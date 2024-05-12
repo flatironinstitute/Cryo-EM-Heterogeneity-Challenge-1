@@ -1,0 +1,98 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "src/cryo_challenge",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "src/cryo_challenge",
+]
+
+[project]
+name = "cryo-em-heterogeneity-challenge-1"
+dynamic = ["version"]
+description = ''
+readme = "README.md"
+requires-python = ">=3.8"
+#license = "None"
+keywords = []
+authors = [
+  { name="Geoffrey Woollard", email="geoffwoollard@gmail.com" },
+  { name="David Silva Sanchez", email="david.silva@yale.edu"},
+  { name="Miro Astore", email="mastore@flatironinstitute.org"},
+  { name="Pilar Cossio", email="pcossio@flatironinstitute.org"},
+  { name="Sonya Hanson", email="shanson@flatironinstitute.org"},
+]
+
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "torch",
+  "numpy",
+  "natsort",
+  "pandas",
+  "dataclasses_json",
+  "mrcfile",
+  "scipy",
+  "cvxpy",
+  "POT",
+  "aspire",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "mypy",
+  "pre-commit",
+  "ruff"
+]
+
+# [project.urls]
+# Documentation = "https://github.com/U.N. Owen/cryo-em-heterogeneity-challenge-1#readme"
+# Issues = "https://github.com/U.N. Owen/cryo-em-heterogeneity-challenge-1/issues"
+# Source = "https://github.com/U.N. Owen/cryo-em-heterogeneity-challenge-1"
+
+[tool.hatch.version]
+path = "src/cryo_challenge/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/cryo_challenge tests}"
+
+[tool.coverage.run]
+source_pkgs = ["cryo_challenge", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/cryo_challenge/__about__.py",
+]
+
+[tool.coverage.paths]
+cryo_challenge = ["src/cryo_challenge", "*/cryo-em-heterogeneity-challenge-1/src/cryo_challenge"]
+tests = ["tests", "*/cryo-em-heterogeneity-challenge-1/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[project.scripts]
+cryo_challenge = "cryo_challenge.command_line:main_commands"
