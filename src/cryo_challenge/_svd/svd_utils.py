@@ -26,7 +26,7 @@ def get_vols_svd(
     --------
     >>> volumes = torch.randn(10, 32, 32, 32)
     >>> U, S, V = get_vols_svd(volumes)
-    """
+    """  # noqa: E501
     assert volumes.ndim == 4, "Input volumes must have shape (n_volumes, n_x, n_y, n_z)"
     assert volumes.shape[0] > 0, "Input volumes must have at least one volume"
 
@@ -60,7 +60,7 @@ def project_vols_to_svd(
     >>> volumes2 = torch.randn(10, 32, 32, 32)
     >>> U, S, V = get_vols_svd(volumes1)
     >>> coeffs = project_vols_to_svd(volumes2, V)
-    """
+    """  # noqa: E501
     assert volumes.ndim == 4, "Input volumes must have shape (n_volumes, n_x, n_y, n_z)"
     assert volumes.shape[0] > 0, "Input volumes must have at least one volume"
     assert (
@@ -68,7 +68,7 @@ def project_vols_to_svd(
     ), "Right singular vectors must have shape (n_features, n_components)"
     assert (
         volumes.shape[1] * volumes.shape[2] * volumes.shape[3] == V_reference.shape[1]
-    ), "Number of features in volumes must match number of features in right singular vectors"
+    ), "Number of features in volumes must match number of features in right singular vectors"  # noqa: E501
 
     coeffs = volumes.reshape(volumes.shape[0], -1) @ V_reference.T
 

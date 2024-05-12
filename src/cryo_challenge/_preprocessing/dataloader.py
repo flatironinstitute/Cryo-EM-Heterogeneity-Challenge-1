@@ -32,7 +32,9 @@ class SubmissionPreprocessingDataLoader(Dataset):
         )
 
         try:
-            self.vol_gt_ref = mrcfile.open(path_to_gt_ref, mode="r").data
+            self.vol_gt_ref = mrcfile.open(path_to_gt_ref, mode="r").data.astype(
+                np.float32
+            )
 
         except FileNotFoundError:
             raise FileNotFoundError(
@@ -82,12 +84,12 @@ class SubmissionPreprocessingDataLoader(Dataset):
     def help(cls):
         print("Help documentation for SubmissionPreprocessingDataLoader")
         print(
-            "SubmissionPreprocessingDataLoader - Dataset class for loading submission data for preprocessing"
+            "SubmissionPreprocessingDataLoader - Dataset class for loading submission data for preprocessing"  # noqa: E501
         )
         print("Parameters:")
         print(
             "submission_config (dict): dictionary containing submission configuration"
-        )
+        )  # noqa: E501
         print("Submission config should contain the following")
         print("gt: dictionary containing ground truth information")
         print("gt: {")
@@ -96,7 +98,7 @@ class SubmissionPreprocessingDataLoader(Dataset):
         print("    box_size: box size of ground truth volume")
         print("    pixel_size: pixel size of ground truth volume")
         print(
-            "    align: 0 or 1, 1 if submission needs to be aligned to ground truth, 0 otherwise"
+            "    align: 0 or 1, 1 if submission needs to be aligned to ground truth, 0 otherwise"  # noqa: E501
         )
         print("}")
         print("submissions: dictionary containing submission information")
@@ -107,7 +109,7 @@ class SubmissionPreprocessingDataLoader(Dataset):
         print("        box_size: box size of submission volume")
         print("        pixel_size: pixel size of submission volume")
         print(
-            "        align: 0 or 1, 1 if submission needs to be aligned to ground truth, 0 otherwise"
+            "        align: 0 or 1, 1 if submission needs to be aligned to ground truth, 0 otherwise"  # noqa: E501
         )
         print("    }")
         print("}")
@@ -150,6 +152,10 @@ class SubmissionPreprocessingDataLoader(Dataset):
         )
         vol_paths = [vol_path for vol_path in vol_paths if "mask" not in vol_path]
 
+        assert len(vol_paths) > 0, "No volumes found in submission directory"
+
+        vol_paths = vol_paths[:3]
+
         populations = np.loadtxt(
             os.path.join(self.submission_paths[idx], "populations.txt")
         )
@@ -157,7 +163,13 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
         vol0 = mrcfile.open(vol_paths[0], mode="r")
         volumes = torch.zeros(
-            (len(vol_paths), vol0.data.shape[0], vol0.data.shape[1], vol0.data.shape[2])
+            (
+                len(vol_paths),
+                vol0.data.shape[0],
+                vol0.data.shape[1],
+                vol0.data.shape[2],
+            ),
+            dtype=torch.float32,
         )
         headers = []
         voxel_sizes = []

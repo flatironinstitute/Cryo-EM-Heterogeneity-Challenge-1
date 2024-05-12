@@ -30,7 +30,7 @@ def fourier_shell_correlation(
     -------
     torch.Tensor
         The correlation between x and y for each Fourier shell.
-    """
+    """  # noqa: E501
     batch_shape = x.shape[: -len(dim)]
 
     freqs = [torch.fft.fftfreq(x.shape[d], d=1 / x.shape[d]).to(x) for d in dim]

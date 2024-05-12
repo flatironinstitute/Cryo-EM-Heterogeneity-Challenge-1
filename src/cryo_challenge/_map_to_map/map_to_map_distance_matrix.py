@@ -97,7 +97,7 @@ def main():
 
             if (
                 cost_label == "fsc"
-            ):  # TODO: make pydantic (include base class). type hint inputs to this (what it needs like gt volumes and populations)
+            ):  # TODO: make pydantic (include base class). type hint inputs to this (what it needs like gt volumes and populations) # noqa: E501
                 maps_gt_flat_cube = torch.zeros(len(maps_gt_flat), n_pix**3)
                 maps_gt_flat_cube[:, mask] = maps_gt_flat
                 maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)

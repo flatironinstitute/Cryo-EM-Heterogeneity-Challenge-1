@@ -67,7 +67,6 @@ def main():
     metadata_df = pd.read_csv(config["gt_metadata_fname"])
     metadata_df.sort_values("pc1", inplace=True)
 
-    # fname = '/mnt/home/gwoollard/ceph/repos/cryomethods_comparison_pipeline/results/analysis_results_ref_unique_npix114_dataset2_structura-Valentin_Peretroukhin.pkl' #analysis_results_20240306-ref_unique_npix224-submission_0.pkl' # TODO: config
     with open(config["input_fname"], "rb") as f:
         data = pickle.load(f)
 

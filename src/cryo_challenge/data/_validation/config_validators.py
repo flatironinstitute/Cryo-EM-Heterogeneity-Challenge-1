@@ -24,7 +24,7 @@ def validate_generic_config(config: dict, reference: dict) -> None:
     Returns
     -------
     None
-    """
+    """  # noqa: E501
     for key in reference:
         if key not in config:
             raise ValueError(f"Missing key in config: {key}")
@@ -32,6 +32,25 @@ def validate_generic_config(config: dict, reference: dict) -> None:
             raise ValueError(
                 f"Invalid type for key {key} in config: {type(config[key])}"
             )
+    return
+
+
+# Preprocessing
+def validate_config_preprocessing(config_data: dict) -> None:
+    """
+    Validate the config dictionary for the preprocessing pipeline.
+    """
+    keys_and_types = {
+        "submission_config_file": str,
+        "output_path": str,
+        "thresh_percentile": Number,
+        "BOT_box_size": int,
+        "BOT_loss": str,
+        "BOT_iter": Number,
+        "BOT_refine": bool,
+        "seed_flavor_assignment": int,
+    }
+    validate_generic_config(config_data, keys_and_types)
     return
 
 
@@ -96,7 +115,7 @@ def validate_config_mtm_data(config_data: dict) -> None:
 def validate_config_mtm_analysis_normalize(config_analysis_normalize: dict) -> None:
     """
     Validate the normalize part of the analysis part of the config dictionary for the MapToMap config.
-    """
+    """  # noqa: E501
     keys_and_types = {
         "do": bool,
         "method": str,
@@ -108,7 +127,7 @@ def validate_config_mtm_analysis_normalize(config_analysis_normalize: dict) -> N
 def validate_config_mtm_analysis(config_analysis: dict) -> None:
     """
     Validate the analysis part of the config dictionary for the MapToMap config.
-    """
+    """  # noqa: E501
     keys_and_types = {
         "metrics": list,
         "chunk_size_submission": Number,
@@ -124,7 +143,7 @@ def validate_config_mtm_analysis(config_analysis: dict) -> None:
 def validate_input_config_mtm(config: dict) -> None:
     """
     Validate the config dictionary for the MapToMap config.
-    """
+    """  # noqa: E501
     keys_and_types = {
         "data": dict,
         "analysis": dict,
@@ -141,7 +160,7 @@ def validate_input_config_mtm(config: dict) -> None:
 def validate_maptomap_result(output_dict: dict) -> None:
     """
     Validate the output dictionary of the map-to-map distance matrix computation.
-    """
+    """  # noqa: E501
     keys_and_types = {
         "cost_matrix": pd.DataFrame,
         "user_submission_label": str,
@@ -155,7 +174,7 @@ def validate_maptomap_result(output_dict: dict) -> None:
 def validate_config_dtd_optimal_q_kl(config_optimal_q_kl: dict) -> None:
     """
     Validate the optimal_q_kl part of the config dictionary for the DistributionToDistribution config.
-    """
+    """  # noqa: E501
     keys_and_types = {
         "n_iter": Number,
         "break_atol": Number,
@@ -167,7 +186,7 @@ def validate_config_dtd_optimal_q_kl(config_optimal_q_kl: dict) -> None:
 def validate_input_config_disttodist(config: dict) -> None:
     """
     Validate the config dictionary.
-    """
+    """  # noqa: E501
     keys_and_types = {
         "input_fname": str,
         "metrics": list,
@@ -190,7 +209,7 @@ def validate_input_config_disttodist(config: dict) -> None:
 def validate_config_svd_output(config_output: dict) -> None:
     """
     Validate the output part of the config dictionary for the SVD pipeline.
-    """
+    """  # noqa: E501
     keys_and_types = {
         "output_path": str,
         "save_volumes": bool,
@@ -203,7 +222,7 @@ def validate_config_svd_output(config_output: dict) -> None:
 def validate_config_svd(config: dict) -> None:
     """
     Validate the config dictionary for the SVD pipeline.
-    """
+    """  # noqa: E501
     keys_and_types = {
         "path_to_volumes": str,
         "box_size_ds": Number,

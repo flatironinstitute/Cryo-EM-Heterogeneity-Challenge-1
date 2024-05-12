@@ -1,13 +1,11 @@
-"""
-Run SVD on submission volumes and, optionally, reference volumes.
-"""
-
 import argparse
 import os
 import yaml
+import json
 
-from .._svd.svd_pipeline import run_all_vs_all_pipeline, run_all_vs_ref_pipeline
-from ..data._validation.config_validators import validate_config_svd
+from ..data._validation.config_validators import validate_config_preprocessing
+from .._preprocessing.preprocessing_pipeline import preprocess_submissions
+from .._preprocessing.dataloader import SubmissionPreprocessingDataLoader
 
 
 def add_args(parser):
@@ -35,15 +33,17 @@ def main(args):
     with open(args.config, "r") as file:
         config = yaml.safe_load(file)
 
-    validate_config_svd(config)
-    warnexists(config["output_options"]["output_path"])
-    mkbasedir(config["output_options"]["output_path"])
+    validate_config_preprocessing(config)
+    print(config)
 
-    if config["experiment_mode"] == "all_vs_all":
-        run_all_vs_all_pipeline(config)
+    warnexists(config["output_path"])
+    mkbasedir(config["output_path"])
 
-    elif config["experiment_mode"] == "all_vs_ref":
-        run_all_vs_ref_pipeline(config)
+    with open(config["submission_config_file"], "r") as f:
+        submission_config = json.load(f)
+    submission_dataset = SubmissionPreprocessingDataLoader(submission_config)
+
+    preprocess_submissions(submission_dataset, config)
 
     return
 

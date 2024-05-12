@@ -39,7 +39,7 @@ def load_volumes(
     >>> submission_list = [0, 1, 2, 3, 4] # submission 5 is ignored
     >>> path_to_submissions = "/path/to/submissions" # under this folder submissions should be name submission_i.pt
     >>> volumes, populations = load_volumes(box_size_ds, submission_list, path_to_submissions)
-    """
+    """  # noqa: E501
 
     metadata = {}
     volumes = torch.empty((0, box_size_ds, box_size_ds, box_size_ds), dtype=dtype)
@@ -98,7 +98,7 @@ def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
     >>> box_size_ds = 64
     >>> path_to_volumes = "/path/to/volumes.pt"
     >>> volumes_ds = load_ref_vols(box_size_ds, path_to_volumes)
-    """
+    """  # noqa: E501
     try:
         volumes = torch.load(path_to_volumes)
     except (FileNotFoundError, EOFError):

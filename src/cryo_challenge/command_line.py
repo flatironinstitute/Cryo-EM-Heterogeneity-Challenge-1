@@ -3,7 +3,7 @@
 See the `[project.scripts]` entry in the `pyproject.toml` file for how this module
 is used to create the commands during installation.
 
-"""
+"""  # noqa: E501
 
 import argparse
 import os
@@ -19,7 +19,7 @@ def _get_commands(cmd_dir: str, doc_str: str = "") -> None:
         cmd_dir: path to folder containing Cryo-EM Heterogeneity Challenge command modules
         doc_str: documentation for this list of commands as a whole
 
-    """
+    """  # noqa: E501
     parser = argparse.ArgumentParser(description=doc_str)
     parser.add_argument(
         "--version", action="version", version="Cryo-EM Challenge " + __version__

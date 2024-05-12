@@ -1,13 +1,14 @@
 import torch
 import numpy as np
 import json
+import os
 
 from .align_utils import align_submission, center_submission, threshold_submissions
 from .crop_pad_utils import crop_pad_submission
 from .fourier_utils import downsample_submission
 
 
-def save_submission(volumes, populations, submission_id, submission_index):
+def save_submission(volumes, populations, submission_id, submission_index, config):
     """
     Save preprocessed submission volumes
 
@@ -30,76 +31,16 @@ def save_submission(volumes, populations, submission_id, submission_index):
         "id": submission_id,
     }
 
-    torch.save(submission_dict, f"submission_{submission_index}.pt")
+    submission_path = os.path.join(
+        config["output_path"], f"submission_{submission_index}.pt"
+    )
+    torch.save(submission_dict, submission_path)
 
     return submission_dict
 
 
-def preprocess_submission_parse_kwargs(kwargs):
-    req_kwargs = {
-        "thresh_percentile": 93.0,
-        "BOT_box_size": 32,
-        "BOT_loss": "wemd",
-        "BOT_iter": 200,
-        "BOT_reflect": False,
-        "BOT_refine": True,
-    }
-
-    for key, value in req_kwargs.items():
-        if key not in kwargs.keys():
-            kwargs[key] = value
-
-    for key, value in kwargs.items():
-        if key not in req_kwargs.keys():
-            raise ValueError(f"Invalid keyword argument {key}")
-
-        if key == "thresh_percentile":
-            if not isinstance(value, (int, float)):
-                raise ValueError(
-                    f"thresh_percentile should be a number, got {type(value)}"
-                )
-
-            if value < 0 or value > 100:
-                raise ValueError("thresh_percentile should be between 0 and 100")
-
-        if key == "BOT_box_size":
-            if not isinstance(value, (int, float)):
-                raise ValueError(
-                    f"BOT_box_size should be an integer, got {type(value)}"
-                )
-
-            if value < 0:
-                raise ValueError("BOT_box_size should be a positive integer")
-
-        if key == "BOT_loss":
-            if not isinstance(value, str):
-                raise ValueError(f"BOT_loss should be a string, got {type(value)}")
-
-            if value not in ["wemd", "eu"]:
-                raise ValueError("BOT_loss should be 'wemd' or 'eu'")
-
-        if key == "BOT_iter":
-            if not isinstance(value, (int, float)):
-                raise ValueError(f"BOT_iter should be an integer, got {type(value)}")
-
-            if value < 0:
-                raise ValueError("BOT_iter should be a positive integer")
-
-        if key == "BOT_reflect":
-            if not isinstance(value, bool):
-                raise ValueError(f"BOT_reflect should be a boolean, got {type(value)}")
-
-        if key == "BOT_refine":
-            if not isinstance(value, bool):
-                raise ValueError(f"BOT_refine should be a boolean, got {type(value)}")
-
-    return kwargs
-
-
-def preprocess_submissions(submission_dataset, seed, **kwargs):
-    params = preprocess_submission_parse_kwargs(kwargs)
-
-    np.random.seed(seed)
+def preprocess_submissions(submission_dataset, config):
+    np.random.seed(config["seed_flavor_assignment"])
     ice_cream_flavors = [
         "Chocolate",
         "Vanilla",
@@ -150,7 +91,7 @@ def preprocess_submissions(submission_dataset, seed, **kwargs):
         )
         if success == 0:
             print(
-                "Submission is not suited for cropping-padding, pixel size less than ground truth pixel size"
+                "Submission is not suited for cropping-padding, pixel size less than ground truth pixel size"  # noqa: E501
             )
             continue
 
@@ -160,16 +101,16 @@ def preprocess_submissions(submission_dataset, seed, **kwargs):
 
         # thresholding
         print("    Thresholding submission")
-        volumes = threshold_submissions(volumes, params["thresh_percentile"])
+        volumes = threshold_submissions(volumes, config["thresh_percentile"])
 
         # center submission
         print("    Centering submission")
-        volumes = center_submission(volumes)
+        volumes = center_submission(volumes, pixel_size=pixel_size_gt)
 
         # align to GT
         if submission_dataset.submission_config[str(idx)]["align"] == 1:
             print("    Aligning submission to ground truth")
-            volumes = align_submission(volumes, vol_gt_ref, params)
+            volumes = align_submission(volumes, vol_gt_ref, config)
 
         # save preprocessed volumes
         print("    Saving preprocessed submission")
@@ -178,6 +119,7 @@ def preprocess_submissions(submission_dataset, seed, **kwargs):
             submission_dataset[i]["populations"],
             ice_cream_flavors[random_mapping[idx]],
             idx,
+            config,
         )
         print(f"   submission saved as submission_{idx}.pt")
         print(f"Preprocessing submission {idx} complete")

@@ -38,7 +38,7 @@ def run_svd_with_ref(
     >>> volumes = torch.randn(10, 32, 32, 32)
     >>> ref_volumes = torch.randn(10, 32, 32, 32)
     >>> U, S, V, coeffs = run_svd_with_ref(volumes, ref_volumes)
-    """
+    """  # noqa: E501
 
     assert volumes.ndim == 4, "Input volumes must have shape (n_volumes, n_x, n_y, n_z)"
     assert volumes.shape[0] > 0, "Input volumes must have at least one volume"
@@ -81,7 +81,7 @@ def run_svd_all_vs_all(volumes: torch.tensor):
     --------
     >>> volumes = torch.randn(10, 32, 32, 32)
     >>> U, S, V, coeffs = run_svd_all_vs_all(volumes)
-    """
+    """  # noqa: E501
     U, S, V = get_vols_svd(volumes)
     coeffs = U @ torch.diag(S)
     return U, S, V, coeffs
@@ -112,7 +112,7 @@ def run_all_vs_all_pipeline(config: dict):
     - S: Singular values of the input volumes.
     - V: Right singular vectors of the input volumes.
 
-    """
+    """  # noqa: E501
 
     dtype = torch.float32 if config["dtype"] == "float32" else torch.float64
     volumes, mean_volumes, metadata = load_volumes(
@@ -174,7 +174,7 @@ def run_all_vs_ref_pipeline(config: dict):
     - S: Singular values of the reference volumes.
     - V: Right singular vectors of the reference volumes.
 
-    """
+    """  # noqa: E501
 
     dtype = torch.float32 if config["dtype"] == "float32" else torch.float64
 
