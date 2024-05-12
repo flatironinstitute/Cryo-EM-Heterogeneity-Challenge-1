@@ -18,7 +18,7 @@ dynamic = ["version"]
 description = ''
 readme = "README.md"
 requires-python = ">=3.8"
-#license = "None"
+license = "MIT"
 keywords = []
 authors = [
   { name="Geoffrey Woollard", email="geoffwoollard@gmail.com" },
