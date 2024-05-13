@@ -1,0 +1,26 @@
+data:
+  n_pix: 224
+  psize: 2.146 
+  submission:
+    fname: data/submission_0.pt
+    volume_key: volumes
+    metadata_key: populations
+    label_key: id
+  ground_truth:
+    volumes: data/maps_gt_flat.pt 
+    metadata: data/metadata.csv 
+  mask: 
+    do: true
+    volume: data/mask_dilated_wide_224x224.mrc
+analysis:
+  metrics:
+    - l2
+    # - corr
+    # - bioem
+    # - fsc
+  chunk_size_submission: 80
+  chunk_size_gt: 190
+  normalize:
+    do: true
+    method: median_zscore
+output: results/map_to_map_distance_matrix_config_sub0.pkl

@@ -23,10 +23,10 @@ class MapToMapResultsValidator:
     def __post_init__(self):
         validate_input_config_mtm(self.config)
 
-        for metric in self.config["metrics"]:
+        for metric in self.config["analysis"]["metrics"]:
             assert self.__dict__[metric] is not None
 
-        for metric in self.config["metrics"]:
+        for metric in self.config["analysis"]["metrics"]:
             validate_maptomap_result(self.__dict__[metric])
 
         return
