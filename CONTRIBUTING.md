@@ -18,4 +18,4 @@ In this project we use Ruff for linting, and pre-commit to make sure that the co
 ## Best practices for contributing
 
 * Fork the repository and perform changes in your fork.
-* After your fork is updated, you can open a Open a [Pull Request](https://github.com/mjo22/cryojax/pulls).
+* After your fork is updated, you can open a Open a [Pull Request](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/pulls).
