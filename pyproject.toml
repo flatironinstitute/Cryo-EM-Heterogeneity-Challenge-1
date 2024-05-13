@@ -35,8 +35,6 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
@@ -60,10 +58,10 @@ dev = [
   "ruff"
 ]
 
-# [project.urls]
-# Documentation = "https://github.com/U.N. Owen/cryo-em-heterogeneity-challenge-1#readme"
-# Issues = "https://github.com/U.N. Owen/cryo-em-heterogeneity-challenge-1/issues"
-# Source = "https://github.com/U.N. Owen/cryo-em-heterogeneity-challenge-1"
+[project.urls]
+Documentation = "https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/README.md"
+Issues = "https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/issues"
+Source = "https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1"
 
 [tool.hatch.version]
 path = "src/cryo_challenge/__about__.py"
