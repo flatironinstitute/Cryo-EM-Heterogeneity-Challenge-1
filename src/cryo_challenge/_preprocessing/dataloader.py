@@ -154,8 +154,6 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
         assert len(vol_paths) > 0, "No volumes found in submission directory"
 
-        vol_paths = vol_paths[:3]
-
         populations = np.loadtxt(
             os.path.join(self.submission_paths[idx], "populations.txt")
         )
