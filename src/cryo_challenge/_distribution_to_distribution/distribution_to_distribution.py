@@ -71,7 +71,7 @@ def main():
         data = pickle.load(f)
 
     # user_submitted_populations = np.ones(80)/80
-    user_submitted_populations = data["user_submitted_populations"].numpy()
+    user_submitted_populations = data["user_submitted_populations"]#.numpy()
     id = torch.load(data["config"]["data"]["submission"]["fname"])["id"]
 
     results_dict = {}
@@ -93,7 +93,7 @@ def main():
         cost_matrix = cost_matrix_df.values
 
         n = cost_matrix.shape[1]
-        assert n == 80
+        # assert n == 80
 
         n_pool_microstate = config["n_pool_microstate"]
         n_replicates = config["n_replicates"]
