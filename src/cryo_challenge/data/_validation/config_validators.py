@@ -1,7 +1,7 @@
 from numbers import Number
 import pandas as pd
 import os
-
+from typing import List
 
 def validate_generic_config(config: dict, reference: dict) -> None:
     """
@@ -58,6 +58,11 @@ def validate_config_preprocessing(config_data: dict) -> None:
 def validate_config_mtm_data_submission(config_data_submission: dict) -> None:
     """
     Validate the submission part of the config dictionary for the MapToMap config.
+
+    fname: str, is the path to the submission file (submission_*.pt).
+    volume_key: str, is the key in the submission file that contains the volume.
+    metadata_key: str, is the key in the submission file that contains the metadata.
+    label_key: str, is the key in the submission file that contains the (anonymizing) label.
     """
     keys_and_types = {
         "fname": str,
@@ -72,6 +77,9 @@ def validate_config_mtm_data_submission(config_data_submission: dict) -> None:
 def validate_config_mtm_data_ground_truth(config_data_ground_truth: dict) -> None:
     """
     Validate the ground truth part of the config dictionary for the MapToMap config.
+
+    volumes: str, is the path to the ground truth volume (.pt) file.
+    metadata: str, is the path to the ground truth metadata (.csv) file.
     """
     keys_and_types = {
         "volumes": str,
@@ -84,6 +92,9 @@ def validate_config_mtm_data_ground_truth(config_data_ground_truth: dict) -> Non
 def validate_config_mtm_data_mask(config_data_mask: dict) -> None:
     """
     Validate the mask part of the config dictionary for the MapToMap config.
+
+    do: bool, is a flag to indicate whether to use a mask.
+    volume: str, is the path to the mask volume (.mrc) file.
     """
     keys_and_types = {
         "do": bool,
@@ -96,6 +107,12 @@ def validate_config_mtm_data_mask(config_data_mask: dict) -> None:
 def validate_config_mtm_data(config_data: dict) -> None:
     """
     Validate the data part of the config dictionary for the MapToMap config.
+
+    n_pix: int, is the number of pixels in each dimension of the volume.
+    psize: float, is the pixel size of the volume in Angstroms.
+    submission: dict, is the submission part of the config.
+    ground_truth: dict, is the ground truth part of the config.
+    mask: dict, is the mask part of the config.
     """
     keys_and_types = {
         "n_pix": Number,
@@ -115,6 +132,9 @@ def validate_config_mtm_data(config_data: dict) -> None:
 def validate_config_mtm_analysis_normalize(config_analysis_normalize: dict) -> None:
     """
     Validate the normalize part of the analysis part of the config dictionary for the MapToMap config.
+
+    do: bool, is a flag to indicate whether to normalize the volumes.
+    method: str, is the method to use for normalization.
     """  # noqa: E501
     keys_and_types = {
         "do": bool,
@@ -127,6 +147,12 @@ def validate_config_mtm_analysis_normalize(config_analysis_normalize: dict) -> N
 def validate_config_mtm_analysis(config_analysis: dict) -> None:
     """
     Validate the analysis part of the config dictionary for the MapToMap config.
+
+    metrics: list, is a list of metrics to compute.
+    chunk_size_submission: int, is the chunk size for the submission volume.
+    chunk_size_gt: int, is the chunk size for the ground truth volume.
+    normalize: dict, is the normalize part of the analysis part of the config.
+
     """  # noqa: E501
     keys_and_types = {
         "metrics": list,
@@ -143,6 +169,10 @@ def validate_config_mtm_analysis(config_analysis: dict) -> None:
 def validate_input_config_mtm(config: dict) -> None:
     """
     Validate the config dictionary for the MapToMap config.
+
+    data: dict, is the data part of the config.
+    analysis: dict, is the analysis part of the config.
+    output: str, is the path to the output file.
     """  # noqa: E501
     keys_and_types = {
         "data": dict,
@@ -160,6 +190,10 @@ def validate_input_config_mtm(config: dict) -> None:
 def validate_maptomap_result(output_dict: dict) -> None:
     """
     Validate the output dictionary of the map-to-map distance matrix computation.
+
+    cost_matrix: pd.DataFrame, is the cost matrix, with ground truth rows and submission columns.
+    user_submission_label: str, is the label of the submission.
+    computed_assets: dict, is a dictionary of computed assets, which can be re-used in other analyses.
     """  # noqa: E501
     keys_and_types = {
         "cost_matrix": pd.DataFrame,
