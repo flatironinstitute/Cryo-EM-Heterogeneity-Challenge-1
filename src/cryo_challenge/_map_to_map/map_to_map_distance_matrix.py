@@ -2,8 +2,6 @@ import mrcfile
 import pandas as pd
 import pickle
 import torch
-import yaml
-import argparse
 
 from .map_to_map_distance import (
     compute_bioem3d_cost,
@@ -30,18 +28,10 @@ def vmap_distance(
     )(maps_gt)
 
 
-def main():
+def run(config):
     """
     Compare a submission to ground truth.
     """
-    parser = argparse.ArgumentParser(description="Align maps")
-    parser.add_argument(
-        "--config", type=str, default=None, help="Path to the config (yaml) file"
-    )
-    args = parser.parse_args()
-
-    with open(args.config, "r") as file:
-        config = yaml.safe_load(file)
 
     n_pix = config["data"]["n_pix"]
 
@@ -51,7 +41,8 @@ def main():
     label_key = config["data"]["submission"]["label_key"]
     user_submission_label = submission[label_key]
 
-    metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])
+    # n_trunc = 10
+    metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])#[:n_trunc]
 
     results_d = {}
     results_d["config"] = config
@@ -72,6 +63,7 @@ def main():
     maps_gt_flat = torch.load(config["data"]["ground_truth"]["volumes"]).reshape(
         -1, n_pix**3
     )
+    # maps_gt_flat = torch.randn(n_trunc, n_pix**3)
 
     if config["data"]["mask"]["do"]:
         mask = (
@@ -137,4 +129,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run()

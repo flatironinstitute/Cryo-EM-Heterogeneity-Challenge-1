@@ -13,6 +13,16 @@ from .config_validators import (
 @dataclass_json
 @dataclass
 class MapToMapResultsValidator:
+    '''
+    Validate the output dictionary of the map-to-map distance matrix computation.
+
+    config: dict, input config dictionary.
+    user_submitted_populations: torch.Tensor, user submitted populations, which sum to 1.
+    corr: dict, correlation results.
+    l2: dict, L2 results.
+    bioem: dict, BioEM results.
+    fsc: dict, FSC results.
+    '''
     config: dict
     user_submitted_populations: torch.Tensor
     corr: Optional[dict] = None
@@ -23,10 +33,10 @@ class MapToMapResultsValidator:
     def __post_init__(self):
         validate_input_config_mtm(self.config)
 
-        for metric in self.config["metrics"]:
+        for metric in self.config["analysis"]["metrics"]:
             assert self.__dict__[metric] is not None
 
-        for metric in self.config["metrics"]:
+        for metric in self.config["analysis"]["metrics"]:
             validate_maptomap_result(self.__dict__[metric])
 
         return
