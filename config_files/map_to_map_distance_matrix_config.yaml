@@ -15,12 +15,12 @@ data:
 analysis:
   metrics:
     - l2
-    - corr
-    - bioem
-    - fsc
+    # - corr
+    # - bioem
+    # - fsc
   chunk_size_submission: 80
   chunk_size_gt: 190
   normalize:
     do: true
     method: median_zscore
-output: results/map_to_map_distance_matrix_submission_0.pkl
+output: results/map_to_map_distance_matrix_submission_0_tmp.pkl
