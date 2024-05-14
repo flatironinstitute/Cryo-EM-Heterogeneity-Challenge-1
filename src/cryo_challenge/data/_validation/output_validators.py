@@ -45,6 +45,22 @@ class MapToMapResultsValidator:
 @dataclass_json
 @dataclass
 class ReplicateValidatorEMD:
+    """
+    Validate the output dictionary of one EMD in the the distribution-to-distribution pipeline.
+
+    q_opt: List[float], optimal user submitted distribution, which sums to 1.
+    EMD_opt: float, EMD between the ground truth distribution (p) and the (optimized) user submitted distribution (q_opt). 
+        The transport plan is a joint distribution, such that:
+        summing over the rows gives the (optimized) user submitted distribution, and summing over the columns gives the ground truth distribution.
+    transport_plan_opt: List[List[float]], transport plan between the ground truth distribution (p, rows) and the (optimized) user submitted distribution (q_opt, columns).
+    flow_opt: cvx output, optimization output (problem is formulated as a network flow problem).
+    prob_opt: cvx output, optimization 'problem' output.
+    runtime_opt: float, runtime of the optimization.
+    EMD_submitted: float, EMD between the ground truth distribution (p) and the user submitted distribution (q).
+    transport_plan_submitted: List[List[float]], transport plan between the ground truth distribution (p, rows) and the user submitted distribution (q, columns).
+        The transport plan is a joint distribution, such that:
+        summing over the rows gives the user submitted distribution, and summing over the columns gives the ground truth distribution.
+    """
     q_opt: List[float]
     EMD_opt: float
     transport_plan_opt: List[List[float]]
@@ -61,6 +77,18 @@ class ReplicateValidatorEMD:
 @dataclass_json
 @dataclass
 class ReplicateValidatorKL:
+    """
+    Validate the output dictionary of one KL divergence in the the distribution-to-distribution pipeline.
+
+    q_opt: List[float], optimal user submitted distribution, which sums to 1.
+    klpq_opt: float, KL divergence between the ground truth distribution (p) and the (optimized) user submitted distribution (q_opt).
+    klqp_opt: float, KL divergence between the (optimized) user submitted distribution and the ground truth distribution (p).
+    A: List[List[float]], assignment matrix.
+    iter_stop: int, number of iterations until convergence.
+    eps_stop: float, stopping criterion.
+    klpq_submitted: float, KL divergence between the ground truth distribution (p) and the user submitted distribution (q).
+    klqp_submitted: float, KL divergence between the user submitted distribution (q) and the ground truth distribution (p).    
+    """
     q_opt: List[float]
     klpq_opt: float
     klqp_opt: float
@@ -78,6 +106,11 @@ class ReplicateValidatorKL:
 @dataclass_json
 @dataclass
 class MetricDistToDistValidator:
+    '''
+    Validate the output dictionary of one map to map metric in the the distribution-to-distribution pipeline.
+
+    replicates: dict, dictionary of replicates.
+    '''
     replicates: dict
 
     def validate_replicates(self, n_replicates):
@@ -93,6 +126,17 @@ class MetricDistToDistValidator:
 @dataclass_json
 @dataclass
 class DistributionToDistributionResultsValidator:
+    '''
+    Validate the output dictionary of the distribution-to-distribution pipeline.
+
+    config: dict, input config dictionary.
+    user_submitted_populations: torch.Tensor, user submitted populations, which sum to 1.
+    id: str, submission id.
+    fsc: dict, FSC distance results.
+    bioem: dict, BioEM distance results.
+    l2: dict, L2 distance results.
+    corr: dict, correlation distance results.
+    '''
     config: dict
     user_submitted_populations: torch.Tensor
     id: str
