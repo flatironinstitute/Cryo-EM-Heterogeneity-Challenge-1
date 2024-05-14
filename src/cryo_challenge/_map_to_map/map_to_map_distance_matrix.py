@@ -127,6 +127,4 @@ def run(config):
     with open(config["output"], "wb") as f:
         pickle.dump(results_dict, f)
 
-
-if __name__ == "__main__":
-    run()
+    return results_dict

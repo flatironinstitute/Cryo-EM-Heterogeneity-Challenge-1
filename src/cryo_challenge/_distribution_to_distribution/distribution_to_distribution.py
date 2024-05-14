@@ -55,14 +55,6 @@ def make_assignment_matrix(cost_matrix):
 
 
 def run(config):
-    # parser = argparse.ArgumentParser(description="Align maps")
-    # parser.add_argument(
-    #     "--config", type=str, default=None, help="Path to the config (yaml) file"
-    # )
-    # args = parser.parse_args()
-
-    # with open(args.config, "r") as file:
-    #     config = yaml.safe_load(file)
 
     metadata_df = pd.read_csv(config["gt_metadata_fname"])
     metadata_df.sort_values("pc1", inplace=True)
@@ -211,7 +203,5 @@ def run(config):
     DistributionToDistributionResultsValidator.from_dict(results_dict)
     with open(config["output_fname"], "wb") as f:
         pickle.dump(results_dict, f)
-
-
-if __name__ == "__main__":
-    run()
+    
+    return results_dict
