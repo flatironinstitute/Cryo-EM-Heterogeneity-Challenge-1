@@ -37,7 +37,7 @@ def main(args):
 
     validate_input_config_mtm(config)
     warnexists(config["output"])
-    mkbasedir(os.path.basename(config["output"]))
+    mkbasedir(os.path.dirname(config["output"]))
 
     run(config)
 
