@@ -36,8 +36,8 @@ def main(args):
         config = yaml.safe_load(file)
 
     validate_input_config_mtm(config)
-    warnexists(config["output_options"]["output_path"])
-    mkbasedir(config["output_options"]["output_path"])
+    warnexists(config["output"])
+    mkbasedir(os.path.basename(config["output"]))
 
     run(config)
 

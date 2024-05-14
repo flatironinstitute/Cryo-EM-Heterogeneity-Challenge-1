@@ -41,8 +41,8 @@ def run(config):
     label_key = config["data"]["submission"]["label_key"]
     user_submission_label = submission[label_key]
 
-    n_trunc = 10
-    metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])[:n_trunc]
+    # n_trunc = 10
+    metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])#[:n_trunc]
 
     results_d = {}
     results_d["config"] = config
@@ -60,10 +60,10 @@ def run(config):
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
     )
-    # maps_gt_flat = torch.load(config["data"]["ground_truth"]["volumes"]).reshape(
-    #     -1, n_pix**3
-    # )
-    maps_gt_flat = torch.randn(n_trunc, n_pix**3)
+    maps_gt_flat = torch.load(config["data"]["ground_truth"]["volumes"]).reshape(
+        -1, n_pix**3
+    )
+    # maps_gt_flat = torch.randn(n_trunc, n_pix**3)
 
     if config["data"]["mask"]["do"]:
         mask = (
