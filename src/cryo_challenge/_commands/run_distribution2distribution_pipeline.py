@@ -1,13 +1,13 @@
 """
-Compute map to map distances on ground truth versus submission volumes.
+Quantify the similarity between ground truth distribution and user submitted distribution, taking into account the population weights and a map to map distance.
 """
 
 import argparse
 import os
 import yaml
 
-from .._map_to_map.map_to_map_distance_matrix import run
-from ..data._validation.config_validators import validate_input_config_mtm
+from .._distribution_to_distribution.distribution_to_distribution import run
+from ..data._validation.config_validators import validate_input_config_disttodist
 
 
 def add_args(parser):
@@ -35,9 +35,9 @@ def main(args):
     with open(args.config, "r") as file:
         config = yaml.safe_load(file)
 
-    validate_input_config_mtm(config)
-    warnexists(config["output"])
-    mkbasedir(os.path.dirname(config["output"]))
+    validate_input_config_disttodist(config)
+    warnexists(config["output_fname"])
+    mkbasedir(os.path.dirname(config["output_fname"]))
 
     run(config)
 

@@ -208,6 +208,9 @@ def validate_maptomap_result(output_dict: dict) -> None:
 def validate_config_dtd_optimal_q_kl(config_optimal_q_kl: dict) -> None:
     """
     Validate the optimal_q_kl part of the config dictionary for the DistributionToDistribution config.
+
+    n_iter: int, is the number of iterations for the optimization.
+    break_atol: float, is the absolute tolerance for the optimization.
     """  # noqa: E501
     keys_and_types = {
         "n_iter": Number,
@@ -220,6 +223,15 @@ def validate_config_dtd_optimal_q_kl(config_optimal_q_kl: dict) -> None:
 def validate_input_config_disttodist(config: dict) -> None:
     """
     Validate the config dictionary.
+
+    input_fname: str, is the path to the map to map distance matrix (output from map2map_pipeline).
+    metrics: list, is a list of metrics to compute.
+    gt_metadata_fname: str, is the path to the ground truth metadata (.csv) file.
+    n_replicates: int, is the number of replicates to compute.
+    n_pool_microstate: int, is the number of microstates to pool (low values less than 3-5 can cause problems for optimization convergence in CVXPY numerical solvers).
+    replicate_fraction: float, is the fraction of the data to use for replicates.
+    cvxpy_solver: str, is the solver to use for CVXPY optimization.
+    optimal_q_kl: dict, is the optimal_q_kl part of the config.
     """  # noqa: E501
     keys_and_types = {
         "input_fname": str,

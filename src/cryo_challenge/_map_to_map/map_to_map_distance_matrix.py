@@ -44,9 +44,9 @@ def run(config):
     # n_trunc = 10
     metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])#[:n_trunc]
 
-    results_d = {}
-    results_d["config"] = config
-    results_d["user_submitted_populations"] = (
+    results_dict = {}
+    results_dict["config"] = config
+    results_dict["user_submitted_populations"] = (
         submission[submission_metadata_key] / submission[submission_metadata_key].sum()
     )
 
@@ -113,20 +113,18 @@ def run(config):
             )
 
             # output results
-            single_distance_results_d = {
+            single_distance_results_dict = {
                 "cost_matrix": cost_matrix_df,
                 "user_submission_label": user_submission_label,
                 "computed_assets": computed_assets,
             }
 
-            results_d[cost_label] = single_distance_results_d
+            results_dict[cost_label] = single_distance_results_dict
 
     # Validate before saving
-    _ = MapToMapResultsValidator.from_dict(results_d)
+    _ = MapToMapResultsValidator.from_dict(results_dict)
 
     with open(config["output"], "wb") as f:
-        pickle.dump(results_d, f)
+        pickle.dump(results_dict, f)
 
-
-if __name__ == "__main__":
-    run()
+    return results_dict
