@@ -45,11 +45,6 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Compute map to map distances on ground truth versus submission volumes."
-    )
-    parser.add_argument(
-        "--config", type=str, default=None, help="Path to the config (yaml) file"
-    )
+    parser = argparse.ArgumentParser(description=__doc__)
     args = parser.parse_args()
-    main()
+    main(add_args(parser).parse_args())
