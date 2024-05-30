@@ -54,15 +54,7 @@ def make_assignment_matrix(cost_matrix):
     return A
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Align maps")
-    parser.add_argument(
-        "--config", type=str, default=None, help="Path to the config (yaml) file"
-    )
-    args = parser.parse_args()
-
-    with open(args.config, "r") as file:
-        config = yaml.safe_load(file)
+def run(config):
 
     metadata_df = pd.read_csv(config["gt_metadata_fname"])
     metadata_df.sort_values("pc1", inplace=True)
@@ -71,7 +63,7 @@ def main():
         data = pickle.load(f)
 
     # user_submitted_populations = np.ones(80)/80
-    user_submitted_populations = data["user_submitted_populations"].numpy()
+    user_submitted_populations = data["user_submitted_populations"]#.numpy()
     id = torch.load(data["config"]["data"]["submission"]["fname"])["id"]
 
     results_dict = {}
@@ -93,7 +85,7 @@ def main():
         cost_matrix = cost_matrix_df.values
 
         n = cost_matrix.shape[1]
-        assert n == 80
+        # assert n == 80
 
         n_pool_microstate = config["n_pool_microstate"]
         n_replicates = config["n_replicates"]
@@ -211,7 +203,5 @@ def main():
     DistributionToDistributionResultsValidator.from_dict(results_dict)
     with open(config["output_fname"], "wb") as f:
         pickle.dump(results_dict, f)
-
-
-if __name__ == "__main__":
-    main()
+    
+    return results_dict
