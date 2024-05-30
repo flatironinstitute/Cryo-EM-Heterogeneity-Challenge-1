@@ -104,6 +104,10 @@ def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
     except (FileNotFoundError, EOFError):
         raise ValueError("Volumes not found or not in PyTorch format.")
 
+    # Reshape volumes to correct size
+    box_size = int(round((float(volumes.shape[-1]) ** (1. / 3.))))
+    volumes = torch.reshape(volumes, (-1, box_size, box_size, box_size))
+
     volumes_ds = torch.empty(
         (volumes.shape[0], box_size_ds, box_size_ds, box_size_ds), dtype=dtype
     )
