@@ -48,7 +48,9 @@ dependencies = [
   "cvxpy",
   "POT",
   "aspire",
-  "jupyter"
+  "jupyter",
+  "osfclient",
+  "seaborn"
 ]
 
 [project.optional-dependencies]
