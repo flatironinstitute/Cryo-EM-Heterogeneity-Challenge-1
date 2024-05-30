@@ -2,6 +2,47 @@ import torch
 from typing import Tuple
 
 from ..._preprocessing.fourier_utils import downsample_volume
+from ..._preprocessing.normalize import compute_power_spectrum, normalize_power_spectrum
+
+
+def _remove_mean_volumes_sub(volumes, metadata):
+    box_size = volumes.shape[-1]
+    n_subs = len(list(metadata.keys()))
+    mean_volumes = torch.zeros((n_subs, box_size, box_size, box_size))
+
+    for i, key in enumerate(metadata.keys()):
+        indices = metadata[key]["indices"]
+
+        mean_volumes[i] = torch.mean(volumes[indices[0] : indices[1]], dim=0)
+        volumes[indices[0] : indices[1]] = (
+            volumes[indices[0] : indices[1]] - mean_volumes[i][None, ...]
+        )
+
+    return volumes, mean_volumes
+
+
+def remove_mean_volumes(volumes, metadata=None):
+    if metadata is None:
+        mean_volumes = torch.mean(volumes, dim=0)
+        volumes = volumes - mean_volumes[None, ...]
+
+    else:
+        volumes, mean_volumes = _remove_mean_volumes_sub(volumes, metadata)
+
+    return volumes, mean_volumes
+
+
+def normalize_power_spectrum_sub(volumes, metadata, ref_vol_key, ref_vol_index):
+    idx_ref_vol = metadata[ref_vol_key]["indices"][0] + ref_vol_index
+    ref_power_spectrum = compute_power_spectrum(volumes[idx_ref_vol])
+
+    for key in metadata.keys():
+        indices = metadata[key]["indices"]
+        volumes[indices[0] : indices[1]] = normalize_power_spectrum(
+            volumes[indices[0] : indices[1]], ref_power_spectrum
+        )
+
+    return volumes
 
 
 def load_volumes(
@@ -28,10 +69,10 @@ def load_volumes(
     -------
     volumes: torch.tensor
         Tensor of shape (n_volumes, n_x, n_y, n_z) containing the volumes.
-    populations: dict
-        Dictionary containing the populations of each submission.
-    vols_per_submission: dict
-        Dictionary containing the number of volumes per submission.
+    metadata: dict
+        Dictionary containing the metadata for each submission.
+        The keys are the id (ice cream name) of each submission.
+        The values are dictionaries containing the number of volumes, the populations, and the indices of the volumes in the volumes tensor.
 
     Examples
     --------
@@ -43,12 +84,10 @@ def load_volumes(
 
     metadata = {}
     volumes = torch.empty((0, box_size_ds, box_size_ds, box_size_ds), dtype=dtype)
-    mean_volumes = torch.empty(
-        (len(submission_list), box_size_ds, box_size_ds, box_size_ds), dtype=dtype
-    )
+
     counter = 0
 
-    for i, idx in enumerate(submission_list):
+    for idx in submission_list:
         submission = torch.load(f"{path_to_submissions}/submission_{idx}.pt")
         vols = submission["volumes"]
         pops = submission["populations"]
@@ -68,11 +107,9 @@ def load_volumes(
             "indices": (counter_start, counter),
         }
 
-        mean_volumes[i] = vols_tmp.mean(dim=0)
-        vols_tmp = vols_tmp - mean_volumes[i][None, :, :, :]
         volumes = torch.cat((volumes, vols_tmp), dim=0)
 
-    return volumes, mean_volumes, metadata
+    return volumes, metadata
 
 
 def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
@@ -111,7 +148,6 @@ def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
         volumes_ds[i] = downsample_volume(vol, box_size_ds)
         volumes_ds[i] = volumes_ds[i] / volumes_ds[i].sum()
 
-    mean_volume = volumes_ds.mean(dim=0)
-    volumes_ds = volumes_ds - mean_volume[None, :, :, :]
+    volumes_ds = volumes_ds
 
-    return volumes_ds, mean_volume
+    return volumes_ds
