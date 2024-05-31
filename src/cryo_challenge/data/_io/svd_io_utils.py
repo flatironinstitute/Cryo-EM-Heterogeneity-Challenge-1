@@ -22,6 +22,7 @@ def _remove_mean_volumes_sub(volumes, metadata):
 
 
 def remove_mean_volumes(volumes, metadata=None):
+    volumes = volumes.clone()
     if metadata is None:
         mean_volumes = torch.mean(volumes, dim=0)
         volumes = volumes - mean_volumes[None, ...]
@@ -33,6 +34,7 @@ def remove_mean_volumes(volumes, metadata=None):
 
 
 def normalize_power_spectrum_sub(volumes, metadata, ref_vol_key, ref_vol_index):
+    volumes = volumes.clone()
     idx_ref_vol = metadata[ref_vol_key]["indices"][0] + ref_vol_index
     ref_power_spectrum = compute_power_spectrum(volumes[idx_ref_vol])
 

@@ -78,6 +78,7 @@ def compute_power_spectrum(volume):
 
 def normalize_power_spectrum(volumes, power_spectrum_ref):
     L = volumes.shape[-1]
+    n_vols = volumes.shape[0]
     dtype = torch.float32
     radii = _grid_3d(L, dtype=dtype)["r"]
 
@@ -90,10 +91,13 @@ def normalize_power_spectrum(volumes, power_spectrum_ref):
         outer_diameter = 0.5 + (i + 1)
         ring_mask = (radii > inner_diameter) & (radii < outer_diameter)
 
-        power_spectrum = torch.norm(ring_mask[None, ...] * vols_fft)
-
+        power_spectrum = torch.norm(
+            (ring_mask[None, ...] * vols_fft).reshape(n_vols, -1), dim=1
+        )
         vols_fft[:, ring_mask] = (
-            vols_fft[:, ring_mask] / (power_spectrum + 1e-5) * power_spectrum_ref[i]
+            vols_fft[:, ring_mask]
+            / (power_spectrum[:, None] + 1e-5)
+            * power_spectrum_ref[i]
         )
 
         # # Update ring
