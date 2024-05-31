@@ -2,7 +2,6 @@ import torch
 from typing import Tuple
 import yaml
 import argparse
-import os
 
 from .svd_utils import get_vols_svd, project_vols_to_svd
 from ..data._io.svd_io_utils import (
@@ -143,6 +142,7 @@ def run_all_vs_all_pipeline(config: dict):
         "coeffs": coeffs,
         "metadata": metadata,
         "config": config,
+        "sing_vals": S,
     }
 
     if config["output_options"]["save_volumes"]:
@@ -151,13 +151,10 @@ def run_all_vs_all_pipeline(config: dict):
 
     if config["output_options"]["save_svd_matrices"]:
         output_dict["U"] = U
-        output_dict["S"] = S
         output_dict["V"] = V
+        output_dict["S"] = S
 
-    output_file = os.path.join(
-        config["output_options"]["output_path"], "svd_results.pt"
-    )
-    torch.save(output_dict, output_file)
+    torch.save(output_dict, config["output_options"]["output_file"])
 
     return output_dict
 
@@ -233,6 +230,7 @@ def run_all_vs_ref_pipeline(config: dict):
         "coeffs_ref": coeffs_ref,
         "metadata": metadata,
         "config": config,
+        "sing_vals": S,
     }
 
     if config["output_options"]["save_volumes"]:
@@ -246,10 +244,7 @@ def run_all_vs_ref_pipeline(config: dict):
         output_dict["S"] = S
         output_dict["V"] = V
 
-    output_file = os.path.join(
-        config["output_options"]["output_path"], "svd_results.pt"
-    )
-    torch.save(output_dict, output_file)
+    torch.save(output_dict, config["output_options"]["output_file"])
 
     return output_dict
 

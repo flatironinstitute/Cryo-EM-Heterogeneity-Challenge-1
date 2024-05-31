@@ -37,7 +37,7 @@ def main(args):
 
     validate_config_svd(config)
     warnexists(config["output_options"]["output_path"])
-    mkbasedir(config["output_options"]["output_path"])
+    mkbasedir(os.path.dirname(config["output_options"]["output_path"]))
 
     if config["experiment_mode"] == "all_vs_all":
         run_all_vs_all_pipeline(config)
