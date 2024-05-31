@@ -65,6 +65,8 @@ class SubmissionPreprocessingDataLoader(Dataset):
                     raise ValueError(f"Pixel size not found for submission {key}")
                 if "align" not in value.keys():
                     raise ValueError(f"Align not found for submission {key}")
+                if "populations_file" not in value.keys():
+                    raise ValueError(f"Population file not found for submission {key}")
 
                 if not os.path.exists(value["path"]):
                     raise ValueError(f"Path {value['path']} does not exist")
@@ -154,8 +156,8 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
         assert len(vol_paths) > 0, "No volumes found in submission directory"
 
-        populations = np.loadtxt(
-            os.path.join(self.submission_paths[idx], "populations.txt")
+        populations = np.loadtxt(self.submission_config["populations_file"]).astype(
+            float
         )
         populations = torch.from_numpy(populations)
 
