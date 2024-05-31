@@ -16,6 +16,9 @@ from ..data._validation.output_validators import (
 def compute_wasserstein_between_distributions_from_weights_and_cost(
     weights_a, weights_b, cost, numItermax=1000000
 ):
+    weights_a = weights_a.numpy() if isinstance(weights_a, torch.Tensor) else weights_a
+    weights_b = weights_b.numpy() if isinstance(weights_b, torch.Tensor) else weights_b
+    cost = cost.numpy() if isinstance(cost, torch.Tensor) else cost
     transport = ot.emd(weights_a, weights_b, cost, numItermax=numItermax)
     wassertstein = (transport * cost).sum()
     return wassertstein, transport
