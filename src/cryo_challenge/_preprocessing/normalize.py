@@ -37,7 +37,6 @@ def _grid_3d(n, dtype=torch.float32):
 
     phi, theta, r = _cart2sph(x, y, z)
 
-    # TODO: Should this theta adjustment be moved inside _cart2sph?
     theta = torch.pi / 2 - theta
 
     return {"x": x, "y": y, "z": z, "phi": phi, "theta": theta, "r": r}
