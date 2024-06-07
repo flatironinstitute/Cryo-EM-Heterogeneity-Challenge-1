@@ -1,7 +1,7 @@
 from numbers import Number
 import pandas as pd
 import os
-from typing import List
+
 
 def validate_generic_config(config: dict, reference: dict) -> None:
     """
@@ -257,7 +257,7 @@ def validate_config_svd_output(config_output: dict) -> None:
     Validate the output part of the config dictionary for the SVD pipeline.
     """  # noqa: E501
     keys_and_types = {
-        "output_path": str,
+        "output_file": str,
         "save_volumes": bool,
         "save_svd_matrices": bool,
     }
@@ -274,6 +274,8 @@ def validate_config_svd(config: dict) -> None:
         "box_size_ds": Number,
         "submission_list": list,
         "experiment_mode": str,
+        "ref_vol_key": str,
+        "ref_vol_index": Number,
         "dtype": str,
         "output_options": dict,
     }
