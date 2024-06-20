@@ -1,0 +1,12 @@
+input_fname: results/test_map_to_map_distance_matrix_submission_0.pkl
+metrics:
+  - l2
+gt_metadata_fname: data/metadata.csv
+n_replicates: 3
+n_pool_microstate: 2
+replicate_fraction: 0.9
+cvxpy_solver: ECOS
+optimal_q_kl:
+  n_iter: 100000
+  break_atol: 0.0001
+output_fname: results/test_distribution_to_distribution_submission_0.pkl

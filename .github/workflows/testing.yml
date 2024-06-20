@@ -27,6 +27,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install .
           pip install pytest
+      - name: Get test data
+        run: |
+          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/dataset_2_submissions/submission_0.pt?download=true -O data/dataset_2_submissions/submission_0.pt
+          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/gt_maps_flat_float16.pt?download=true -O data/gt_maps_flat_float16.pt
+          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/metadata.csv?download=true -O data/metadata.csv 
+          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/metadata.csv?download=true -O data/mask_dilated_wide_224x224.mrc 
       - name: Test with pytest
         run: |
           pytest tests/
