@@ -36,10 +36,10 @@ jobs:
           pip install pytest
       - name: Get test data from OSF
         run: |
-          mkdir -p data/dataset_2_submissions tests/data/
+          mkdir -p data/dataset_2_submissions tests/data/ tests/results
           wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/dataset_2_submissions/submission_0.pt?download=true -O data/dataset_2_submissions/submission_0.pt
-          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/gt_maps_flat_10.pt?download=true -O tests/data/gt_maps_flat_10.pt
-          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/metadata_10.csv?download=true -O tests/data/metadata_10.csv 
+          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/test_maps_gt_flat_10.pt?download=true -O tests/data/gt_maps_flat_10.pt
+          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/test_metadata_10.csv?download=true -O tests/data/metadata_10.csv 
           wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/mask_dilated_wide_224x224.mrc?download=true -O data/mask_dilated_wide_224x224.mrc 
       - name: Test with pytest
         run: |

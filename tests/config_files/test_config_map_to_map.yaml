@@ -7,8 +7,8 @@ data:
     metadata_key: populations
     label_key: id
   ground_truth:
-    volumes: tests/data/gt_maps_flat_10.pt 
-    metadata: tests/data/metadata_10.csv 
+    volumes: tests/data/test_maps_gt_flat_10.pt 
+    metadata: tests/data/test_metadata_10.csv 
   mask: 
     do: true
     volume: data/mask_dilated_wide_224x224.mrc
@@ -20,4 +20,4 @@ analysis:
   normalize:
     do: true
     method: median_zscore
-output: tests/test_map_to_map_distance_matrix_submission_0.pkl
+output: tests/results/test_map_to_map_distance_matrix_submission_0.pkl

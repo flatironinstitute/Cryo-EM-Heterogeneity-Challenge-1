@@ -1,7 +1,7 @@
-input_fname: results/test_map_to_map_distance_matrix_submission_0.pkl
+input_fname: tests/results/test_map_to_map_distance_matrix_submission_0.pkl
 metrics:
   - l2
-gt_metadata_fname: data/metadata.csv
+gt_metadata_fname: tests/data/test_metadata_10.csv
 n_replicates: 3
 n_pool_microstate: 2
 replicate_fraction: 0.9
