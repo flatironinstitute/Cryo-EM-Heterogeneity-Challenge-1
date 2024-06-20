@@ -22,6 +22,13 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Cache pip wheels
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -29,10 +36,11 @@ jobs:
           pip install pytest
       - name: Get test data from OSF
         run: |
+          mkdir data/dataset_2_submissions
           wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/dataset_2_submissions/submission_0.pt?download=true -O data/dataset_2_submissions/submission_0.pt
-          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/gt_maps_flat_float16.pt?download=true -O tests/data/gt_maps_flat_10.pt
-          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/metadata.csv?download=true -O tests/data/metadat_10a.csv 
-          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/metadata.csv?download=true -O data/mask_dilated_wide_224x224.mrc 
+          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/gt_maps_flat_10.pt?download=true -O tests/data/gt_maps_flat_10.pt
+          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/metadata_10.csv?download=true -O tests/data/metadata_10.csv 
+          wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/mask_dilated_wide_224x224.mrc?download=true -O data/mask_dilated_wide_224x224.mrc 
       - name: Test with pytest
         run: |
           pytest tests/
