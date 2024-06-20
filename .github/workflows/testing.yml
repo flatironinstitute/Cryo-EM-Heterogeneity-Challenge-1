@@ -36,7 +36,7 @@ jobs:
           pip install pytest
       - name: Get test data from OSF
         run: |
-          mkdir data/dataset_2_submissions
+          mkdir -p data/dataset_2_submissions tests/data/
           wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/dataset_2_submissions/submission_0.pt?download=true -O data/dataset_2_submissions/submission_0.pt
           wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/gt_maps_flat_10.pt?download=true -O tests/data/gt_maps_flat_10.pt
           wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/metadata_10.csv?download=true -O tests/data/metadata_10.csv 
