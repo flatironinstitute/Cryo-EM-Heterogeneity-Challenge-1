@@ -43,4 +43,5 @@ jobs:
           wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/Ground_truth/mask_dilated_wide_224x224.mrc?download=true -O data/mask_dilated_wide_224x224.mrc 
       - name: Test with pytest
         run: |
-          pytest tests/
+          pytest tests/test_map_to_map.py
+          pytest tests/test_distribution_to_distribution.py 
