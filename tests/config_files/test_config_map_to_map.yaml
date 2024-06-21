@@ -2,7 +2,7 @@ data:
   n_pix: 224
   psize: 2.146 
   submission:
-    fname: data/dataset_2_submissions/submission_0.pt
+    fname: tests/data/dataset_2_submissions/test_submission_0_n8.pt
     volume_key: volumes
     metadata_key: populations
     label_key: id
