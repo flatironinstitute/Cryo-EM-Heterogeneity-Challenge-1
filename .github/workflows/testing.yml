@@ -1,6 +1,6 @@
-# GHA workflow for running tests. 
+# GHA workflow for running tests.
 #
-# Largely taken from 
+# Largely taken from
 # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 # Please check the link for more detailed instructions
 
@@ -18,11 +18,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache pip wheels
+          
+      - name: Cache dependencies and test data
+        id: cache
         uses: actions/cache@v3
         with:
           path: |
@@ -32,15 +35,19 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/tests/scripts/fetch_test_data.sh') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install .
           pip install pytest omegaconf
+          
       - name: Get test data from OSF
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           sh tests/scripts/fetch_test_data.sh
+          
       - name: Test with pytest
         run: |
           pytest tests/test_map_to_map.py
-          pytest tests/test_distribution_to_distribution.py 
+          pytest tests/test_distribution_to_distribution.py
