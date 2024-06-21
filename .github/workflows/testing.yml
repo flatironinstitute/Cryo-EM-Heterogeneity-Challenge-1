@@ -28,6 +28,7 @@ jobs:
           path: |
             ~/.cache/pip
             tests/data
+            data
           key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/tests/scripts/fetch_test_data.sh') }}
           restore-keys: |
             ${{ runner.os }}-pip-
