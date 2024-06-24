@@ -58,7 +58,8 @@ dev = [
   "pytest",
   "mypy",
   "pre-commit",
-  "ruff"
+  "ruff",
+  "omegaconf"
 ]
 
 [project.urls]
