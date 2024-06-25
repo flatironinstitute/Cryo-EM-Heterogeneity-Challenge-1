@@ -44,7 +44,7 @@ dependencies = [
   "pandas",
   "dataclasses_json",
   "mrcfile",
-  "scipy",
+  "scipy<=1.13.1",
   "cvxpy",
   "POT",
   "aspire",
