@@ -20,41 +20,34 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Set up Python ${{ matrix.python-version }}
-        id: setup_python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
 
-      - name: Cache test data
-        id: cache_test_data
+      - name: Cache dependencies and test data
+        id: cache
         uses: actions/cache@v3
         with:
           path: |
+            .venv
             tests/data
             data
-          key: venv-${{ runner.os }}-${{ steps.setup_python.outputs.python-version}}-${{ hashFiles('**/tests/scripts/fetch_test_data.sh') }}
+          key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml', '**/tests/scripts/fetch_test_data.sh') }}
 
-      - uses: syphar/restore-virtualenv@v1
-        id: cache-virtualenv
-        with:
-          requirement_files: "**/pyproject.toml" # this is optional
-          key: venv-${{ runner.os }}-${{ steps.setup_python.outputs.python-version}}-${{ hashFiles('**/pyproject.toml') }}
+      - name: Restore venv
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
 
-      - uses: syphar/restore-pip-download-cache@v1
-        if: ${{ steps.cache-virtualenv.outputs.cache-hit != 'true' }}
-        with:
-          requirement_files: "**/pyproject.toml" # this is optional
-          key: download-${{ runner.os }}-${{ steps.setup_python.outputs.python-version}}-${{ hashFiles('**/pyproject.toml') }}
-
-      - run: |
+      - name: Install dependencies
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        run: |
           python -m pip install --upgrade pip
           pip install .
-          pip install .[dev]
-        if: ${{ steps.cache-virtualenv.outputs.cache-hit != 'true' }}
+          pip install pytest omegaconf
           
       - name: Get test data from OSF
-        if: ${{ steps.cache_test_data.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         run: |
           sh tests/scripts/fetch_test_data.sh
           
