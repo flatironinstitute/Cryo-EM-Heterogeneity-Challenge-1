@@ -30,7 +30,9 @@ jobs:
         id: cache_test_data
         uses: actions/cache@v3
         with:
-          path: tests/data
+          path: |
+            tests/data
+            data
           key: venv-${{ runner.os }}-${{ steps.setup_python.outputs.python-version}}-${{ hashFiles('**/tests/scripts/fetch_test_data.sh') }}
 
       - uses: syphar/restore-virtualenv@v1
@@ -40,7 +42,7 @@ jobs:
           key: venv-${{ runner.os }}-${{ steps.setup_python.outputs.python-version}}-${{ hashFiles('**/pyproject.toml') }}
 
       - uses: syphar/restore-pip-download-cache@v1
-        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+        if: ${{ steps.cache-virtualenv.outputs.cache-hit != 'true' }}
         with:
           requirement_files: "**/pyproject.toml" # this is optional
           key: download-${{ runner.os }}-${{ steps.setup_python.outputs.python-version}}-${{ hashFiles('**/pyproject.toml') }}
@@ -49,10 +51,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install .
           pip install .[dev]
-        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+        if: ${{ steps.cache-virtualenv.outputs.cache-hit != 'true' }}
           
       - name: Get test data from OSF
-        if: steps.cache_test_data.outputs.cache-hit != 'true'
+        if: ${{ steps.cache_test_data.outputs.cache-hit != 'true' }}
         run: |
           sh tests/scripts/fetch_test_data.sh
           
