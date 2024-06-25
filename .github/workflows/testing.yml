@@ -33,8 +33,9 @@ jobs:
           path: tests/data
           key: venv-${{ runner.os }}-${{ steps.setup_python.outputs.python-version}}-${{ hashFiles('**/tests/scripts/fetch_test_data.sh') }}
 
+      - uses: syphar/restore-virtualenv@v1
+
       - name: Install dependencies
-        uses: syphar/restore-virtualenv@v1
         if: steps.restore-virtualenv.outputs.cache-hit != 'true'
         run: |
           python -m pip install --upgrade pip
