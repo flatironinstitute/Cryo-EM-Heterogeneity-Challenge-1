@@ -33,16 +33,12 @@ jobs:
             tests/data
             data
           key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml', '**/tests/scripts/fetch_test_data.sh') }}
-
-      - name: Create venv
-        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
-        run: |
-          python -m venv .venv
-          . .venv/bin/activate
+          restore-keys: venv-${{ runner.os }}-
 
       - name: Install dependencies
         if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         run: |
+          python -m venv .venv
           . .venv/bin/activate
           python -m pip install --upgrade pip
           pip install .
