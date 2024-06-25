@@ -1,0 +1,13 @@
+gt_metadata: path/to/metadata.csv
+
+map2map_results:
+  - path/to/map2map_results_1.pkl
+  - path/to/map2map_results_2.pkl
+
+dist2dist_results:
+  pkl_fnames:
+    - path/to/dist2dist_results_1.pkl
+    - path/to/dist2dist_results_2.pkl
+  pkl_globs:
+    - string/path/with/wildcards/and/regex/filestem*_field1[0-9].pkl
+    - string/path/with/wildcards/and/regex/filestem*_field1[0-9]_field2[0-9].pkl
