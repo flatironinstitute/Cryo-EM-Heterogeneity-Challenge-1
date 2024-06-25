@@ -34,17 +34,16 @@ jobs:
             data
           key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml', '**/tests/scripts/fetch_test_data.sh') }}
 
-      - name: Restore venv
-        if: ${{ steps.cache.outputs.cache-hit == 'true' }}
+      - name: Create venv
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         run: |
           python -m venv .venv
           . .venv/bin/activate
-          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
 
       - name: Install dependencies
         if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         run: |
+          . .venv/bin/activate
           python -m pip install --upgrade pip
           pip install .
           pip install pytest omegaconf
@@ -56,5 +55,6 @@ jobs:
           
       - name: Test with pytest
         run: |
+          . .venv/bin/activate
           pytest tests/test_map_to_map.py
           pytest tests/test_distribution_to_distribution.py
