@@ -55,5 +55,7 @@ jobs:
           
       - name: Test with pytest
         run: |
+          pytest tests/test_preprocess.py
           pytest tests/test_map_to_map.py
           pytest tests/test_distribution_to_distribution.py
+          
