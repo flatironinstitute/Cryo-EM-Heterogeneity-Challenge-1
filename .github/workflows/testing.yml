@@ -48,6 +48,5 @@ jobs:
           
       - name: Test with pytest
         run: |
-          . .venv/bin/activate
           pytest tests/test_map_to_map.py
           pytest tests/test_distribution_to_distribution.py
