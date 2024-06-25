@@ -44,6 +44,7 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           python -m pip install --upgrade pip
+          pip install .
           pip install .[dev]
           echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
@@ -51,7 +52,7 @@ jobs:
       - name: Get test data from OSF
         if: steps.cache_test_data.outputs.cache-hit != 'true'
         run: |
-          echo steps.cache_test_data.outputs.cache-hit
+          echo $(steps.cache_test_data.outputs.cache-hit)
           sh tests/scripts/fetch_test_data.sh
           
       - name: Test with pytest
