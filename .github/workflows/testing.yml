@@ -29,17 +29,14 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            .venv
+            ${{ env.pythonLocation }}
             tests/data
             data
-          key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml', '**/tests/scripts/fetch_test_data.sh') }}
-          restore-keys: venv-${{ runner.os }}-
+          key: venv-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/pyproject.toml', '**/tests/scripts/fetch_test_data.sh') }}
 
       - name: Install dependencies
         if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         run: |
-          python -m venv .venv
-          . .venv/bin/activate
           python -m pip install --upgrade pip
           pip install .
           pip install pytest omegaconf
