@@ -37,11 +37,13 @@ jobs:
         id: cache-virtualenv
         with:
           requirement_files: "**/pyproject.toml" # this is optional
+          key: venv-${{ runner.os }}-${{ steps.setup_python.outputs.python-version}}-${{ hashFiles('**/pyproject.toml') }}
 
       - uses: syphar/restore-pip-download-cache@v1
         if: steps.cache-virtualenv.outputs.cache-hit != 'true'
         with:
           requirement_files: "**/pyproject.toml" # this is optional
+          key: download-${{ runner.os }}-${{ steps.setup_python.outputs.python-version}}-${{ hashFiles('**/pyproject.toml') }}
 
       - run: |
           python -m pip install --upgrade pip
