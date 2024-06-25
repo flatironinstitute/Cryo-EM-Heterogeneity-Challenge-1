@@ -49,7 +49,7 @@ jobs:
           pip install pytest omegaconf
           
       - name: Get test data from OSF
-        # if: ${{ steps.cache_test_data.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache_test_data.outputs.cache-hit != 'true' }}
         run: |
           sh tests/scripts/fetch_test_data.sh
           
