@@ -36,7 +36,7 @@ jobs:
       - uses: syphar/restore-virtualenv@v1
         id: cache-virtualenv
         with:
-          requirement_files: pyproject.toml  # this is optional
+          requirement_files: "**/pyproject.toml" # this is optional
 
       - uses: syphar/restore-pip-download-cache@v1
         if: steps.cache-virtualenv.outputs.cache-hit != 'true'
