@@ -50,7 +50,8 @@ dependencies = [
   "aspire<=0.12.2",
   "jupyter<=1.0.0",
   "osfclient<=0.0.5",
-  "seaborn<=0.13.2"
+  "seaborn<=0.13.2",
+  "ipyfilechooser",
 ]
 
 [project.optional-dependencies]
