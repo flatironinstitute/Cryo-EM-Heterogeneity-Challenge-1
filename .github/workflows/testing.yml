@@ -25,24 +25,32 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache dependencies and test data
-        id: cache
+        id: cache_deps
         uses: actions/cache@v3
         with:
           path: |
-            ${{ env.pythonLocation }}
             tests/data
             data
-          key: venv-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/pyproject.toml', '**/tests/scripts/fetch_test_data.sh') }}
+          key: venv-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/pyproject.toml') }}
+
+      - name: Cache dependencies test data
+        id: cache_test_data
+        uses: actions/cache@v3
+        with:
+          path: |
+            tests/data
+            data
+          key: venv-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/tests/scripts/fetch_test_data.sh') }}
 
       - name: Install dependencies
-        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache_deps.outputs.cache-hit != 'true' }}
         run: |
           python -m pip install --upgrade pip
           pip install .
           pip install pytest omegaconf
           
       - name: Get test data from OSF
-        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache_test_data.outputs.cache-hit != 'true' }}
         run: |
           sh tests/scripts/fetch_test_data.sh
           
