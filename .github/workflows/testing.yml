@@ -35,6 +35,7 @@ jobs:
           key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml', '**/tests/scripts/fetch_test_data.sh') }}
 
       - name: Restore venv
+        if: ${{ steps.cache.outputs.cache-hit == 'true' }}
         run: |
           python -m venv .venv
           . .venv/bin/activate
