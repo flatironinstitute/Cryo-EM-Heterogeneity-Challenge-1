@@ -50,9 +50,8 @@ jobs:
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
           
       - name: Get test data from OSF
-        # if: steps.cache_test_data.outputs.cache-hit != 'true'
+        if: steps.cache_test_data.outputs.cache-hit != 'true'
         run: |
-          python -c "print(steps.cache_test_data.outputs.cache-hit)"
           sh tests/scripts/fetch_test_data.sh
           
       - name: Test with pytest
