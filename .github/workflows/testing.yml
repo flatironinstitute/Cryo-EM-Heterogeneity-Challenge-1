@@ -24,16 +24,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache dependencies and test data
+      - name: Cache dependencies
         id: cache_deps
         uses: actions/cache@v3
         with:
           path: |
-            tests/data
-            data
+            ${{ env.pythonLocation }}
           key: venv-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/pyproject.toml') }}
 
-      - name: Cache dependencies test data
+      - name: Cache test data
         id: cache_test_data
         uses: actions/cache@v3
         with:
