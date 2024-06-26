@@ -11,7 +11,7 @@ This is a work in progress, while the code will probably not change, we are stil
 
 ## Accesing the data
 
-The data is available in TODO
+The data is available via the Open Science Foundation project [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/). You can download via a webbroswer, or programatically with wget as per [this script](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/tests/scripts/fetch_test_data.sh).
 
 
 ## Installation
