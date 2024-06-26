@@ -36,4 +36,4 @@ cryo_challenge run_distribution2distribution_pipeline --config config_files/conf
 
 ## Acknowledgements
 * Miro A. Astore, Geoffrey Woollard, David Silva-Sánchez, Wenda Zhao, Khanh Dao Duc, Nikolaus Grigorieff, Pilar Cossio, and Sonya M. Hanson. "The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge". 9 June 2023. DOI:10.17605/OSF.IO/8H6FZ
-* David Herreros for testing and CI and debugging in this repo
+* [David Herreros](https://github.com/DavidHerreros) for testing and CI and debugging in this repo
