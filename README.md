@@ -1,10 +1,12 @@
 <h1 align='center'>Cryo-EM Heterogeniety Challenge</h1>
 
-This repository contains the code used to analyse the submissions for the first Cryo-EM Heteorgeneity Challenge.
+This repository contains the code used to analyse the submissions for the [Inaugrural Flatirion Cryo-EM Heteorgeneity Challenge](https://www.simonsfoundation.org/flatiron/center-for-computational-biology/structural-and-molecular-biophysics-collaboration/heterogeneity-in-cryo-electron-microscopy/).
 
+## Scope
+
+This repository explains how to preprocess a submission (80 maps and corresponding probability distribution), and analyze it. Challenge participants can benchmark their submissions locally against the ground truth and other submissions that are available on the cloud via the Open Science Foundation project [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/).
 
 ## Warning
-
 
 This is a work in progress, while the code will probably not change, we are still writting better tutorials, documentation, and other ideas for analyzing the data. We are also in the process of making it easier for other people to contribute with their own metrics and methods. We are also in the process of distributiing the code to PyPi
 
