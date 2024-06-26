@@ -24,11 +24,13 @@ pip install .
 ```
 
 ## Running
-If you want to run our code, please check the notebooks in the folder called "tutorials". The tutorials explain how to setup the config files, and run the commands
+If you want to run our code, please check the notebooks in the [tutorials folder](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/tree/main/tutorials).
+
+The tutorials explain how to setup the config files, and run the commands
 ```
-cryo_challenge run_preprocessing --config config_files/config_preproc.yaml
-cryo_challenge run_svd --config config_files/config_svd.yaml
-cryo_challenge run_map2map_pipeline --config config_files/config_map_to_map.yaml
+cryo_challenge run_preprocessing                      --config config_files/config_preproc.yaml
+cryo_challenge run_svd                                --config config_files/config_svd.yaml
+cryo_challenge run_map2map_pipeline                   --config config_files/config_map_to_map.yaml
 cryo_challenge run_distribution2distribution_pipeline --config config_files/config_distribution_to_distribution.yaml
 ```
 
