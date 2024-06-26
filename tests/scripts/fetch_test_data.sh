@@ -1,5 +1,6 @@
 mkdir -p tests/data/dataset_2_submissions data/dataset_2_submissions tests/results tests/data/unprocessed_dataset_2_submissions/submission_x tests/data/Ground_truth/ data/Ground_truth
 wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/tests/dataset_2_submissions/test_submission_0_n8.pt?download=true -O tests/data/dataset_2_submissions/test_submission_0_n8.pt
+ln -s tests/data/dataset_2_submissions/test_submission_0_n8.pt tests/data/dataset_2_submissions/submission_0.pt # symlink for svd which needs submission_0.pt for filename
 wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/tests/Ground_truth/test_maps_gt_flat_10.pt?download=true -O tests/data/Ground_truth/test_maps_gt_flat_10.pt
 wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/tests/Ground_truth/test_metadata_10.csv?download=true -O tests/data/Ground_truth/test_metadata_10.csv 
 wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/tests/Ground_truth/1.mrc?download=true -O tests/data/Ground_truth/1.mrc 
