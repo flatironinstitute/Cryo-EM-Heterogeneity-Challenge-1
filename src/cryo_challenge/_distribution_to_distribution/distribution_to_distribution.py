@@ -13,6 +13,13 @@ from ..data._validation.output_validators import (
 )
 
 
+def sort_by_transport(cost):
+    m,n = cost.shape
+    _, transport = compute_wasserstein_between_distributions_from_weights_and_cost(np.ones(m) / m, np.ones(n)/n, cost)
+    indices = np.argsort((transport * np.arange(m)[...,None]).sum(0))
+    return cost[:,indices], indices, transport
+
+
 def compute_wasserstein_between_distributions_from_weights_and_cost(
     weights_a, weights_b, cost, numItermax=1000000
 ):
