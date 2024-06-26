@@ -23,6 +23,15 @@ cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
 pip install .
 ```
 
-You are all set. If you want to run our code, please check the notebooks in the folder called "tutorials".
+## Running
+If you want to run our code, please check the notebooks in the folder called "tutorials". The tutorials explain how to setup the config files, and run the commands
+```
+cryo_challenge run_preprocessing --config config_files/config_preproc.yaml
+cryo_challenge run_svd --config config_files/config_svd.yaml
+cryo_challenge run_map2map_pipeline --config config_files/config_map_to_map.yaml
+cryo_challenge run_distribution2distribution_pipeline --config config_files/config_distribution_to_distribution.yaml
+```
 
 ## Acknowledgements
+* Miro A. Astore, Geoffrey Woollard, David Silva-Sánchez, Wenda Zhao, Khanh Dao Duc, Nikolaus Grigorieff, Pilar Cossio, and Sonya M. Hanson. "The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge". 9 June 2023. DOI:10.17605/OSF.IO/8H6FZ
+* David Herreros for testing and CI and debugging in this repo
