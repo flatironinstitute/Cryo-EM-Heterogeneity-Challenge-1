@@ -5,8 +5,17 @@
 <img alt="Supported Python versions" src="https://img.shields.io/badge/Supported_Python_Versions-3.8_%7C_3.9_%7C_3.10_%7C_3.11-blue">
 <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/total">
 <img alt="GitHub branch check runs" src="https://img.shields.io/github/check-runs/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/main">
+<img alt="GitHub License" src="https://img.shields.io/github/license/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1">
 
 </p>
+
+<p align="center">
+        
+<img alt="Cryo-EM Heterogeneity Challenge" src="https://simonsfoundation.imgix.net/wp-content/uploads/2023/05/15134456/Screenshot-2023-05-15-at-1.39.07-PM.png?auto=format&q=90">
+
+</p>
+
+
         
 This repository contains the code used to analyse the submissions for the [Inaugrural Flatirion Cryo-EM Heteorgeneity Challenge](https://www.simonsfoundation.org/flatiron/center-for-computational-biology/structural-and-molecular-biophysics-collaboration/heterogeneity-in-cryo-electron-microscopy/).
 
@@ -66,6 +75,17 @@ If you find any bug or have a suggestion on the code feel free to open an issue 
 We also welcome any help with the development of this repository. If you want to contribute with your own suggestions, code, or fixes, we recommend creating a fork of this repository to avoid any incompatibilities with newer versions of the software. Once you are happy with your new code, please, make a PR from your fork to this repository.
 
 We are also working on pipelines to simplify the exentension of the code with new metrics or functionalities, stay tuned!
+
+# License
+MIT License
+
+Copyright (c) 2024 Flatiron Institute
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 # Acknowledgements
 * Miro A. Astore, Geoffrey Woollard, David Silva-Sánchez, Wenda Zhao, Khanh Dao Duc, Nikolaus Grigorieff, Pilar Cossio, and Sonya M. Hanson. "The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge". 9 June 2023. DOI:10.17605/OSF.IO/8H6FZ
