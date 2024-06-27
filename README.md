@@ -1,6 +1,6 @@
 <h1 align='center'>Cryo-EM Heterogeniety Challenge</h1>
 
-.. image:: https://img.shields.io/badge/Supported Python Versions-3.8 - 3.9 - 3.10 - 3.11)
+.. image:: https://img.shields.io/badge/Supported_Python_Versions-3.8_%7C_3.9_%7C_3.10_%7C_3.11-blue
         :alt: Supported Python versions
 
 This repository contains the code used to analyse the submissions for the [Inaugrural Flatirion Cryo-EM Heteorgeneity Challenge](https://www.simonsfoundation.org/flatiron/center-for-computational-biology/structural-and-molecular-biophysics-collaboration/heterogeneity-in-cryo-electron-microscopy/).
