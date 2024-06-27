@@ -1,6 +1,6 @@
 <h1 align='center'>Cryo-EM Heterogeniety Challenge</h1>
 
-This repository contains the code used to analyse the submissions for the [Inaugural Flatirion Cryo-EM Heterogeneity Challenge](https://www.simonsfoundation.org/flatiron/center-for-computational-biology/structural-and-molecular-biophysics-collaboration/heterogeneity-in-cryo-electron-microscopy/).
+This repository contains the code used to analyse the submissions for the [Inaugural Flatiron Cryo-EM Heterogeneity Challenge](https://www.simonsfoundation.org/flatiron/center-for-computational-biology/structural-and-molecular-biophysics-collaboration/heterogeneity-in-cryo-electron-microscopy/).
 
 ## Scope
 
