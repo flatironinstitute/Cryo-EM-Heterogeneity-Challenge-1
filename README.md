@@ -70,7 +70,7 @@ cryo_challenge run_distribution2distribution_pipeline --config config_files/conf
 ```
 
 # Contributing
-If you find any bug or have a suggestion on the code feel free to open an issue [here](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/issues)
+If you find any bug or have a suggestion on the code feel free to open an issue [here](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/issues).
 
 We also welcome any help with the development of this repository. If you want to contribute with your own suggestions, code, or fixes, we recommend creating a fork of this repository to avoid any incompatibilities with newer versions of the software. Once you are happy with your new code, please, make a PR from your fork to this repository.
 
