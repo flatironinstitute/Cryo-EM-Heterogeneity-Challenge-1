@@ -265,6 +265,18 @@ def validate_config_svd_output(config_output: dict) -> None:
     return
 
 
+def validate_power_spectrum_normalization(config_normalization: dict) -> None:
+    """
+    Validate the normalization part of the config dictionary for the SVD pipeline.
+    """  # noqa: E501
+    keys_and_types = {
+        "ref_vol_key": str,
+        "ref_vol_index": Number,
+    }
+    validate_generic_config(config_normalization, keys_and_types)
+    return
+
+
 def validate_config_svd(config: dict) -> None:
     """
     Validate the config dictionary for the SVD pipeline.
@@ -274,14 +286,14 @@ def validate_config_svd(config: dict) -> None:
         "box_size_ds": Number,
         "submission_list": list,
         "experiment_mode": str,
-        "ref_vol_key": str,
-        "ref_vol_index": Number,
+        "power_spectrum_normalization": dict,
         "dtype": str,
         "output_options": dict,
     }
 
     validate_generic_config(config, keys_and_types)
     validate_config_svd_output(config["output_options"])
+    validate_power_spectrum_normalization(config["power_spectrum_normalization"])
 
     if config["experiment_mode"] == "all_vs_ref":
         if "path_to_reference" not in config.keys():

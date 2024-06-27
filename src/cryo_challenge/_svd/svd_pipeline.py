@@ -130,8 +130,8 @@ def run_all_vs_all_pipeline(config: dict):
     volumes = normalize_power_spectrum_sub(
         volumes,
         metadata,
-        config["ref_vol_key"],
-        config["ref_vol_index"],
+        config["power_spectrum_normalization"]["ref_vol_key"],
+        config["power_spectrum_normalization"]["ref_vol_index"],
     )
 
     volumes, mean_volumes = remove_mean_volumes(volumes, metadata)
@@ -205,7 +205,8 @@ def run_all_vs_ref_pipeline(config: dict):
 
     # Normalize Power spectrums
     idx_ref_vol = (
-        metadata[config["ref_vol_key"]]["indices"][0] + config["ref_vol_index"]
+        metadata[config["power_spectrum_normalization"]["ref_vol_key"]]["indices"][0]
+        + config["power_spectrum_normalization"]["ref_vol_index"]
     )
     ref_power_spectrum = compute_power_spectrum(volumes[idx_ref_vol])
     ref_volumes = normalize_power_spectrum(ref_volumes, ref_power_spectrum)
@@ -213,8 +214,8 @@ def run_all_vs_ref_pipeline(config: dict):
     volumes = normalize_power_spectrum_sub(
         volumes,
         metadata,
-        config["ref_vol_key"],
-        config["ref_vol_index"],
+        config["power_spectrum_normalization"]["ref_vol_key"],
+        config["power_spectrum_normalization"]["ref_vol_index"],
     )
 
     # Remove mean volumes
