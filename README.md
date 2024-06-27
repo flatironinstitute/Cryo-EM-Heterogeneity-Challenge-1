@@ -23,7 +23,7 @@ This repository contains the code used to analyse the submissions for the [Inaug
 This repository explains how to preprocess a submission (80 maps and corresponding probability distribution), and analyze it. Challenge participants can benchmark their submissions locally against the ground truth and other submissions that are available on the cloud via the Open Science Foundation project [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/).
 
 # Warning
-This is a work in progress, while the code will probably not change, we are still writting better tutorials, documentation, and other ideas for analyzing the data. We are also in the process of making it easier for other people to contribute with their own metrics and methods. We are also in the process of distributiing the code to PyPi.
+This is a work in progress, while the code will probably not change, we are still writting better tutorials, documentation, and other ideas for analyzing the data. We are also in the process of making it easier for other people to contribute with their own metrics and methods. We are also in the process of distributing the code to PyPi.
 
 # Accesing the data
 The data is available via the Open Science Foundation project [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/). You can download via a webbroswer, or programatically with wget as per [this script](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/tests/scripts/fetch_test_data.sh).
