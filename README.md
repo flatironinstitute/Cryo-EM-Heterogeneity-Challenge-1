@@ -40,7 +40,7 @@ cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
 pip install .
 ```
 
-## Devel installation
+## Developer installation
 If you are interested in testing the programs previously installed, please, install the repository in development mode with the following commands:
 
 ```bash
@@ -52,6 +52,7 @@ The test included in the repo can be executed with PyTest as shown below:
 
 ```bash
 cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
+sh tests/scripts/fetch_test_data.sh # download test data from OSF
 pytest tests/test_preprocessing.py
 pytest tests/test_svd.py
 pytest tests/test_map_to_map.py
@@ -59,15 +60,21 @@ pytest tests/test_distribution_to_distribution.py
 ```
 
 # Running
-If you want to run our code, please check the notebooks in the [tutorials folder](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/tree/main/tutorials).
+If you want to run our code on the full challenge data, or you own local data, please complete the following steps
 
-The tutorials explain how to setup the config files, and run the commands
+### 1. Dowload the full challenge data from [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/)
+You can do this through the web browser, or programatically with wget (you can get inspiration from [this script](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/tests/scripts/fetch_test_data.sh), which is just for the test data, not the full datasets)
+
+### 2. Modify the config files and run the commands on the full challenge data
+Point to the path where the data is locally
+The [tutorial notebooks](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/tree/main/tutorials) explain how to setup the config files, and run the commands
 ```
 cryo_challenge run_preprocessing                      --config config_files/config_preproc.yaml
 cryo_challenge run_svd                                --config config_files/config_svd.yaml
 cryo_challenge run_map2map_pipeline                   --config config_files/config_map_to_map.yaml
 cryo_challenge run_distribution2distribution_pipeline --config config_files/config_distribution_to_distribution.yaml
 ```
+
 
 # Contributing
 If you find any bug or have a suggestion on the code feel free to open an issue [here](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/issues).
