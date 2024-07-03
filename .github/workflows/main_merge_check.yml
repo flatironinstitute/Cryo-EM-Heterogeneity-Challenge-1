@@ -1,4 +1,4 @@
-name: 'Check merging branch'
+name: Check merging branch
 
 on:
   pull_request:
