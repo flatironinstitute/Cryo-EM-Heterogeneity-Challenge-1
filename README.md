@@ -1,4 +1,4 @@
-<h1 align='center'>Cryo-EM Heterogeniety Challenge</h1>
+<h1 align='center'>Cryo-EM Heterogeneity Challenge</h1>
 
 <p align="center">
         
@@ -62,7 +62,7 @@ pytest tests/test_distribution_to_distribution.py
 # Running
 If you want to run our code on the full challenge data, or you own local data, please complete the following steps
 
-### 1. Dowload the full challenge data from [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/)
+### 1. Download the full challenge data from [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/)
 You can do this through the web browser, or programatically with wget (you can get inspiration from [this script](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/tests/scripts/fetch_test_data.sh), which is just for the test data, not the full datasets)
 
 ### 2. Modify the config files and run the commands on the full challenge data
