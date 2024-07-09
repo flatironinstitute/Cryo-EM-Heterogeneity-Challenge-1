@@ -1,7 +1,4 @@
-# TUTORIALS
-
-
-## Brief overview
+# Brief overview
 
 There are notebook tutorials for the each step in the analysis pipeline.
 
