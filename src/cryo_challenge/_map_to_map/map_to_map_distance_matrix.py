@@ -12,22 +12,6 @@ from .map_to_map_distance import (
 from ..data._validation.output_validators import MapToMapResultsValidator
 
 
-def vmap_distance(
-    maps_gt,
-    maps_submission,
-    map_to_map_distance,
-    chunk_size_gt=None,
-    chunk_size_submission=None,
-):
-    return torch.vmap(
-        lambda maps_gt: torch.vmap(
-            lambda maps_submission: map_to_map_distance(maps_gt, maps_submission),
-            chunk_size=chunk_size_submission,
-        )(maps_submission),
-        chunk_size=chunk_size_gt,
-    )(maps_gt)
-
-
 class MapToMapDistance:
     def __init__(self, config):
         self.config = config
@@ -99,11 +83,8 @@ def run(config):
 
     cost_funcs_d = {
         "fsc": compute_cost_fsc_chunk,
-        "corrold": compute_cost_corr,
         "corr": Correlation(config).get_distance_matrix,
-        "l2old": compute_cost_l2,
         "l2": L2DistanceSum(config).get_distance_matrix,
-        "bioemold": compute_bioem3d_cost,
         "bioem": BioEM3dDistance(config).get_distance_matrix,
     }
 
@@ -149,28 +130,9 @@ def run(config):
                 )
                 cost_matrix = cost_matrix.numpy()
                 computed_assets["fsc_matrix"] = fsc_matrix
-            elif cost_label == "l2":
+            else:
                 cost_matrix = cost_func(
                     maps_gt_flat, maps_user_flat
-                ).numpy()
-            elif cost_label == "corr":
-                corr_map2map_distance = Correlation(config)
-                cost_matrix = corr_map2map_distance.get_distance_matrix(
-                    maps_gt_flat, maps_user_flat
-                ).numpy()
-            elif cost_label == "bioem":
-                bioem_map2map_distance = BioEM3dDistance(config)
-                cost_matrix = bioem_map2map_distance.get_distance_matrix(
-                    maps_gt_flat, maps_user_flat
-                ).numpy()
-
-            else:
-                cost_matrix = vmap_distance(
-                    maps_gt_flat,
-                    maps_user_flat,
-                    cost_func,
-                    chunk_size_gt=config["analysis"]["chunk_size_gt"],
-                    chunk_size_submission=config["analysis"]["chunk_size_submission"],
                 ).numpy()
 
             cost_matrix_df = pd.DataFrame(
