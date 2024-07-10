@@ -48,13 +48,33 @@ class MapToMapDistance:
 
         return distance_matrix
 
-class L2Distance(MapToMapDistance):
+class L2DistanceNorm(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
     def get_distance(self, map1, map2):
         return torch.norm(map1 - map2)**2
     
+class L2DistanceSum(MapToMapDistance):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def get_distance(self, map1, map2):
+        return compute_cost_l2(map1, map2)
+    
+class Correlation(MapToMapDistance):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def get_distance(self, map1, map2):
+        return compute_cost_corr(map1, map2) 
+
+class BioEM3dDistance(MapToMapDistance):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def get_distance(self, map1, map2):
+        return compute_bioem3d_cost(map1, map2) 
     
 def run(config):
     """
@@ -69,8 +89,7 @@ def run(config):
     label_key = config["data"]["submission"]["label_key"]
     user_submission_label = submission[label_key]
 
-    # n_trunc = 10
-    metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])#[:n_trunc]
+    metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])
 
     results_dict = {}
     results_dict["config"] = config
@@ -80,9 +99,12 @@ def run(config):
 
     cost_funcs_d = {
         "fsc": compute_cost_fsc_chunk,
-        "corr": compute_cost_corr,
-        "l2": compute_cost_l2,
-        "bioem": compute_bioem3d_cost,
+        "corrold": compute_cost_corr,
+        "corr": Correlation(config).get_distance_matrix,
+        "l2old": compute_cost_l2,
+        "l2": L2DistanceSum(config).get_distance_matrix,
+        "bioemold": compute_bioem3d_cost,
+        "bioem": BioEM3dDistance(config).get_distance_matrix,
     }
 
     maps_user_flat = submission[submission_volume_key].reshape(
@@ -127,12 +149,20 @@ def run(config):
                 )
                 cost_matrix = cost_matrix.numpy()
                 computed_assets["fsc_matrix"] = fsc_matrix
-            elif cost_label == "nope":
-                l2_map2map_distance = L2Distance(config)
-                cost_matrix = l2_map2map_distance.get_distance_matrix(
+            elif cost_label == "l2":
+                cost_matrix = cost_func(
                     maps_gt_flat, maps_user_flat
                 ).numpy()
-                print('run new method')
+            elif cost_label == "corr":
+                corr_map2map_distance = Correlation(config)
+                cost_matrix = corr_map2map_distance.get_distance_matrix(
+                    maps_gt_flat, maps_user_flat
+                ).numpy()
+            elif cost_label == "bioem":
+                bioem_map2map_distance = BioEM3dDistance(config)
+                cost_matrix = bioem_map2map_distance.get_distance_matrix(
+                    maps_gt_flat, maps_user_flat
+                ).numpy()
 
             else:
                 cost_matrix = vmap_distance(

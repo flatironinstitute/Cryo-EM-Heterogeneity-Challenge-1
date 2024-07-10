@@ -26,8 +26,11 @@ class MapToMapResultsValidator:
     config: dict
     user_submitted_populations: torch.Tensor
     corr: Optional[dict] = None
+    corrold: Optional[dict] = None
     l2: Optional[dict] = None
+    l2old: Optional[dict] = None
     bioem: Optional[dict] = None
+    bioemold: Optional[dict] = None
     fsc: Optional[dict] = None
 
     def __post_init__(self):
@@ -142,8 +145,11 @@ class DistributionToDistributionResultsValidator:
     id: str
     fsc: Optional[dict] = None
     bioem: Optional[dict] = None
+    bioemold: Optional[dict] = None
     l2: Optional[dict] = None
+    l2old: Optional[dict] = None
     corr: Optional[dict] = None
+    corrold: Optional[dict] = None
 
     def __post_init__(self):
         validate_input_config_disttodist(self.config)

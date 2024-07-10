@@ -15,6 +15,11 @@ data:
 analysis:
   metrics:
     - l2
+    - l2old
+    - corr
+    - corrold
+    - bioem
+    - bioemold
   chunk_size_submission: 80
   chunk_size_gt: 190
   normalize:
