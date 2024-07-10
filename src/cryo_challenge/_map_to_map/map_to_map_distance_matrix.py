@@ -67,8 +67,18 @@ class FSCDistance(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
-    def get_distance(self, map1, map2):
-        return compute_cost_fsc_chunk(map1, map2, self.config["data"]["n_pix"])
+    def get_distance_matrix(self, maps1, maps2): # custom method
+        maps_gt_flat = maps1
+        maps_user_flat = maps2
+        n_pix = self.config["data"]["n_pix"]
+        maps_gt_flat_cube = torch.zeros(len(maps_gt_flat), n_pix**3)
+        mask = (
+            mrcfile.open(self.config["data"]["mask"]["volume"]).data.astype(bool).flatten()
+        )
+        maps_gt_flat_cube[:, mask] = maps_gt_flat
+        maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
+        maps_user_flat_cube[:, mask] = maps_user_flat
+        return compute_cost_fsc_chunk(maps_gt_flat_cube, maps_user_flat_cube, n_pix)
     
 def run(config):
     """
@@ -92,7 +102,7 @@ def run(config):
     )
 
     cost_funcs_d = {
-        "fsc": compute_cost_fsc_chunk,
+        "fsc": FSCDistance(config),
         "corr": Correlation(config),
         "l2": L2DistanceSum(config),
         "bioem": BioEM3dDistance(config),
@@ -104,7 +114,6 @@ def run(config):
     maps_gt_flat = torch.load(config["data"]["ground_truth"]["volumes"]).reshape(
         -1, n_pix**3
     )
-    # maps_gt_flat = torch.randn(n_trunc, n_pix**3)
 
     if config["data"]["mask"]["do"]:
         mask = (
@@ -131,13 +140,9 @@ def run(config):
             if (
                 cost_label == "fsc"
             ):  # TODO: make pydantic (include base class). type hint inputs to this (what it needs like gt volumes and populations) # noqa: E501
-                cost_func = map_to_map_distance
-                maps_gt_flat_cube = torch.zeros(len(maps_gt_flat), n_pix**3)
-                maps_gt_flat_cube[:, mask] = maps_gt_flat
-                maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
-                maps_user_flat_cube[:, mask] = maps_user_flat
-                cost_matrix, fsc_matrix = cost_func(
-                    maps_gt_flat_cube, maps_user_flat_cube, n_pix
+
+                cost_matrix, fsc_matrix = map_to_map_distance.get_distance_matrix(
+                    maps_gt_flat, maps_user_flat
                 )
                 cost_matrix = cost_matrix.numpy()
                 computed_assets["fsc_matrix"] = fsc_matrix
