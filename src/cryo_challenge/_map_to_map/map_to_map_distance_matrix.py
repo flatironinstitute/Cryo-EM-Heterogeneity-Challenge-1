@@ -107,7 +107,7 @@ def run(config):
         submission[submission_metadata_key] / submission[submission_metadata_key].sum()
     )
 
-    cost_funcs_d = {
+    map_to_map_distances = {
         "fsc": FSCDistance(config),
         "corr": Correlation(config),
         "l2": L2DistanceSum(config),
@@ -139,9 +139,9 @@ def run(config):
             maps_user_flat /= maps_user_flat.std(dim=1, keepdim=True)
 
     computed_assets = {}
-    for cost_label, map_to_map_distance in cost_funcs_d.items():
-        if cost_label in config["analysis"]["metrics"]:  # TODO: can remove
-            print("cost matrix", cost_label)
+    for distance_label, map_to_map_distance in map_to_map_distances.items():
+        if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
+            print("cost matrix", distance_label)
 
             cost_matrix = map_to_map_distance.get_distance_matrix(
                 maps_gt_flat, maps_user_flat
@@ -162,7 +162,7 @@ def run(config):
                 "computed_assets": computed_assets,
             }
 
-            results_dict[cost_label] = single_distance_results_dict
+            results_dict[distance_label] = single_distance_results_dict
 
     # Validate before saving
     _ = MapToMapResultsValidator.from_dict(results_dict)

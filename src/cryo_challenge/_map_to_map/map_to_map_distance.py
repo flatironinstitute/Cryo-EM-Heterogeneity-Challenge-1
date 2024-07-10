@@ -133,7 +133,6 @@ def compute_cost_fsc_chunk(maps_gt_flat, maps_user_flat, n_pix):
     cost_matrix = torch.empty(len(maps_gt_flat), len(maps_user_flat))
     fsc_matrix = torch.zeros(len(maps_gt_flat), len(maps_user_flat), n_pix // 2)
     for idx in range(len(maps_gt_flat)):
-        print(idx)
         corr_vector = fourier_shell_correlation(
             maps_user_flat.reshape(-1, n_pix, n_pix, n_pix),
             maps_gt_flat[idx].reshape(n_pix, n_pix, n_pix),
