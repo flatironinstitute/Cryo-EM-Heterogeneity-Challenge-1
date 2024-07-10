@@ -31,6 +31,9 @@ class MapToMapDistance:
         )(maps1)
 
         return distance_matrix
+    
+    def get_computed_assets(self, maps1, maps2):
+        return {}
 
 class L2DistanceNorm(MapToMapDistance):
     def __init__(self, config):
@@ -60,6 +63,13 @@ class BioEM3dDistance(MapToMapDistance):
     def get_distance(self, map1, map2):
         return compute_bioem3d_cost(map1, map2) 
     
+class FSCDistance(MapToMapDistance):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def get_distance(self, map1, map2):
+        return compute_cost_fsc_chunk(map1, map2, self.config["data"]["n_pix"])
+    
 def run(config):
     """
     Compare a submission to ground truth.
@@ -83,9 +93,9 @@ def run(config):
 
     cost_funcs_d = {
         "fsc": compute_cost_fsc_chunk,
-        "corr": Correlation(config).get_distance_matrix,
-        "l2": L2DistanceSum(config).get_distance_matrix,
-        "bioem": BioEM3dDistance(config).get_distance_matrix,
+        "corr": Correlation(config),
+        "l2": L2DistanceSum(config),
+        "bioem": BioEM3dDistance(config),
     }
 
     maps_user_flat = submission[submission_volume_key].reshape(
@@ -114,13 +124,14 @@ def run(config):
             maps_user_flat /= maps_user_flat.std(dim=1, keepdim=True)
 
     computed_assets = {}
-    for cost_label, cost_func in cost_funcs_d.items():
+    for cost_label, map_to_map_distance in cost_funcs_d.items():
         if cost_label in config["analysis"]["metrics"]:  # TODO: can remove
             print("cost matrix", cost_label)
 
             if (
                 cost_label == "fsc"
             ):  # TODO: make pydantic (include base class). type hint inputs to this (what it needs like gt volumes and populations) # noqa: E501
+                cost_func = map_to_map_distance
                 maps_gt_flat_cube = torch.zeros(len(maps_gt_flat), n_pix**3)
                 maps_gt_flat_cube[:, mask] = maps_gt_flat
                 maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
@@ -131,9 +142,14 @@ def run(config):
                 cost_matrix = cost_matrix.numpy()
                 computed_assets["fsc_matrix"] = fsc_matrix
             else:
-                cost_matrix = cost_func(
+
+                cost_matrix = map_to_map_distance.get_distance_matrix(
                     maps_gt_flat, maps_user_flat
                 ).numpy()
+                computed_assets = map_to_map_distance.get_computed_assets(
+                    maps_gt_flat, maps_user_flat
+                )
+                computed_assets.update(computed_assets)
 
             cost_matrix_df = pd.DataFrame(
                 cost_matrix, columns=None, index=metadata_gt.populations.tolist()
