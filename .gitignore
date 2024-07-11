@@ -1,5 +1,8 @@
-tests/data
+tests/data/dataset_2_submissions
+tests/data/Ground_truth
 tests/results
+tests/data/unprocessed_dataset_2_submissions/submission_x/*.mrc
+tests/data/unprocessed_dataset_2_submissions/submission_x/populations.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
