@@ -25,7 +25,9 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
     def __init__(self, submission_config):
         self.submission_config = submission_config
-        self.submission_paths, self.gt_path = self.extract_submission_paths()
+        self.submission_paths, self.population_files, self.gt_path = (
+            self.extract_submission_paths()
+        )
         self.subs_index = [int(idx) for idx in list(self.submission_config.keys())[1:]]
         path_to_gt_ref = os.path.join(
             self.gt_path, self.submission_config["gt"]["ref_align_fname"]
@@ -65,6 +67,8 @@ class SubmissionPreprocessingDataLoader(Dataset):
                     raise ValueError(f"Pixel size not found for submission {key}")
                 if "align" not in value.keys():
                     raise ValueError(f"Align not found for submission {key}")
+                if "populations_file" not in value.keys():
+                    raise ValueError(f"Population file not found for submission {key}")
 
                 if not os.path.exists(value["path"]):
                     raise ValueError(f"Path {value['path']} does not exist")
@@ -135,13 +139,16 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
     def extract_submission_paths(self):
         submission_paths = []
+        population_files = []
         for key, value in self.submission_config.items():
             if key == "gt":
                 gt_path = value["path"]
 
             else:
                 submission_paths.append(value["path"])
-        return submission_paths, gt_path
+                population_files.append(value["populations_file"])
+
+        return submission_paths, population_files, gt_path
 
     def __len__(self):
         return len(self.submission_paths)
@@ -154,10 +161,7 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
         assert len(vol_paths) > 0, "No volumes found in submission directory"
 
-        populations = np.loadtxt(
-            os.path.join(self.submission_paths[idx], "populations.txt")
-        )
-        populations = torch.from_numpy(populations)
+        populations = torch.from_numpy(np.loadtxt(self.population_files[idx]))
 
         vol0 = mrcfile.open(vol_paths[0], mode="r")
         volumes = torch.zeros(
