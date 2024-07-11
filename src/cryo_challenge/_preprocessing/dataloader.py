@@ -25,6 +25,8 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
     def __init__(self, submission_config):
         self.submission_config = submission_config
+        self.validate_submission_config()
+
         self.submission_paths, self.population_files, self.gt_path = (
             self.extract_submission_paths()
         )
@@ -55,12 +57,16 @@ class SubmissionPreprocessingDataLoader(Dataset):
                     raise ValueError("Box size not found for ground truth")
                 if "pixel_size" not in value.keys():
                     raise ValueError("Pixel size not found for ground truth")
+                if "ref_align_fname" not in value.keys():
+                    raise ValueError(
+                        "Reference align file name not found for ground truth"
+                    )
                 continue
             else:
                 if "path" not in value.keys():
                     raise ValueError(f"Path not found for submission {key}")
-                if "id" not in value.keys():
-                    raise ValueError(f"ID not found for submission {key}")
+                if "name" not in value.keys():
+                    raise ValueError(f"Name not found for submission {key}")
                 if "box_size" not in value.keys():
                     raise ValueError(f"Box size not found for submission {key}")
                 if "pixel_size" not in value.keys():
@@ -76,11 +82,10 @@ class SubmissionPreprocessingDataLoader(Dataset):
                 if not os.path.isdir(value["path"]):
                     raise ValueError(f"Path {value['path']} is not a directory")
 
-        ids = list(self.submission_config.keys())[1:]
-        if ids != list(range(len(ids))):
-            raise ValueError(
-                "Submission IDs should be integers starting from 0 and increasing by 1"
-            )
+                if not os.path.exists(value["populations_file"]):
+                    raise ValueError(
+                        f"Population file {value['populations_file']} does not exist"
+                    )
 
         return
 
