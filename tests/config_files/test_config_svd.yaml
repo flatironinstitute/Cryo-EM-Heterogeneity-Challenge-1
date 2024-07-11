@@ -5,7 +5,7 @@ experiment_mode: "all_vs_ref" # options are "all_vs_all", "all_vs_ref"
 # optional unless experiment_mode is "all_vs_ref"
 
 power_spectrum_normalization:
-  ref_vol_key: "Mango" # which submission should be used
+  ref_vol_key: "Coffee" # which submission should be used
   ref_vol_index: 0 # which volume of that submission should be used
 
 path_to_reference: tests/data/Ground_truth/test_maps_gt_flat_10.pt

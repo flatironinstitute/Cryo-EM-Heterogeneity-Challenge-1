@@ -11,7 +11,7 @@ data:
     metadata: tests/data/Ground_truth/test_metadata_10.csv
   mask:
     do: true
-    volume: data/Ground_truth/mask_dilated_wide_224x224.mrc
+    volume: tests/data/Ground_truth/mask_dilated_wide_224x224.mrc
 analysis:
   metrics:
     - l2
