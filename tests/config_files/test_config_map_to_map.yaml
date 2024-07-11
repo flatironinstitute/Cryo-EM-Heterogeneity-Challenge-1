@@ -1,0 +1,23 @@
+data:
+  n_pix: 224
+  psize: 2.146
+  submission:
+    fname: tests/data/dataset_2_submissions/test_submission_0_n8.pt
+    volume_key: volumes
+    metadata_key: populations
+    label_key: id
+  ground_truth:
+    volumes: tests/data/Ground_truth/test_maps_gt_flat_10.pt
+    metadata: tests/data/Ground_truth/test_metadata_10.csv
+  mask:
+    do: true
+    volume: data/Ground_truth/mask_dilated_wide_224x224.mrc
+analysis:
+  metrics:
+    - l2
+  chunk_size_submission: 80
+  chunk_size_gt: 190
+  normalize:
+    do: true
+    method: median_zscore
+output: tests/results/test_map_to_map_distance_matrix_submission_0.pkl

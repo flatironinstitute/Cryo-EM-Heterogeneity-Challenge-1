@@ -1,0 +1,16 @@
+{
+    "gt": {
+        "name": "gt",
+        "path": "tests/data/unprocessed_dataset_2_submissions/submission_x",
+        "box_size": 224,
+        "pixel_size": 2.146,
+        "ref_align_fname": "1.mrc"
+    },
+    "0": {
+        "name": "raw_submission_in_testdata",
+        "align": 1,
+        "box_size": 244,
+        "pixel_size": 2.146,
+        "path": "tests/data/unprocessed_dataset_2_submissions/submission_x"
+    }
+}

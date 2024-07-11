@@ -145,14 +145,16 @@ def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
 
     # Reshape volumes to correct size
     if volumes.dim() == 2:
-        box_size = int(round((float(volumes.shape[-1]) ** (1. / 3.))))
+        box_size = int(round((float(volumes.shape[-1]) ** (1.0 / 3.0))))
         volumes = torch.reshape(volumes, (-1, box_size, box_size, box_size))
     elif volumes.dim() == 4:
         pass
     else:
-        raise ValueError(f"The shape of the volumes stored in {path_to_volumes} have the unexpected shape "
-                         f"{torch.shape}. Please, review the file and regenerate it so that volumes stored hasve the "
-                         f"shape (num_vols, box_size ** 3) or (num_vols, box_size, box_size, box_size).")
+        raise ValueError(
+            f"The shape of the volumes stored in {path_to_volumes} have the unexpected shape "
+            f"{torch.shape}. Please, review the file and regenerate it so that volumes stored hasve the "
+            f"shape (num_vols, box_size ** 3) or (num_vols, box_size, box_size, box_size)."
+        )
 
     volumes_ds = torch.empty(
         (volumes.shape[0], box_size_ds, box_size_ds, box_size_ds), dtype=dtype
