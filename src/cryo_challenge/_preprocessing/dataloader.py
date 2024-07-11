@@ -25,6 +25,7 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
     def __init__(self, submission_config):
         self.submission_config = submission_config
+        print(self.submission_config)
         self.validate_submission_config()
 
         self.submission_paths, self.population_files, self.gt_path = (

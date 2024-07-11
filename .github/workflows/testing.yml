@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -47,16 +47,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install .
           pip install pytest omegaconf
-          
+
       - name: Get test data from OSF
         if: ${{ steps.cache_test_data.outputs.cache-hit != 'true' }}
         run: |
           sh tests/scripts/fetch_test_data.sh
-          
+
       - name: Test with pytest
         run: |
-          pytest tests/test_preprocessing.py
+          pytest tests/test_preprocessing.py -rP
           pytest tests/test_svd.py
           pytest tests/test_map_to_map.py
           pytest tests/test_distribution_to_distribution.py
-          
