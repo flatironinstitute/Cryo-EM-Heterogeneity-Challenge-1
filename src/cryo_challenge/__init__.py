@@ -1,0 +1,1 @@
+from cryo_challenge.__about__ import __version__
