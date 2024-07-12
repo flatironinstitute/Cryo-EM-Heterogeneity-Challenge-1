@@ -6,8 +6,8 @@ import argparse
 import os
 import yaml
 
-from .._map_to_map.map_to_map_distance_matrix import run
-from ..data._validation.config_validators import validate_input_config_mtm
+from cryo_challenge._map_to_map.map_to_map_distance_matrix import run
+from cryo_challenge.data._validation.config_validators import validate_input_config_mtm
 
 
 def add_args(parser):
@@ -46,5 +46,5 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    args = parser.parse_args()
+    # args = parser.parse_args()
     main(add_args(parser).parse_args())

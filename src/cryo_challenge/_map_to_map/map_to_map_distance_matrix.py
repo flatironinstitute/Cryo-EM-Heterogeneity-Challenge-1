@@ -2,14 +2,15 @@ import mrcfile
 import pandas as pd
 import pickle
 import torch
+import numpy as np
 
-from .map_to_map_distance import (
+from cryo_challenge._map_to_map.map_to_map_distance import (
     compute_bioem3d_cost,
     compute_cost_corr,
     compute_cost_fsc_chunk,
     compute_cost_l2,
 )
-from ..data._validation.output_validators import MapToMapResultsValidator
+from cryo_challenge.data._validation.output_validators import MapToMapResultsValidator
 
 
 class MapToMapDistance:
@@ -30,7 +31,7 @@ class MapToMapDistance:
             chunk_size=chunk_size_gt,
         )(maps1)
 
-        return distance_matrix
+        return distance_matrix.numpy()
     
     def get_computed_assets(self, maps1, maps2):
         return {}
@@ -81,10 +82,36 @@ class FSCDistance(MapToMapDistance):
         
         cost_matrix, fsc_matrix =  compute_cost_fsc_chunk(maps_gt_flat_cube, maps_user_flat_cube, n_pix)
         self.stored_computed_assets = {'fsc_matrix': fsc_matrix}
-        return cost_matrix
+        return cost_matrix.numpy()
     
     def get_computed_assets(self, maps1, maps2):
         return self.stored_computed_assets # must run get_distance_matrix first
+
+class ResDistance(MapToMapDistance):
+    def __init__(self, config):
+        super().__init__(config)
+
+    def get_distance_matrix(self, maps1, maps2): # custom method
+        # get fsc matrix
+        fourier_pixel_max = 120
+        psize = 2.146
+        fname = 'tests/results/test_map_to_map_distance_matrix_submission_0.pkl' #self.config['external']
+
+        with open(fname, 'rb') as f:
+            data = pickle.load(f)
+
+        # fsc_matrix = fscs_sorted = torch.zeros(len(maps1), len(maps2), fourier_pixel_max)
+        fsc_matrix = data['fsc']['computed_assets']['fsc_matrix']
+        units_Angstroms = 2 * psize / (np.arange(1,fourier_pixel_max+1) / fourier_pixel_max)
+        def res_at_fsc_threshold(fscs, threshold=0.5):
+            res_fsc_half = np.argmin(fscs > threshold, axis=-1)
+            fraction_nyquist = 0.5*res_fsc_half / fscs.shape[-1]
+            return res_fsc_half, fraction_nyquist
+        res_fsc_half, fraction_nyquist = res_at_fsc_threshold(fsc_matrix)
+        self.stored_computed_assets = {'fraction_nyquist': fraction_nyquist}
+        return units_Angstroms[res_fsc_half]
+        
+
     
 def run(config):
     """
@@ -112,6 +139,7 @@ def run(config):
         "corr": Correlation(config),
         "l2": L2DistanceSum(config),
         "bioem": BioEM3dDistance(config),
+        "res": ResDistance(config),
     }
 
     maps_user_flat = submission[submission_volume_key].reshape(
@@ -145,7 +173,7 @@ def run(config):
 
             cost_matrix = map_to_map_distance.get_distance_matrix(
                 maps_gt_flat, maps_user_flat
-            ).numpy()
+            )
             computed_assets = map_to_map_distance.get_computed_assets(
                 maps_gt_flat, maps_user_flat
             )

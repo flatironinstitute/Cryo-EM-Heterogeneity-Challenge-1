@@ -29,6 +29,7 @@ class MapToMapResultsValidator:
     l2: Optional[dict] = None
     bioem: Optional[dict] = None
     fsc: Optional[dict] = None
+    res: Optional[dict] = None
 
     def __post_init__(self):
         validate_input_config_mtm(self.config)
@@ -142,6 +143,7 @@ class DistributionToDistributionResultsValidator:
     id: str
     fsc: Optional[dict] = None
     bioem: Optional[dict] = None
+    res: Optional[dict] = None
     l2: Optional[dict] = None
     corr: Optional[dict] = None
 

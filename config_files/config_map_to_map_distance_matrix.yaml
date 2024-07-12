@@ -18,9 +18,12 @@ analysis:
     - corr
     - bioem
     - fsc
+    - res
   chunk_size_submission: 80
   chunk_size_gt: 190
   normalize:
     do: true
     method: median_zscore
 output: results/map_to_map_distance_matrix_submission_0.pkl
+# external:
+#   res: results/map_to_map_distance_matrix_submission_0.pkl
