@@ -2,6 +2,7 @@ import torch
 from typing import Tuple
 
 from ..._preprocessing.fourier_utils import downsample_volume
+from ...data._dataloaders.gt_dataloader import GT_Dataset
 
 
 def load_volumes(
@@ -84,7 +85,7 @@ def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
     box_size_ds: int
         Size of the downsampled box.
     path_to_volumes: str
-        Path to the file containing the reference volumes. Must be in PyTorch format.
+        Path to the file containing the reference volumes. Must be in Numpy format.
     dtype: torch.dtype
         Data type of the volumes.
 
@@ -100,26 +101,36 @@ def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
     >>> volumes_ds = load_ref_vols(box_size_ds, path_to_volumes)
     """  # noqa: E501
     try:
-        volumes = torch.load(path_to_volumes)
+        volumes = GT_Dataset(path_to_volumes)
     except (FileNotFoundError, EOFError):
         raise ValueError("Volumes not found or not in PyTorch format.")
 
     # Reshape volumes to correct size
     if volumes.dim() == 2:
-        box_size = int(round((float(volumes.shape[-1]) ** (1. / 3.))))
-        volumes = torch.reshape(volumes, (-1, box_size, box_size, box_size))
+        box_size = int(round((float(volumes.shape[-1]) ** (1.0 / 3.0))))
+        reshape = True
+
     elif volumes.dim() == 4:
         pass
     else:
-        raise ValueError(f"The shape of the volumes stored in {path_to_volumes} have the unexpected shape "
-                         f"{torch.shape}. Please, review the file and regenerate it so that volumes stored hasve the "
-                         f"shape (num_vols, box_size ** 3) or (num_vols, box_size, box_size, box_size).")
+        raise ValueError(
+            f"The shape of the volumes stored in {path_to_volumes} have the unexpected shape "
+            f"Please, review the file and regenerate it so that volumes stored have "
+            f"shape (num_vols, box_size ** 3) or (num_vols, box_size, box_size, box_size)."
+        )
 
     volumes_ds = torch.empty(
         (volumes.shape[0], box_size_ds, box_size_ds, box_size_ds), dtype=dtype
     )
     for i, vol in enumerate(volumes):
-        volumes_ds[i] = downsample_volume(vol, box_size_ds)
+        if reshape:
+            volumes_ds[i] = downsample_volume(
+                vol.reshape(box_size, box_size, box_size), box_size_ds
+            )
+
+        else:
+            volumes_ds[i] = downsample_volume(vol, box_size_ds)
+
         volumes_ds[i] = volumes_ds[i] / volumes_ds[i].sum()
 
     mean_volume = volumes_ds.mean(dim=0)

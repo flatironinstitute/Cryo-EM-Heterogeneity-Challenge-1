@@ -1,7 +1,7 @@
 from numbers import Number
 import pandas as pd
 import os
-from typing import List
+
 
 def validate_generic_config(config: dict, reference: dict) -> None:
     """
@@ -291,8 +291,8 @@ def validate_config_svd(config: dict) -> None:
             assert isinstance(config["path_to_reference"], str)
             os.path.exists(config["path_to_reference"])
             assert (
-                "pt" in config["path_to_reference"]
-            ), "Reference path point to a .pt file"
+                "npy" in config["path_to_reference"]
+            ), "Reference path point to a .npy file"
 
     os.path.exists(config["path_to_volumes"])
     for submission in config["submission_list"]:

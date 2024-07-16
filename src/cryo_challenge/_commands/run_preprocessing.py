@@ -5,7 +5,7 @@ import json
 
 from ..data._validation.config_validators import validate_config_preprocessing
 from .._preprocessing.preprocessing_pipeline import preprocess_submissions
-from .._preprocessing.dataloader import SubmissionPreprocessingDataLoader
+from ..data._dataloaders.preproc_dataloader import SubmissionPreprocessingDataLoader
 
 
 def add_args(parser):

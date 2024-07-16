@@ -151,6 +151,7 @@ class SubmissionPreprocessingDataLoader(Dataset):
             glob.glob(os.path.join(self.submission_paths[idx], "*.mrc"))
         )
         vol_paths = [vol_path for vol_path in vol_paths if "mask" not in vol_path]
+        vol_paths = vol_paths[:3]
 
         assert len(vol_paths) > 0, "No volumes found in submission directory"
 
