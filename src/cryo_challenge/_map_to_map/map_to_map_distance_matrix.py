@@ -93,8 +93,8 @@ class ResDistance(MapToMapDistance):
 
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results): # custom method
         # get fsc matrix
-        fourier_pixel_max = self.config['data']['npix'] // 2 # TODO: check for odd psizes if this should be +1
-        psize = self.config['data']['npix']
+        fourier_pixel_max = self.config['data']['n_pix'] // 2 # TODO: check for odd psizes if this should be +1
+        psize = self.config['data']['psize']
         fsc_matrix = global_store_of_running_results['fsc']['computed_assets']['fsc_matrix']
         units_Angstroms = 2 * psize / (np.arange(1,fourier_pixel_max+1) / fourier_pixel_max)
         def res_at_fsc_threshold(fscs, threshold=0.5):
