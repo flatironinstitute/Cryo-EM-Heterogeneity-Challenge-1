@@ -2,16 +2,16 @@ data:
   n_pix: 224
   psize: 2.146 
   submission:
-    fname: data/submission_0.pt
+    fname: data/dataset_2_ground_truth/submission_0.pt
     volume_key: volumes
     metadata_key: populations
     label_key: id
   ground_truth:
-    volumes: data/maps_gt_flat.pt 
-    metadata: data/metadata.csv 
+    volumes: data/dataset_2_ground_truth/maps_gt_flat.pt 
+    metadata: data/dataset_2_ground_truth/metadata.csv 
   mask: 
     do: true
-    volume: data/mask_dilated_wide_224x224.mrc
+    volume: data/dataset_2_ground_truth/mask_dilated_wide_224x224.mrc
 analysis:
   metrics:
     - l2

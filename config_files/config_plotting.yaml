@@ -1,4 +1,4 @@
-gt_metadata: path/to/metadata.csv
+gt_metadata: data/dataset_2_ground_truth/metadata.csv
 
 map2map_results:
   - path/to/map2map_results_1.pkl
