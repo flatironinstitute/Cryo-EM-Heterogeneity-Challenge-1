@@ -179,8 +179,7 @@ def run_all_vs_ref_pipeline(config: dict):
     dtype = torch.float32 if config["dtype"] == "float32" else torch.float64
 
     ref_volumes, mean_volume = load_ref_vols(
-        box_size_ds=config["box_size_ds"],
-        path_to_volumes=config["path_to_reference"],
+        config,
         dtype=dtype,
     )
 

@@ -76,16 +76,14 @@ def load_volumes(
     return volumes, mean_volumes, metadata
 
 
-def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
+def load_ref_vols(config: dict, dtype=torch.float32):
     """
     Load the reference volumes, downsample them, normalize them, and remove the mean volume.
 
     Parameters
     ----------
-    box_size_ds: int
-        Size of the downsampled box.
-    path_to_volumes: str
-        Path to the file containing the reference volumes. Must be in Numpy format.
+    config: dict,
+        Dictionary containing the configuration parameters.
     dtype: torch.dtype
         Data type of the volumes.
 
@@ -100,10 +98,27 @@ def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
     >>> path_to_volumes = "/path/to/volumes.pt"
     >>> volumes_ds = load_ref_vols(box_size_ds, path_to_volumes)
     """  # noqa: E501
-    try:
-        volumes = GT_Dataset(path_to_volumes)
-    except (FileNotFoundError, EOFError):
-        raise ValueError("Volumes not found or not in PyTorch format.")
+
+    path_to_volumes = config["reference_options"]["path_to_reference"]
+    box_size_ds = config["box_size_ds"]
+
+    volumes = GT_Dataset(path_to_volumes)
+
+    if config["reference_options"]["n_volumes"] is None:
+        n_vols = volumes.shape[0]
+        vol_skip = 1
+        random_subset = False
+
+    else:
+        n_vols = config["reference_options"]["n_volumes"]
+        vol_skip = volumes.shape[0] // n_vols
+        random_subset = config["reference_options"]["random_subset"]
+
+    if random_subset:
+        indices = torch.randperm(volumes.shape[0])[:n_vols]
+
+    else:
+        indices = torch.arange(0, n_vols) * vol_skip
 
     # Reshape volumes to correct size
     if volumes.dim() == 2:
@@ -120,9 +135,10 @@ def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
         )
 
     volumes_ds = torch.empty(
-        (volumes.shape[0], box_size_ds, box_size_ds, box_size_ds), dtype=dtype
+        (n_vols, box_size_ds, box_size_ds, box_size_ds), dtype=dtype
     )
-    for i, vol in enumerate(volumes):
+    for i, idx in enumerate(indices):
+        vol = volumes[idx]
         if reshape:
             volumes_ds[i] = downsample_volume(
                 vol.reshape(box_size, box_size, box_size), box_size_ds

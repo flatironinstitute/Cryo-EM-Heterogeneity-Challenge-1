@@ -3,7 +3,9 @@ box_size_ds: 32
 submission_list: [0]
 experiment_mode: "all_vs_ref" # options are "all_vs_all", "all_vs_ref"
 # optional unless experiment_mode is "all_vs_ref"
-path_to_reference: tests/data/Ground_truth/test_maps_gt_flat_10.npy
+reference_options:
+  path_to_reference: tests/data/Ground_truth/test_maps_gt_flat_10.npy
+
 dtype: "float32" # options are "float32", "float64"
 output_options:
   # path will be created if it does not exist

@@ -282,17 +282,27 @@ def validate_config_svd(config: dict) -> None:
     validate_config_svd_output(config["output_options"])
 
     if config["experiment_mode"] == "all_vs_ref":
-        if "path_to_reference" not in config.keys():
+        if "reference_options" not in config.keys():
             raise ValueError(
-                "Reference path is required for experiment mode 'all_vs_ref'"
+                "Reference options are required for experiment mode 'all_vs_ref'"
             )
 
-        else:
-            assert isinstance(config["path_to_reference"], str)
-            os.path.exists(config["path_to_reference"])
-            assert (
-                "npy" in config["path_to_reference"]
-            ), "Reference path point to a .npy file"
+        keys_and_types_ref = {
+            "path_to_reference": str,
+        }
+        validate_generic_config(config["reference_options"], keys_and_types_ref)
+
+        assert isinstance(config["reference_options"]["path_to_reference"], str)
+        os.path.exists(config["reference_options"]["path_to_reference"])
+        assert (
+            "npy" in config["reference_options"]["path_to_reference"]
+        ), "Reference path point to a .npy file"
+
+        if "n_volumes" not in config["reference_options"].keys():
+            config["reference_options"]["n_volumes"] = None
+
+        if "random_subset" not in config["reference_options"].keys():
+            config["reference_options"]["random_subset"] = False
 
     os.path.exists(config["path_to_volumes"])
     for submission in config["submission_list"]:
