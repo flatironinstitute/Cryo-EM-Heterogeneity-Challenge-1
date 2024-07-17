@@ -5,7 +5,7 @@ experiment_mode: "all_vs_ref" # options are "all_vs_all", "all_vs_ref"
 
 # optional unless experiment_mode is "all_vs_ref"
 reference_options:
-  path_to_reference: /path/to/reference
+  path_to_reference: /path/to/reference/gt_maps.npy
   n_volumes: 338 # optional, default is all volumes
   random_subset: False # if False, the subset is chosen as volumes[::skip_vols, ...] to satisfy n_volumes
 
