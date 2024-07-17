@@ -124,7 +124,10 @@ def preprocess_submissions(submission_dataset, config):
         print(f"   submission saved as submission_{idx}.pt")
         print(f"Preprocessing submission {idx} complete")
 
-    with open("hash_table.json", "w") as f:
+    hash_table_path = os.path.join(
+        config["output_path"], "submission_to_icecream_table.json"
+    )
+    with open(hash_table_path, "w") as f:
         json.dump(hash_table, f, indent=4)
 
     return
