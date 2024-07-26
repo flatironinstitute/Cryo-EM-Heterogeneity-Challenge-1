@@ -8,6 +8,8 @@
     },
     "0": {
         "name": "raw_submission_in_testdata",
+        "submission_version": "0",
+        "flip": 0,
         "align": 1,
         "box_size": 244,
         "pixel_size": 2.146,
