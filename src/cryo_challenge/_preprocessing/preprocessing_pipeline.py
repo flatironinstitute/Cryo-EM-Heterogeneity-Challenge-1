@@ -107,6 +107,11 @@ def preprocess_submissions(submission_dataset, config):
         print("    Centering submission")
         volumes = center_submission(volumes, pixel_size=pixel_size_gt)
 
+        # flip handedness
+        if submission_dataset.submission_config[str(idx)]["flip"] == 1:
+            print("    Flipping handedness of submission")
+            volumes = volumes.flip(-1)
+
         # align to GT
         if submission_dataset.submission_config[str(idx)]["align"] == 1:
             print("    Aligning submission to ground truth")
@@ -114,10 +119,21 @@ def preprocess_submissions(submission_dataset, config):
 
         # save preprocessed volumes
         print("    Saving preprocessed submission")
+        submission_version = submission_dataset.submission_config[str(idx)][
+            "submission_version"
+        ]
+        if submission_version == "0":
+            submission_version = ""
+        else:
+            submission_version = f" {submission_version}"
+        print(f" SUBMISSIION VERSION {submission_version}")
+        submission_id = ice_cream_flavors[random_mapping[idx]] + submission_version
+        print(f"SUBMISSION ID {submission_id}")
+
         save_submission(
             volumes,
             submission_dataset[i]["populations"],
-            ice_cream_flavors[random_mapping[idx]],
+            submission_id,
             idx,
             config,
         )

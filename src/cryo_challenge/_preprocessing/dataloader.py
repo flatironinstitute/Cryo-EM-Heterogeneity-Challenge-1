@@ -65,7 +65,14 @@ class SubmissionPreprocessingDataLoader(Dataset):
                     raise ValueError(f"Pixel size not found for submission {key}")
                 if "align" not in value.keys():
                     raise ValueError(f"Align not found for submission {key}")
-
+                if "populations_file" not in value.keys():
+                    raise ValueError(f"Population file not found for submission {key}")
+                if "flip" not in value.keys():
+                    raise ValueError(f"Flip not found for submission {key}")
+                if "submission_version" not in value.keys():
+                    raise ValueError(
+                        f"Submission version not found for submission {key}"
+                    )
                 if not os.path.exists(value["path"]):
                     raise ValueError(f"Path {value['path']} does not exist")
 
@@ -151,8 +158,8 @@ class SubmissionPreprocessingDataLoader(Dataset):
             glob.glob(os.path.join(self.submission_paths[idx], "*.mrc"))
         )
         vol_paths = [vol_path for vol_path in vol_paths if "mask" not in vol_path]
-
         assert len(vol_paths) > 0, "No volumes found in submission directory"
+        vol_paths = vol_paths[:3]
 
         populations = np.loadtxt(
             os.path.join(self.submission_paths[idx], "populations.txt")
