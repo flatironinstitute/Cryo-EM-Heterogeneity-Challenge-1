@@ -159,7 +159,6 @@ class SubmissionPreprocessingDataLoader(Dataset):
         )
         vol_paths = [vol_path for vol_path in vol_paths if "mask" not in vol_path]
         assert len(vol_paths) > 0, "No volumes found in submission directory"
-        vol_paths = vol_paths[:3]
 
         populations = np.loadtxt(
             os.path.join(self.submission_paths[idx], "populations.txt")
