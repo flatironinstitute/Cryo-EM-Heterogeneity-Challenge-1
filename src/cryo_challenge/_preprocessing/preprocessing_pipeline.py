@@ -107,6 +107,11 @@ def preprocess_submissions(submission_dataset, config):
         print("    Centering submission")
         volumes = center_submission(volumes, pixel_size=pixel_size_gt)
 
+        # flip handedness
+        if submission_dataset.submission_config[str(idx)]["flip"] == 1:
+            print("    Flipping handedness of submission")
+            volumes = volumes.flip(-1)
+
         # align to GT
         if submission_dataset.submission_config[str(idx)]["align"] == 1:
             print("    Aligning submission to ground truth")
