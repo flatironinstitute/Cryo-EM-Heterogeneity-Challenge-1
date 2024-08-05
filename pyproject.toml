@@ -38,21 +38,21 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  torch,
-  numpy,
-  natsort,
-  pandas,
-  dataclasses_json,
-  mrcfile,
-  scipy,
-  cvxpy,
-  POT,
-  aspire,
-  jupyter,
-  osfclient,
-  seaborn,
-  ipyfilechooser,
-  omegaconf
+  "torch",
+  "numpy",
+  "natsort",
+  "pandas",
+  "dataclasses_json",
+  "mrcfile",
+  "scipy",
+  "cvxpy",
+  "POT",
+  "aspire",
+  "jupyter",
+  "osfclient",
+  "seaborn",
+  "ipyfilechooser",
+  "omegaconf"
 ]
 
 [project.optional-dependencies]
