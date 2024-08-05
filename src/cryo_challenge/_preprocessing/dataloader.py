@@ -25,7 +25,11 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
     def __init__(self, submission_config):
         self.submission_config = submission_config
-        self.submission_paths, self.gt_path = self.extract_submission_paths()
+        self.validate_submission_config()
+
+        self.submission_paths, self.population_files, self.gt_path = (
+            self.extract_submission_paths()
+        )
         self.subs_index = [int(idx) for idx in list(self.submission_config.keys())[1:]]
         path_to_gt_ref = os.path.join(
             self.gt_path, self.submission_config["gt"]["ref_align_fname"]
@@ -53,18 +57,24 @@ class SubmissionPreprocessingDataLoader(Dataset):
                     raise ValueError("Box size not found for ground truth")
                 if "pixel_size" not in value.keys():
                     raise ValueError("Pixel size not found for ground truth")
+                if "ref_align_fname" not in value.keys():
+                    raise ValueError(
+                        "Reference align file name not found for ground truth"
+                    )
                 continue
             else:
                 if "path" not in value.keys():
                     raise ValueError(f"Path not found for submission {key}")
-                if "id" not in value.keys():
-                    raise ValueError(f"ID not found for submission {key}")
+                if "name" not in value.keys():
+                    raise ValueError(f"Name not found for submission {key}")
                 if "box_size" not in value.keys():
                     raise ValueError(f"Box size not found for submission {key}")
                 if "pixel_size" not in value.keys():
                     raise ValueError(f"Pixel size not found for submission {key}")
                 if "align" not in value.keys():
                     raise ValueError(f"Align not found for submission {key}")
+                if "populations_file" not in value.keys():
+                    raise ValueError(f"Population file not found for submission {key}")
                 if "flip" not in value.keys():
                     raise ValueError(f"Flip not found for submission {key}")
 
@@ -74,11 +84,10 @@ class SubmissionPreprocessingDataLoader(Dataset):
                 if not os.path.isdir(value["path"]):
                     raise ValueError(f"Path {value['path']} is not a directory")
 
-        ids = list(self.submission_config.keys())[1:]
-        if ids != list(range(len(ids))):
-            raise ValueError(
-                "Submission IDs should be integers starting from 0 and increasing by 1"
-            )
+                if not os.path.exists(value["populations_file"]):
+                    raise ValueError(
+                        f"Population file {value['populations_file']} does not exist"
+                    )
 
         return
 
@@ -137,13 +146,16 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
     def extract_submission_paths(self):
         submission_paths = []
+        population_files = []
         for key, value in self.submission_config.items():
             if key == "gt":
                 gt_path = value["path"]
 
             else:
                 submission_paths.append(value["path"])
-        return submission_paths, gt_path
+                population_files.append(value["populations_file"])
+
+        return submission_paths, population_files, gt_path
 
     def __len__(self):
         return len(self.submission_paths)
@@ -156,10 +168,7 @@ class SubmissionPreprocessingDataLoader(Dataset):
 
         assert len(vol_paths) > 0, "No volumes found in submission directory"
 
-        populations = np.loadtxt(
-            os.path.join(self.submission_paths[idx], "populations.txt")
-        )
-        populations = torch.from_numpy(populations)
+        populations = torch.from_numpy(np.loadtxt(self.population_files[idx]))
 
         vol0 = mrcfile.open(vol_paths[0], mode="r")
         volumes = torch.zeros(
