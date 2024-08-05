@@ -1,0 +1,4 @@
+*.ipynb linguist-vendored
+tests/data/*.pt
+tests/data/*.mrc
+tests/data/*.npy
