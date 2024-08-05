@@ -50,9 +50,9 @@ dependencies = [
   aspire,
   jupyter,
   osfclient,
-  seaborn",
-  ipyfilechooser",
-  omegaconf"
+  seaborn,
+  ipyfilechooser,
+  omegaconf
 ]
 
 [project.optional-dependencies]
