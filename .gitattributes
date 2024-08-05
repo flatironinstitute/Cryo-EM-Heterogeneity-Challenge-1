@@ -1,4 +1,4 @@
 *.ipynb linguist-vendored
-tests/data/*.pt
-tests/data/*.mrc
-tests/data/*.npy
+tests/data/*.mrc filter=lfs diff=lfs merge=lfs -text
+tests/data/*.pt filter=lfs diff=lfs merge=lfs -text
+tests/data/*.npy filter=lfs diff=lfs merge=lfs -text
