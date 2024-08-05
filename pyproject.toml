@@ -52,6 +52,7 @@ dependencies = [
   "osfclient<=0.0.5",
   "seaborn<=0.13.2",
   "ipyfilechooser<=0.6.0",
+  "omegaconf<=2.3.0"
 ]
 
 [project.optional-dependencies]
@@ -60,7 +61,6 @@ dev = [
   "mypy",
   "pre-commit",
   "ruff",
-  "omegaconf<=2.3.0"
 ]
 
 [project.urls]
