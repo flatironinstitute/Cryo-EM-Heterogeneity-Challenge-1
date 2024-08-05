@@ -45,4 +45,3 @@ jobs:
           pytest tests/test_svd.py
           pytest tests/test_map_to_map.py
           pytest tests/test_distribution_to_distribution.py
-          
