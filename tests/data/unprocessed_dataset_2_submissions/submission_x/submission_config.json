@@ -8,11 +8,22 @@
     },
     "0": {
         "name": "raw_submission_in_testdata",
-        "submission_version": "0",
-        "flip": 0,
+        "submission_version": 0,
+        "flip": 1,
         "align": 1,
         "box_size": 244,
         "pixel_size": 2.146,
-        "path": "tests/data/unprocessed_dataset_2_submissions/submission_x"
+        "path": "tests/data/unprocessed_dataset_2_submissions/submission_x",
+        "populations_file": "tests/data/unprocessed_dataset_2_submissions/submission_x/populations.txt"
+    },
+    "1": {
+        "name": "raw_submission_in_testdata",
+        "submission_version": "1",
+        "flip": 0,
+        "align": 0,
+        "box_size": 244,
+        "pixel_size": 2.146,
+        "path": "tests/data/unprocessed_dataset_2_submissions/submission_x",
+        "populations_file": "tests/data/unprocessed_dataset_2_submissions/submission_x/populations.txt"
     }
 }

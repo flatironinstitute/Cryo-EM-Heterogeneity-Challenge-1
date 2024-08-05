@@ -1,7 +1,7 @@
 from numbers import Number
 import pandas as pd
 import os
-from typing import List
+
 
 def validate_generic_config(config: dict, reference: dict) -> None:
     """

@@ -2,8 +2,6 @@ import pandas as pd
 import numpy as np
 import pickle
 from scipy.stats import rankdata
-import yaml
-import argparse
 import torch
 import ot
 
@@ -14,10 +12,12 @@ from ..data._validation.output_validators import (
 
 
 def sort_by_transport(cost):
-    m,n = cost.shape
-    _, transport = compute_wasserstein_between_distributions_from_weights_and_cost(np.ones(m) / m, np.ones(n)/n, cost)
-    indices = np.argsort((transport * np.arange(m)[...,None]).sum(0))
-    return cost[:,indices], indices, transport
+    m, n = cost.shape
+    _, transport = compute_wasserstein_between_distributions_from_weights_and_cost(
+        np.ones(m) / m, np.ones(n) / n, cost
+    )
+    indices = np.argsort((transport * np.arange(m)[..., None]).sum(0))
+    return cost[:, indices], indices, transport
 
 
 def compute_wasserstein_between_distributions_from_weights_and_cost(
@@ -65,7 +65,6 @@ def make_assignment_matrix(cost_matrix):
 
 
 def run(config):
-
     metadata_df = pd.read_csv(config["gt_metadata_fname"])
     metadata_df.sort_values("pc1", inplace=True)
 
@@ -73,7 +72,7 @@ def run(config):
         data = pickle.load(f)
 
     # user_submitted_populations = np.ones(80)/80
-    user_submitted_populations = data["user_submitted_populations"]#.numpy()
+    user_submitted_populations = data["user_submitted_populations"]  # .numpy()
     id = torch.load(data["config"]["data"]["submission"]["fname"])["id"]
 
     results_dict = {}
@@ -213,5 +212,5 @@ def run(config):
     DistributionToDistributionResultsValidator.from_dict(results_dict)
     with open(config["output_fname"], "wb") as f:
         pickle.dump(results_dict, f)
-    
+
     return results_dict

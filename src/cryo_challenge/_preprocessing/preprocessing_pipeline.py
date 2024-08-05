@@ -122,7 +122,7 @@ def preprocess_submissions(submission_dataset, config):
         submission_version = submission_dataset.submission_config[str(idx)][
             "submission_version"
         ]
-        if submission_version == "0":
+        if str(submission_version) == "0":
             submission_version = ""
         else:
             submission_version = f" {submission_version}"
