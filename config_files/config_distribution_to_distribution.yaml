@@ -4,7 +4,7 @@ metrics:
   - corr
   - bioem
   - fsc
-gt_metadata_fname: data/metadata.csv
+gt_metadata_fname: data/dataset_2_ground_truth/metadata.csv
 n_replicates: 30
 n_pool_microstate: 5
 replicate_fraction: 0.9

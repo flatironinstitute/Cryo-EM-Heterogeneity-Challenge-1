@@ -1,8 +1,11 @@
-tests/data/dataset_2_submissions
-tests/data/Ground_truth
-tests/results
-tests/data/unprocessed_dataset_2_submissions/submission_x/*.mrc
-tests/data/unprocessed_dataset_2_submissions/submission_x/populations.txt
+# downloaded data
+data/dataset_2_submissions
+data/dataset_1_submissions
+data/dataset_2_ground_truth
+
+# data for testing and resulting outputs
+tests/results/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -164,9 +167,3 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-
-# Tutorials folder
-tutorials/*
-
-# Config file templates
-config_files/*

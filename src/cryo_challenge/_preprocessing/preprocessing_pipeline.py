@@ -107,6 +107,11 @@ def preprocess_submissions(submission_dataset, config):
         print("    Centering submission")
         volumes = center_submission(volumes, pixel_size=pixel_size_gt)
 
+        # flip handedness
+        if submission_dataset.submission_config[str(idx)]["flip"] == 1:
+            print("    Flipping handedness of submission")
+            volumes = volumes.flip(-1)
+
         # align to GT
         if submission_dataset.submission_config[str(idx)]["align"] == 1:
             print("    Aligning submission to ground truth")
@@ -124,7 +129,10 @@ def preprocess_submissions(submission_dataset, config):
         print(f"   submission saved as submission_{idx}.pt")
         print(f"Preprocessing submission {idx} complete")
 
-    with open("hash_table.json", "w") as f:
+    hash_table_path = os.path.join(
+        config["output_path"], "submission_to_icecream_table.json"
+    )
+    with open(hash_table_path, "w") as f:
         json.dump(hash_table, f, indent=4)
 
     return

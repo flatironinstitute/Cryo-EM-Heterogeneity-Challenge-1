@@ -75,6 +75,8 @@ class SubmissionPreprocessingDataLoader(Dataset):
                     raise ValueError(f"Align not found for submission {key}")
                 if "populations_file" not in value.keys():
                     raise ValueError(f"Population file not found for submission {key}")
+                if "flip" not in value.keys():
+                    raise ValueError(f"Flip not found for submission {key}")
 
                 if not os.path.exists(value["path"]):
                     raise ValueError(f"Path {value['path']} does not exist")
