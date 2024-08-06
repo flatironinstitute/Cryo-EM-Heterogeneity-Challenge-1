@@ -77,7 +77,10 @@ class SubmissionPreprocessingDataLoader(Dataset):
                     raise ValueError(f"Population file not found for submission {key}")
                 if "flip" not in value.keys():
                     raise ValueError(f"Flip not found for submission {key}")
-
+                if "submission_version" not in value.keys():
+                    raise ValueError(
+                        f"Submission version not found for submission {key}"
+                    )
                 if not os.path.exists(value["path"]):
                     raise ValueError(f"Path {value['path']} does not exist")
 
@@ -165,7 +168,6 @@ class SubmissionPreprocessingDataLoader(Dataset):
             glob.glob(os.path.join(self.submission_paths[idx], "*.mrc"))
         )
         vol_paths = [vol_path for vol_path in vol_paths if "mask" not in vol_path]
-
         assert len(vol_paths) > 0, "No volumes found in submission directory"
 
         populations = torch.from_numpy(np.loadtxt(self.population_files[idx]))

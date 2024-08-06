@@ -119,10 +119,21 @@ def preprocess_submissions(submission_dataset, config):
 
         # save preprocessed volumes
         print("    Saving preprocessed submission")
+        submission_version = submission_dataset.submission_config[str(idx)][
+            "submission_version"
+        ]
+        if str(submission_version) == "0":
+            submission_version = ""
+        else:
+            submission_version = f" {submission_version}"
+        print(f" SUBMISSIION VERSION {submission_version}")
+        submission_id = ice_cream_flavors[random_mapping[idx]] + submission_version
+        print(f"SUBMISSION ID {submission_id}")
+
         save_submission(
             volumes,
             submission_dataset[i]["populations"],
-            ice_cream_flavors[random_mapping[idx]],
+            submission_id,
             idx,
             config,
         )
