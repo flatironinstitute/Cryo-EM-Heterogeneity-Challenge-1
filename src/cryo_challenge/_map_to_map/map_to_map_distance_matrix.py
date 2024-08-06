@@ -42,7 +42,7 @@ def run(config):
     user_submission_label = submission[label_key]
 
     # n_trunc = 10
-    metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])  # [:n_trunc]
+    metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])#[:n_trunc]
 
     results_dict = {}
     results_dict["config"] = config

@@ -41,9 +41,6 @@ pip install .
 ```
 
 ## Developer installation
-
-First of all, make sure to have git lfs installed, otherwise you will have no access to the testing data. For installing, please follow these [guidelines](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage).
-
 If you are interested in testing the programs previously installed, please, install the repository in development mode with the following commands:
 
 ```bash
@@ -55,6 +52,7 @@ The test included in the repo can be executed with PyTest as shown below:
 
 ```bash
 cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
+sh tests/scripts/fetch_test_data.sh # download test data from OSF
 pytest tests/test_preprocessing.py
 pytest tests/test_svd.py
 pytest tests/test_map_to_map.py
