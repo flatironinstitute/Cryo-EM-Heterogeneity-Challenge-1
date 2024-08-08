@@ -65,7 +65,7 @@ def preprocess_submissions(submission_dataset, config):
     ]
 
     n_subs = max(submission_dataset.subs_index) + 1
-    random_mapping = np.random.choice(len(ice_cream_flavors), n_subs, replace=False)
+    random_mapping = np.random.choice(len(ice_cream_flavors), len(ice_cream_flavors), replace=False)
     hash_table = {}
 
     box_size_gt = submission_dataset.submission_config["gt"]["box_size"]
@@ -76,8 +76,9 @@ def preprocess_submissions(submission_dataset, config):
         idx = submission_dataset.subs_index[i]
 
         hash_table[submission_dataset.submission_config[str(idx)]["name"]] = (
-            ice_cream_flavors[random_mapping[idx]]
+            ice_cream_flavors[submission_dataset.submission_config[str(idx)]["flavor_key"]]
         )
+        print(submission_dataset.submission_config[str(idx)]["flavor_key"])
 
         print(f"Preprocessing submission {idx}...")
 
@@ -126,8 +127,8 @@ def preprocess_submissions(submission_dataset, config):
             submission_version = ""
         else:
             submission_version = f" {submission_version}"
-        print(f" SUBMISSIION VERSION {submission_version}")
-        submission_id = ice_cream_flavors[random_mapping[idx]] + submission_version
+        print(f" SUBMISSION VERSION {submission_version}")
+        submission_id = ice_cream_flavors[random_mapping[submission_dataset.submission_config[str(idx)]["flavor_key"]]] + submission_version
         print(f"SUBMISSION ID {submission_id}")
 
         save_submission(
