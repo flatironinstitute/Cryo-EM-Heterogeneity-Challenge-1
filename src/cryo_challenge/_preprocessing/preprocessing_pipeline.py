@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 import json
 import os
 
@@ -40,10 +39,7 @@ def save_submission(volumes, populations, submission_id, submission_index, confi
 
 
 def preprocess_submissions(submission_dataset, config):
-
-    n_subs = max(submission_dataset.subs_index) + 1
     hash_table = {}
-
     box_size_gt = submission_dataset.submission_config["gt"]["box_size"]
     pixel_size_gt = submission_dataset.submission_config["gt"]["pixel_size"]
     vol_gt_ref = submission_dataset.vol_gt_ref
@@ -51,9 +47,12 @@ def preprocess_submissions(submission_dataset, config):
     for i in range(len(submission_dataset)):
         idx = submission_dataset.subs_index[i]
 
-        hash_table[submission_dataset.submission_config[str(idx)]["name"]] = (
-            submission_dataset.submission_config[str(idx)]["flavor_name"]
-        )
+        sub_flavor = submission_dataset.submission_config[str(idx)]["flavor_name"]
+        sub_name = submission_dataset.submission_config[str(idx)]["name"]
+        hash_table[sub_flavor] = {
+            "name": sub_name,
+            "filename": f"submission_{idx}.pt",
+        }
 
         print(f"Preprocessing submission {idx}...")
 
@@ -103,7 +102,10 @@ def preprocess_submissions(submission_dataset, config):
         else:
             submission_version = f" {submission_version}"
         print(f" SUBMISSION VERSION {submission_version}")
-        submission_id = submission_dataset.submission_config[str(idx)]["flavor_name"] + submission_version
+        submission_id = (
+            submission_dataset.submission_config[str(idx)]["flavor_name"]
+            + submission_version
+        )
         print(f"SUBMISSION ID {submission_id}")
 
         save_submission(
