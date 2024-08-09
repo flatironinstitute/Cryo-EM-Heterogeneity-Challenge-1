@@ -103,7 +103,7 @@ def preprocess_submissions(submission_dataset, config):
         else:
             submission_version = f" {submission_version}"
         print(f" SUBMISSION VERSION {submission_version}")
-        submission_id = submission_dataset.submission_config[str(idx)]["flavor_name"] + " "  + submission_version
+        submission_id = submission_dataset.submission_config[str(idx)]["flavor_name"] + submission_version
         print(f"SUBMISSION ID {submission_id}")
 
         save_submission(
