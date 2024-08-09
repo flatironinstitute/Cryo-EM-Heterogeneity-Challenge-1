@@ -1,5 +1,4 @@
 submission_config_file: submission_config.json
-seed_flavor_assignment: 0
 thresh_percentile: 93.0
 BOT_box_size: 32
 BOT_loss: wemd
