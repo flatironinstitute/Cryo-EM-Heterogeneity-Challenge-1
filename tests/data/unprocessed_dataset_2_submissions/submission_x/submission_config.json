@@ -2,16 +2,16 @@
     "gt": {
         "name": "gt",
         "path": "tests/data/unprocessed_dataset_2_submissions/submission_x",
-        "box_size": 224,
-        "pixel_size": 2.146,
+        "box_size": 16,
+        "pixel_size": 30.044,
         "ref_align_fname": "1.mrc"
     },
     "0": {
         "name": "raw_submission_in_testdata",
         "align": 1,
-        "flavor_name": "test flavor", 
-        "box_size": 244,
-        "pixel_size": 2.146,
+        "flavor_name": "test flavor",
+        "box_size": 32,
+        "pixel_size": 15.022,
         "path": "tests/data/unprocessed_dataset_2_submissions/submission_x",
         "flip": 1,
         "populations_file": "tests/data/unprocessed_dataset_2_submissions/submission_x/populations.txt",
