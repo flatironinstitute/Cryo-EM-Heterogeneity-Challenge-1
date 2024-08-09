@@ -52,7 +52,7 @@ def preprocess_submissions(submission_dataset, config):
         idx = submission_dataset.subs_index[i]
 
         hash_table[submission_dataset.submission_config[str(idx)]["name"]] = (
-            submission_dataset.submission_config[str(idx)]["flavor_name"]
+            submission_dataset.submission_config[str(idx)]["flavor_name"]  + " " + str(submission_dataset.submission_config[str(idx)]["submission_version"])
         )
 
         print(f"Preprocessing submission {idx}...")
