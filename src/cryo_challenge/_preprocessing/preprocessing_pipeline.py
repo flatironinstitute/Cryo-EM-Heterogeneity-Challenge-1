@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 import json
 import os
 
@@ -40,34 +39,7 @@ def save_submission(volumes, populations, submission_id, submission_index, confi
 
 
 def preprocess_submissions(submission_dataset, config):
-    np.random.seed(config["seed_flavor_assignment"])
-    ice_cream_flavors = [
-        "Chocolate",
-        "Vanilla",
-        "Cookies N' Cream",
-        "Mint Chocolate Chip",
-        "Strawberry",
-        "Butter Pecan",
-        "Salted Caramel",
-        "Pistachio",
-        "Rocky Road",
-        "Coffee",
-        "Cookie Dough",
-        "Chocolate Chip",
-        "Neapolitan",
-        "Cherry",
-        "Rainbow Sherbet",
-        "Peanut Butter",
-        "Cotton Candy",
-        "Lemon Sorbet",
-        "Mango",
-        "Black Raspberry",
-    ]
-
-    n_subs = max(submission_dataset.subs_index) + 1
-    random_mapping = np.random.choice(len(ice_cream_flavors), n_subs, replace=False)
     hash_table = {}
-
     box_size_gt = submission_dataset.submission_config["gt"]["box_size"]
     pixel_size_gt = submission_dataset.submission_config["gt"]["pixel_size"]
     vol_gt_ref = submission_dataset.vol_gt_ref
@@ -75,9 +47,12 @@ def preprocess_submissions(submission_dataset, config):
     for i in range(len(submission_dataset)):
         idx = submission_dataset.subs_index[i]
 
-        hash_table[submission_dataset.submission_config[str(idx)]["name"]] = (
-            ice_cream_flavors[random_mapping[idx]]
-        )
+        sub_flavor = submission_dataset.submission_config[str(idx)]["flavor_name"]
+        sub_name = submission_dataset.submission_config[str(idx)]["name"]
+        hash_table[sub_flavor] = {
+            "name": sub_name,
+            "filename": f"submission_{idx}.pt",
+        }
 
         print(f"Preprocessing submission {idx}...")
 
@@ -126,8 +101,11 @@ def preprocess_submissions(submission_dataset, config):
             submission_version = ""
         else:
             submission_version = f" {submission_version}"
-        print(f" SUBMISSIION VERSION {submission_version}")
-        submission_id = ice_cream_flavors[random_mapping[idx]] + submission_version
+        print(f" SUBMISSION VERSION {submission_version}")
+        submission_id = (
+            submission_dataset.submission_config[str(idx)]["flavor_name"]
+            + submission_version
+        )
         print(f"SUBMISSION ID {submission_id}")
 
         save_submission(
