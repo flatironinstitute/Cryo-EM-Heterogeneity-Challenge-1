@@ -30,9 +30,7 @@ def get_vols_svd(
     assert volumes.ndim == 4, "Input volumes must have shape (n_volumes, n_x, n_y, n_z)"
     assert volumes.shape[0] > 0, "Input volumes must have at least one volume"
 
-    U, S, V = torch.linalg.svd(
-        volumes.reshape(volumes.shape[0], -1), full_matrices=False
-    )
+    U, S, V = torch.svd_lowrank(volumes.reshape(volumes.shape[0], -1), q=40)
     return U, S, V
 
 

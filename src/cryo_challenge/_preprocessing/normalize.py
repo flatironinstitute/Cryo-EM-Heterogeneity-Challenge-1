@@ -1,22 +1,102 @@
-'''
-TODO: Need to implement this properly
+"""
+Power spectrum normalization and required utility functions
+"""
 
-def normalize_mean_std(vols_flat):
-    """
-    vols_flat.shape is (n_vols, n_pix**3)
-    vols_flat is a torch tensor
-    """
-    return (vols_flat - vols_flat.mean(-1, keepdims=True)) / vols_flat.std(
-        -1, keepdims=True
-    )
+import torch
 
 
-def normalize_median_std(vols_flat):
+def _cart2sph(x, y, z):
     """
-    vols_flat.shape is (n_vols, n_pix**3)
-    vols_flat is a torch tensor
+    Converts a grid in cartesian coordinates to spherical coordinates.
+
+    Parameters
+    ----------
+    x: torch.tensor
+        x-coordinate of the grid.
+    y: torch.tensor
+        y-coordinate of the grid.
+    z: torch.tensor
     """
-    return (vols_flat - vols_flat.median(-1, keepdims=True).values) / vols_flat.std(
-        -1, keepdims=True
-    )
-'''
+    hxy = torch.hypot(x, y)
+    r = torch.hypot(hxy, z)
+    el = torch.atan2(z, hxy)
+    az = torch.atan2(y, x)
+    return az, el, r
+
+
+def _grid_3d(n, dtype=torch.float32):
+    start = -n // 2 + 1
+    end = n // 2
+
+    if n % 2 == 0:
+        start -= 1 / 2
+        end -= 1 / 2
+
+    grid = torch.linspace(start, end, n, dtype=dtype)
+    z, x, y = torch.meshgrid(grid, grid, grid, indexing="ij")
+
+    phi, theta, r = _cart2sph(x, y, z)
+
+    theta = torch.pi / 2 - theta
+
+    return {"x": x, "y": y, "z": z, "phi": phi, "theta": theta, "r": r}
+
+
+def _centered_fftn(x, dim=None):
+    x = torch.fft.fftn(x, dim=dim)
+    x = torch.fft.fftshift(x, dim=dim)
+    return x
+
+
+def _centered_ifftn(x, dim=None):
+    x = torch.fft.fftshift(x, dim=dim)
+    x = torch.fft.ifftn(x, dim=dim)
+    return x
+
+
+def _compute_power_spectrum_shell(index, volume, radii, shell_width=0.5):
+    inner_diameter = shell_width + index
+    outer_diameter = shell_width + (index + 1)
+    mask = (radii > inner_diameter) & (radii < outer_diameter)
+    return torch.norm(mask * volume) ** 2
+
+
+def compute_power_spectrum(volume, shell_width=0.5):
+    L = volume.shape[0]
+    dtype = torch.float32
+    radii = _grid_3d(L, dtype=dtype)["r"]
+
+    # Compute centered Fourier transforms.
+    vol_fft = _centered_fftn(volume)
+
+    power_spectrum = torch.vmap(
+        _compute_power_spectrum_shell, in_dims=(0, None, None, None)
+    )(torch.arange(0, L // 2), vol_fft, radii, shell_width)
+    return power_spectrum
+
+
+def normalize_power_spectrum(volumes, power_spectrum_ref, shell_width=0.5):
+    L = volumes.shape[-1]
+    dtype = torch.float32
+    radii = _grid_3d(L, dtype=dtype)["r"]
+
+    # Compute centered Fourier transforms.
+    vols_fft = _centered_fftn(volumes, dim=(1, 2, 3))
+
+    inner_diameter = shell_width
+    for i in range(0, L // 2):
+        # Compute ring mask
+        outer_diameter = shell_width + (i + 1)
+        ring_mask = (radii > inner_diameter) & (radii < outer_diameter)
+
+        power_spectrum_sqrt = torch.norm(vols_fft[:, ring_mask], dim=1)
+        vols_fft[:, ring_mask] = (
+            vols_fft[:, ring_mask]
+            / (power_spectrum_sqrt[:, None] + 1e-12)
+            * torch.sqrt(power_spectrum_ref[i])
+        )
+
+        # # Update ring
+        inner_diameter = outer_diameter
+
+    return _centered_ifftn(vols_fft, dim=(1, 2, 3)).real

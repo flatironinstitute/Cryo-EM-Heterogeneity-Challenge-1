@@ -2,11 +2,16 @@ import torch
 from typing import Tuple
 import yaml
 import argparse
-import os
 
 from .svd_utils import get_vols_svd, project_vols_to_svd
-from ..data._io.svd_io_utils import load_volumes, load_ref_vols
+from ..data._io.svd_io_utils import (
+    load_volumes,
+    load_ref_vols,
+    remove_mean_volumes,
+    normalize_power_spectrum_sub,
+)
 from ..data._validation.config_validators import validate_config_svd
+from .._preprocessing.normalize import compute_power_spectrum, normalize_power_spectrum
 
 
 def run_svd_with_ref(
@@ -115,12 +120,21 @@ def run_all_vs_all_pipeline(config: dict):
     """  # noqa: E501
 
     dtype = torch.float32 if config["dtype"] == "float32" else torch.float64
-    volumes, mean_volumes, metadata = load_volumes(
+    volumes, metadata = load_volumes(
         box_size_ds=config["box_size_ds"],
         submission_list=config["submission_list"],
         path_to_submissions=config["path_to_volumes"],
         dtype=dtype,
     )
+
+    volumes = normalize_power_spectrum_sub(
+        volumes,
+        metadata,
+        config["power_spectrum_normalization"]["ref_vol_key"],
+        config["power_spectrum_normalization"]["ref_vol_index"],
+    )
+
+    volumes, mean_volumes = remove_mean_volumes(volumes, metadata)
 
     U, S, V, coeffs = run_svd_all_vs_all(volumes=volumes)
 
@@ -128,6 +142,7 @@ def run_all_vs_all_pipeline(config: dict):
         "coeffs": coeffs,
         "metadata": metadata,
         "config": config,
+        "sing_vals": S,
     }
 
     if config["output_options"]["save_volumes"]:
@@ -136,13 +151,10 @@ def run_all_vs_all_pipeline(config: dict):
 
     if config["output_options"]["save_svd_matrices"]:
         output_dict["U"] = U
-        output_dict["S"] = S
         output_dict["V"] = V
+        output_dict["S"] = S
 
-    output_file = os.path.join(
-        config["output_options"]["output_path"], "svd_results.pt"
-    )
-    torch.save(output_dict, output_file)
+    torch.save(output_dict, config["output_options"]["output_file"])
 
     return output_dict
 
@@ -178,18 +190,37 @@ def run_all_vs_ref_pipeline(config: dict):
 
     dtype = torch.float32 if config["dtype"] == "float32" else torch.float64
 
-    ref_volumes, mean_volume = load_ref_vols(
+    ref_volumes = load_ref_vols(
         box_size_ds=config["box_size_ds"],
         path_to_volumes=config["path_to_reference"],
         dtype=dtype,
     )
 
-    volumes, mean_volumes, metadata = load_volumes(
+    volumes, metadata = load_volumes(
         box_size_ds=config["box_size_ds"],
         submission_list=config["submission_list"],
         path_to_submissions=config["path_to_volumes"],
         dtype=dtype,
     )
+
+    # Normalize Power spectrums
+    idx_ref_vol = (
+        metadata[config["power_spectrum_normalization"]["ref_vol_key"]]["indices"][0]
+        + config["power_spectrum_normalization"]["ref_vol_index"]
+    )
+    ref_power_spectrum = compute_power_spectrum(volumes[idx_ref_vol])
+    ref_volumes = normalize_power_spectrum(ref_volumes, ref_power_spectrum)
+
+    volumes = normalize_power_spectrum_sub(
+        volumes,
+        metadata,
+        config["power_spectrum_normalization"]["ref_vol_key"],
+        config["power_spectrum_normalization"]["ref_vol_index"],
+    )
+
+    # Remove mean volumes
+    volumes, mean_volumes = remove_mean_volumes(volumes, metadata)
+    ref_volumes, mean_volume = remove_mean_volumes(ref_volumes)
 
     U, S, V, coeffs, coeffs_ref = run_svd_with_ref(
         volumes=volumes, ref_volumes=ref_volumes
@@ -200,6 +231,7 @@ def run_all_vs_ref_pipeline(config: dict):
         "coeffs_ref": coeffs_ref,
         "metadata": metadata,
         "config": config,
+        "sing_vals": S,
     }
 
     if config["output_options"]["save_volumes"]:
@@ -213,10 +245,7 @@ def run_all_vs_ref_pipeline(config: dict):
         output_dict["S"] = S
         output_dict["V"] = V
 
-    output_file = os.path.join(
-        config["output_options"]["output_path"], "svd_results.pt"
-    )
-    torch.save(output_dict, output_file)
+    torch.save(output_dict, config["output_options"]["output_file"])
 
     return output_dict
 

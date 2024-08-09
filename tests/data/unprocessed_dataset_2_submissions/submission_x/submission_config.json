@@ -11,6 +11,7 @@
         "align": 1,
         "box_size": 244,
         "pixel_size": 2.146,
-        "path": "tests/data/unprocessed_dataset_2_submissions/submission_x"
+        "path": "tests/data/unprocessed_dataset_2_submissions/submission_x",
+        "populations_file": "tests/data/unprocessed_dataset_2_submissions/submission_x/populations.txt"
     }
 }
