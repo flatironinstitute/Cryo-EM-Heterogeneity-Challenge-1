@@ -32,13 +32,6 @@ jobs:
           pip install .
           pip install pytest omegaconf
 
-      - name: Get test data from OSF
-        run: |
-          sh tests/scripts/fetch_test_data.sh
-
       - name: Test with pytest
         run: |
-          pytest tests/test_preprocessing.py
-          pytest tests/test_svd.py
-          pytest tests/test_map_to_map.py
-          pytest tests/test_distribution_to_distribution.py
+          pytest tests

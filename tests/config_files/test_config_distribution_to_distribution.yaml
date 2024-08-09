@@ -1,4 +1,4 @@
-input_fname: tests/results/test_map_to_map_distance_matrix_submission_0.pkl
+input_fname: tests/data/data_for_dist_to_dist/test_map_to_map_distance_matrix_submission_0.pkl
 metrics:
   - l2
 gt_metadata_fname: tests/data/Ground_truth/test_metadata_10.csv
