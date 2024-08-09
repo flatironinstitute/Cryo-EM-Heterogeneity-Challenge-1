@@ -9,7 +9,7 @@
     "0": {
         "name": "raw_submission_in_testdata",
         "align": 1,
-        "flavor_key": 1, 
+        "flavor_name": "test flavor", 
         "box_size": 244,
         "pixel_size": 2.146,
         "path": "tests/data/unprocessed_dataset_2_submissions/submission_x",
