@@ -3,6 +3,7 @@ import torch
 from typing import Optional, Sequence
 from typing_extensions import override
 import mrcfile
+import numpy as np
 
 
 class MapToMapDistance:
@@ -13,7 +14,7 @@ class MapToMapDistance:
         """Compute the distance between two maps."""
         raise NotImplementedError()
 
-    def get_distance_matrix(self, maps1, maps2):
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         """Compute the distance matrix between two sets of maps."""
         chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
         chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
@@ -27,7 +28,7 @@ class MapToMapDistance:
 
         return distance_matrix
 
-    def get_computed_assets(self, maps1, maps2):
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
         """Return any computed assets that are needed for (downstream) analysis."""
         return {}
 
@@ -214,7 +215,9 @@ class FSCDistance(MapToMapDistance):
         return cost_matrix, fsc_matrix
 
     @override
-    def get_distance_matrix(self, maps1, maps2):  # custom method
+    def get_distance_matrix(
+        self, maps1, maps2, global_store_of_running_results
+    ):  # custom method
         maps_gt_flat = maps1
         maps_user_flat = maps2
         n_pix = self.config["data"]["n_pix"]
@@ -235,5 +238,35 @@ class FSCDistance(MapToMapDistance):
         return cost_matrix
 
     @override
-    def get_computed_assets(self, maps1, maps2):
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
         return self.stored_computed_assets  # must run get_distance_matrix first
+
+
+class ResDistance(MapToMapDistance):
+    def __init__(self, config):
+        super().__init__(config)
+
+    @override
+    def get_distance_matrix(
+        self, maps1, maps2, global_store_of_running_results
+    ):  # custom method
+        # get fsc matrix
+        fourier_pixel_max = (
+            self.config["data"]["n_pix"] // 2
+        )  # TODO: check for odd psizes if this should be +1
+        psize = self.config["data"]["psize"]
+        fsc_matrix = global_store_of_running_results["fsc"]["computed_assets"][
+            "fsc_matrix"
+        ]
+        units_Angstroms = (
+            2 * psize / (np.arange(1, fourier_pixel_max + 1) / fourier_pixel_max)
+        )
+
+        def res_at_fsc_threshold(fscs, threshold=0.5):
+            res_fsc_half = np.argmin(fscs > threshold, axis=-1)
+            fraction_nyquist = 0.5 * res_fsc_half / fscs.shape[-1]
+            return res_fsc_half, fraction_nyquist
+
+        res_fsc_half, fraction_nyquist = res_at_fsc_threshold(fsc_matrix)
+        self.stored_computed_assets = {"fraction_nyquist": fraction_nyquist}
+        return units_Angstroms[res_fsc_half]

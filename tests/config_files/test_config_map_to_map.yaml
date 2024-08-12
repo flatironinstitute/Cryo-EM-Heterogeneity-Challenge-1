@@ -18,6 +18,7 @@ analysis:
     - corr
     - bioem
     - fsc
+    - res
   chunk_size_submission: 80
   chunk_size_gt: 190
   normalize:
