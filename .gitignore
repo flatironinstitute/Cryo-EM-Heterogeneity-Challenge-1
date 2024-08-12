@@ -3,10 +3,7 @@ data/dataset_2_submissions
 data/dataset_1_submissions
 data/dataset_2_ground_truth
 
-# data for testing and resulting outputs
-tests/data/Ground_truth
-tests/data/dataset_2_submissions/
-tests/data/unprocessed_dataset_2_submissions/submission_x/
+# testing results
 tests/results/
 
 
