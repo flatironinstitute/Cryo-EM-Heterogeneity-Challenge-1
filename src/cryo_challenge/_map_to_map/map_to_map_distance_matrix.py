@@ -2,6 +2,8 @@ import mrcfile
 import pandas as pd
 import pickle
 import torch
+from typing import override
+
 
 from .map_to_map_distance import (
     compute_bioem3d_cost,
@@ -42,6 +44,7 @@ class L2DistanceNorm(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
+    @override
     def get_distance(self, map1, map2):
         return torch.norm(map1 - map2)**2
     
@@ -49,6 +52,7 @@ class L2DistanceSum(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
+    @override
     def get_distance(self, map1, map2):
         return compute_cost_l2(map1, map2)
     
@@ -56,6 +60,7 @@ class Correlation(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
+    @override
     def get_distance(self, map1, map2):
         return compute_cost_corr(map1, map2) 
 
@@ -63,13 +68,15 @@ class BioEM3dDistance(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
+    @override
     def get_distance(self, map1, map2):
         return compute_bioem3d_cost(map1, map2) 
     
 class FSCDistance(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
-        
+
+    @override   
     def get_distance_matrix(self, maps1, maps2): # custom method
         maps_gt_flat = maps1
         maps_user_flat = maps2
@@ -86,6 +93,7 @@ class FSCDistance(MapToMapDistance):
         self.stored_computed_assets = {'fsc_matrix': fsc_matrix}
         return cost_matrix
     
+    @override
     def get_computed_assets(self, maps1, maps2):
         return self.stored_computed_assets # must run get_distance_matrix first
     
