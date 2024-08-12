@@ -2,105 +2,27 @@ import mrcfile
 import pandas as pd
 import pickle
 import torch
-from typing import override
 
-
-from .map_to_map_distance import (
-    compute_bioem3d_cost,
-    compute_cost_corr,
-    compute_cost_fsc_chunk,
-    compute_cost_l2,
-)
 from ..data._validation.output_validators import MapToMapResultsValidator
+from .._map_to_map.map_to_map_distance import FSCDistance, Correlation, L2DistanceSum, BioEM3dDistance
 
 
-class MapToMapDistance:
-    def __init__(self, config):
-        self.config = config
+AVAILABLE_MAP2MAP_DISTANCES = {
+        "fsc": FSCDistance,
+        "corr": Correlation,
+        "l2": L2DistanceSum,
+        "bioem": BioEM3dDistance,
+    }
 
-    def get_distance(self, map1, map2):
-        """Compute the distance between two maps."""
-        raise NotImplementedError()
-
-    def get_distance_matrix(self, maps1, maps2):
-        """Compute the distance matrix between two sets of maps."""
-        chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
-        chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
-        distance_matrix = torch.vmap(
-            lambda maps1: torch.vmap(
-                lambda maps2: self.get_distance(maps1, maps2),
-                chunk_size=chunk_size_submission,
-            )(maps2),
-            chunk_size=chunk_size_gt,
-        )(maps1)
-
-        return distance_matrix
-    
-    def get_computed_assets(self, maps1, maps2):
-        """Return any computed assets that are needed for (downstream) analysis."""
-        return {}
-
-class L2DistanceNorm(MapToMapDistance):
-    def __init__(self, config):
-        super().__init__(config)
-
-    @override
-    def get_distance(self, map1, map2):
-        return torch.norm(map1 - map2)**2
-    
-class L2DistanceSum(MapToMapDistance):
-    def __init__(self, config):
-        super().__init__(config)
-
-    @override
-    def get_distance(self, map1, map2):
-        return compute_cost_l2(map1, map2)
-    
-class Correlation(MapToMapDistance):
-    def __init__(self, config):
-        super().__init__(config)
-
-    @override
-    def get_distance(self, map1, map2):
-        return compute_cost_corr(map1, map2) 
-
-class BioEM3dDistance(MapToMapDistance):
-    def __init__(self, config):
-        super().__init__(config)
-
-    @override
-    def get_distance(self, map1, map2):
-        return compute_bioem3d_cost(map1, map2) 
-    
-class FSCDistance(MapToMapDistance):
-    def __init__(self, config):
-        super().__init__(config)
-
-    @override   
-    def get_distance_matrix(self, maps1, maps2): # custom method
-        maps_gt_flat = maps1
-        maps_user_flat = maps2
-        n_pix = self.config["data"]["n_pix"]
-        maps_gt_flat_cube = torch.zeros(len(maps_gt_flat), n_pix**3)
-        mask = (
-            mrcfile.open(self.config["data"]["mask"]["volume"]).data.astype(bool).flatten()
-        )
-        maps_gt_flat_cube[:, mask] = maps_gt_flat
-        maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
-        maps_user_flat_cube[:, mask] = maps_user_flat
-        
-        cost_matrix, fsc_matrix =  compute_cost_fsc_chunk(maps_gt_flat_cube, maps_user_flat_cube, n_pix)
-        self.stored_computed_assets = {'fsc_matrix': fsc_matrix}
-        return cost_matrix
-    
-    @override
-    def get_computed_assets(self, maps1, maps2):
-        return self.stored_computed_assets # must run get_distance_matrix first
-    
 def run(config):
     """
     Compare a submission to ground truth.
     """
+
+    map_to_map_distances = {
+        distance_label: distance_class(config)
+        for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
+    }
 
     n_pix = config["data"]["n_pix"]
 
@@ -118,12 +40,6 @@ def run(config):
         submission[submission_metadata_key] / submission[submission_metadata_key].sum()
     )
 
-    map_to_map_distances = {
-        "fsc": FSCDistance(config),
-        "corr": Correlation(config),
-        "l2": L2DistanceSum(config),
-        "bioem": BioEM3dDistance(config),
-    }
 
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
