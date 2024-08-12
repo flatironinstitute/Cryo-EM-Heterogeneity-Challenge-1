@@ -1,6 +1,6 @@
 import math
 import torch
-from typing import Optional, Sequence, override
+from typing import Optional, Sequence
 import mrcfile
 
 class MapToMapDistance:
@@ -33,7 +33,6 @@ class L2DistanceNorm(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
-    @override
     def get_distance(self, map1, map2):
         return torch.norm(map1 - map2)**2
     
@@ -41,10 +40,9 @@ class L2DistanceSum(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
-    def compute_cost_l2(map_1, map_2):
+    def compute_cost_l2(self, map_1, map_2):
         return ((map_1 - map_2) ** 2).sum()
         
-    @override
     def get_distance(self, map1, map2):
         return self.compute_cost_l2(map1, map2)
     
@@ -52,10 +50,9 @@ class Correlation(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
-    def compute_cost_corr(map_1, map_2):
+    def compute_cost_corr(self, map_1, map_2):
         return (map_1 * map_2).sum()
         
-    @override
     def get_distance(self, map1, map2):
         return self.compute_cost_corr(map1, map2) 
 
@@ -63,7 +60,7 @@ class BioEM3dDistance(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
-    def compute_bioem3d_cost(map1, map2):
+    def compute_bioem3d_cost(self, map1, map2):
         """
         Compute the cost between two maps using the BioEM cost function in 3D.
 
@@ -106,7 +103,6 @@ class BioEM3dDistance(MapToMapDistance):
         cost = -log_prob
         return cost
         
-    @override
     def get_distance(self, map1, map2):
         return self.compute_bioem3d_cost(map1, map2) 
     
@@ -115,6 +111,7 @@ class FSCDistance(MapToMapDistance):
         super().__init__(config)
 
     def fourier_shell_correlation(
+        self,
         x: torch.Tensor,
         y: torch.Tensor,
         dim: Sequence[int] = (-3, -2, -1),
@@ -179,7 +176,7 @@ class FSCDistance(MapToMapDistance):
 
         return result
 
-    def compute_cost_fsc_chunk(maps_gt_flat, maps_user_flat, n_pix):
+    def compute_cost_fsc_chunk(self, maps_gt_flat, maps_user_flat, n_pix):
         """
         Compute the cost between two maps using the Fourier Shell Correlation in 3D.
 
@@ -200,7 +197,6 @@ class FSCDistance(MapToMapDistance):
             cost_matrix[idx] = dist
         return cost_matrix, fsc_matrix
 
-    @override   
     def get_distance_matrix(self, maps1, maps2): # custom method
         maps_gt_flat = maps1
         maps_user_flat = maps2
@@ -217,6 +213,5 @@ class FSCDistance(MapToMapDistance):
         self.stored_computed_assets = {'fsc_matrix': fsc_matrix}
         return cost_matrix
     
-    @override
     def get_computed_assets(self, maps1, maps2):
         return self.stored_computed_assets # must run get_distance_matrix first
