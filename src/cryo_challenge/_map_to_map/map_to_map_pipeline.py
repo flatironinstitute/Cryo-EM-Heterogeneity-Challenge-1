@@ -2,7 +2,6 @@ import mrcfile
 import pandas as pd
 import pickle
 import torch
-import numpy as np
 
 from ..data._validation.output_validators import MapToMapResultsValidator
 from .._map_to_map.map_to_map_distance import (
@@ -79,10 +78,14 @@ def run(config):
             print("cost matrix", distance_label)
 
             cost_matrix = map_to_map_distance.get_distance_matrix(
-                maps_gt_flat, maps_user_flat, global_store_of_running_results=results_dict,
+                maps_gt_flat,
+                maps_user_flat,
+                global_store_of_running_results=results_dict,
             )
             computed_assets = map_to_map_distance.get_computed_assets(
-                maps_gt_flat, maps_user_flat, global_store_of_running_results=results_dict,
+                maps_gt_flat,
+                maps_user_flat,
+                global_store_of_running_results=results_dict,
             )
             computed_assets.update(computed_assets)
 
