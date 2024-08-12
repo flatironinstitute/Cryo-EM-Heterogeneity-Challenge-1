@@ -4,15 +4,21 @@ import pickle
 import torch
 
 from ..data._validation.output_validators import MapToMapResultsValidator
-from .._map_to_map.map_to_map_distance import FSCDistance, Correlation, L2DistanceSum, BioEM3dDistance
+from .._map_to_map.map_to_map_distance import (
+    FSCDistance,
+    Correlation,
+    L2DistanceSum,
+    BioEM3dDistance,
+)
 
 
 AVAILABLE_MAP2MAP_DISTANCES = {
-        "fsc": FSCDistance,
-        "corr": Correlation,
-        "l2": L2DistanceSum,
-        "bioem": BioEM3dDistance,
-    }
+    "fsc": FSCDistance,
+    "corr": Correlation,
+    "l2": L2DistanceSum,
+    "bioem": BioEM3dDistance,
+}
+
 
 def run(config):
     """
@@ -39,7 +45,6 @@ def run(config):
     results_dict["user_submitted_populations"] = (
         submission[submission_metadata_key] / submission[submission_metadata_key].sum()
     )
-
 
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
