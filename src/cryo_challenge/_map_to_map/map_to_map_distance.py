@@ -34,6 +34,8 @@ class MapToMapDistance:
 
 
 class L2DistanceNorm(MapToMapDistance):
+    """L2 distance norm"""
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -43,6 +45,10 @@ class L2DistanceNorm(MapToMapDistance):
 
 
 class L2DistanceSum(MapToMapDistance):
+    """L2 distance.
+
+    Computed by summing the squared differences between the two maps."""
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -55,6 +61,10 @@ class L2DistanceSum(MapToMapDistance):
 
 
 class Correlation(MapToMapDistance):
+    """Correlation distance.
+
+    Not technically a distance metric, but a similarity."""
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -67,6 +77,8 @@ class Correlation(MapToMapDistance):
 
 
 class BioEM3dDistance(MapToMapDistance):
+    """BioEM 3D distance."""
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -124,6 +136,10 @@ class BioEM3dDistance(MapToMapDistance):
 
 
 class FSCDistance(MapToMapDistance):
+    """Fourier Shell Correlation distance.
+
+    One minus the correlation between two maps in Fourier space."""
+
     def __init__(self, config):
         super().__init__(config)
 
@@ -215,9 +231,10 @@ class FSCDistance(MapToMapDistance):
         return cost_matrix, fsc_matrix
 
     @override
-    def get_distance_matrix(
-        self, maps1, maps2, global_store_of_running_results
-    ):  # custom method
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        """
+        Applies a mask to the maps and computes the cost matrix using the Fourier Shell Correlation.
+        """
         maps_gt_flat = maps1
         maps_user_flat = maps2
         n_pix = self.config["data"]["n_pix"]
@@ -242,7 +259,13 @@ class FSCDistance(MapToMapDistance):
         return self.stored_computed_assets  # must run get_distance_matrix first
 
 
-class ResDistance(MapToMapDistance):
+class FSCResDistance(MapToMapDistance):
+    """FSC Resolution distance.
+
+    The resolution at which the Fourier Shell Correlation reaches 0.5.
+    Built on top of the FSCDistance class. This needs to be run first and store the FSC matrix in the computed assets.
+    """
+
     def __init__(self, config):
         super().__init__(config)
 
