@@ -17,9 +17,11 @@ class MapToMapDistance:
         self.config = config
 
     def get_distance(self, map1, map2):
+        """Compute the distance between two maps."""
         raise NotImplementedError()
 
     def get_distance_matrix(self, maps1, maps2):
+        """Compute the distance matrix between two sets of maps."""
         chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
         chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
         distance_matrix = torch.vmap(
@@ -33,6 +35,7 @@ class MapToMapDistance:
         return distance_matrix
     
     def get_computed_assets(self, maps1, maps2):
+        """Return any computed assets that are needed for (downstream) analysis."""
         return {}
 
 class L2DistanceNorm(MapToMapDistance):
