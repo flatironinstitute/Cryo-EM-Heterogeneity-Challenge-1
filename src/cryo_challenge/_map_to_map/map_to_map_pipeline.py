@@ -9,7 +9,7 @@ from .._map_to_map.map_to_map_distance import (
     Correlation,
     L2DistanceSum,
     BioEM3dDistance,
-    ResDistance,
+    FSCResDistance,
 )
 
 
@@ -18,7 +18,7 @@ AVAILABLE_MAP2MAP_DISTANCES = {
     "corr": Correlation,
     "l2": L2DistanceSum,
     "bioem": BioEM3dDistance,
-    "res": ResDistance,
+    "res": FSCResDistance,
 }
 
 
