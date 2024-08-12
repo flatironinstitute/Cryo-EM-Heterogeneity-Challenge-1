@@ -1,8 +1,9 @@
 import math
 import torch
 from typing import Optional, Sequence
-from typing_extensions import  override
+from typing_extensions import override
 import mrcfile
+
 
 class MapToMapDistance:
     def __init__(self, config):
@@ -25,10 +26,11 @@ class MapToMapDistance:
         )(maps1)
 
         return distance_matrix
-    
+
     def get_computed_assets(self, maps1, maps2):
         """Return any computed assets that are needed for (downstream) analysis."""
         return {}
+
 
 class L2DistanceNorm(MapToMapDistance):
     def __init__(self, config):
@@ -36,19 +38,21 @@ class L2DistanceNorm(MapToMapDistance):
 
     @override
     def get_distance(self, map1, map2):
-        return torch.norm(map1 - map2)**2
-    
+        return torch.norm(map1 - map2) ** 2
+
+
 class L2DistanceSum(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
     def compute_cost_l2(self, map_1, map_2):
         return ((map_1 - map_2) ** 2).sum()
-    
-    @override  
+
+    @override
     def get_distance(self, map1, map2):
         return self.compute_cost_l2(map1, map2)
-    
+
+
 class Correlation(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
@@ -56,9 +60,10 @@ class Correlation(MapToMapDistance):
     def compute_cost_corr(self, map_1, map_2):
         return (map_1 * map_2).sum()
 
-    @override    
+    @override
     def get_distance(self, map1, map2):
-        return self.compute_cost_corr(map1, map2) 
+        return self.compute_cost_corr(map1, map2)
+
 
 class BioEM3dDistance(MapToMapDistance):
     def __init__(self, config):
@@ -94,7 +99,12 @@ class BioEM3dDistance(MapToMapDistance):
         N = len(m1)
 
         t1 = 2 * torch.pi * math.exp(1)
-        t2 = N * (ccc * coo - coc * coc) + 2 * co * coc * cc - ccc * co * co - coo * cc * cc
+        t2 = (
+            N * (ccc * coo - coc * coc)
+            + 2 * co * coc * cc
+            - ccc * co * co
+            - coo * cc * cc
+        )
         t3 = (N - 2) * (N * ccc - cc * cc)
 
         smallest_float = torch.finfo(m1.dtype).tiny
@@ -107,10 +117,11 @@ class BioEM3dDistance(MapToMapDistance):
         cost = -log_prob
         return cost
 
-    @override  
+    @override
     def get_distance(self, map1, map2):
-        return self.compute_bioem3d_cost(map1, map2) 
-    
+        return self.compute_bioem3d_cost(map1, map2)
+
+
 class FSCDistance(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
@@ -203,22 +214,26 @@ class FSCDistance(MapToMapDistance):
         return cost_matrix, fsc_matrix
 
     @override
-    def get_distance_matrix(self, maps1, maps2): # custom method
+    def get_distance_matrix(self, maps1, maps2):  # custom method
         maps_gt_flat = maps1
         maps_user_flat = maps2
         n_pix = self.config["data"]["n_pix"]
         maps_gt_flat_cube = torch.zeros(len(maps_gt_flat), n_pix**3)
         mask = (
-            mrcfile.open(self.config["data"]["mask"]["volume"]).data.astype(bool).flatten()
+            mrcfile.open(self.config["data"]["mask"]["volume"])
+            .data.astype(bool)
+            .flatten()
         )
         maps_gt_flat_cube[:, mask] = maps_gt_flat
         maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
         maps_user_flat_cube[:, mask] = maps_user_flat
-        
-        cost_matrix, fsc_matrix =  self.compute_cost_fsc_chunk(maps_gt_flat_cube, maps_user_flat_cube, n_pix)
-        self.stored_computed_assets = {'fsc_matrix': fsc_matrix}
+
+        cost_matrix, fsc_matrix = self.compute_cost_fsc_chunk(
+            maps_gt_flat_cube, maps_user_flat_cube, n_pix
+        )
+        self.stored_computed_assets = {"fsc_matrix": fsc_matrix}
         return cost_matrix
 
     @override
     def get_computed_assets(self, maps1, maps2):
-        return self.stored_computed_assets # must run get_distance_matrix first
+        return self.stored_computed_assets  # must run get_distance_matrix first
