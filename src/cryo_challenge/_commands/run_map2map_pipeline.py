@@ -46,5 +46,5 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    args = parser.parse_args()
+    # args = parser.parse_args()
     main(add_args(parser).parse_args())

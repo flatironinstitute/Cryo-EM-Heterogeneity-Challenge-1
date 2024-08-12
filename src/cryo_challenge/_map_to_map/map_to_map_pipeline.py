@@ -9,6 +9,7 @@ from .._map_to_map.map_to_map_distance import (
     Correlation,
     L2DistanceSum,
     BioEM3dDistance,
+    FSCResDistance,
 )
 
 
@@ -17,6 +18,7 @@ AVAILABLE_MAP2MAP_DISTANCES = {
     "corr": Correlation,
     "l2": L2DistanceSum,
     "bioem": BioEM3dDistance,
+    "res": FSCResDistance,
 }
 
 
@@ -76,10 +78,14 @@ def run(config):
             print("cost matrix", distance_label)
 
             cost_matrix = map_to_map_distance.get_distance_matrix(
-                maps_gt_flat, maps_user_flat
-            ).numpy()
+                maps_gt_flat,
+                maps_user_flat,
+                global_store_of_running_results=results_dict,
+            )
             computed_assets = map_to_map_distance.get_computed_assets(
-                maps_gt_flat, maps_user_flat
+                maps_gt_flat,
+                maps_user_flat,
+                global_store_of_running_results=results_dict,
             )
             computed_assets.update(computed_assets)
 
