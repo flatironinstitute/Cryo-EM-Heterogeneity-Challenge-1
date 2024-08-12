@@ -1,6 +1,7 @@
 import math
 import torch
 from typing import Optional, Sequence
+from typing_extensions import  override
 import mrcfile
 
 class MapToMapDistance:
@@ -33,6 +34,7 @@ class L2DistanceNorm(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
 
+    @override
     def get_distance(self, map1, map2):
         return torch.norm(map1 - map2)**2
     
@@ -42,7 +44,8 @@ class L2DistanceSum(MapToMapDistance):
 
     def compute_cost_l2(self, map_1, map_2):
         return ((map_1 - map_2) ** 2).sum()
-        
+    
+    @override  
     def get_distance(self, map1, map2):
         return self.compute_cost_l2(map1, map2)
     
@@ -52,7 +55,8 @@ class Correlation(MapToMapDistance):
 
     def compute_cost_corr(self, map_1, map_2):
         return (map_1 * map_2).sum()
-        
+
+    @override    
     def get_distance(self, map1, map2):
         return self.compute_cost_corr(map1, map2) 
 
@@ -102,7 +106,8 @@ class BioEM3dDistance(MapToMapDistance):
         )
         cost = -log_prob
         return cost
-        
+
+    @override  
     def get_distance(self, map1, map2):
         return self.compute_bioem3d_cost(map1, map2) 
     
@@ -197,6 +202,7 @@ class FSCDistance(MapToMapDistance):
             cost_matrix[idx] = dist
         return cost_matrix, fsc_matrix
 
+    @override
     def get_distance_matrix(self, maps1, maps2): # custom method
         maps_gt_flat = maps1
         maps_user_flat = maps2
@@ -212,6 +218,7 @@ class FSCDistance(MapToMapDistance):
         cost_matrix, fsc_matrix =  self.compute_cost_fsc_chunk(maps_gt_flat_cube, maps_user_flat_cube, n_pix)
         self.stored_computed_assets = {'fsc_matrix': fsc_matrix}
         return cost_matrix
-    
+
+    @override
     def get_computed_assets(self, maps1, maps2):
         return self.stored_computed_assets # must run get_distance_matrix first
