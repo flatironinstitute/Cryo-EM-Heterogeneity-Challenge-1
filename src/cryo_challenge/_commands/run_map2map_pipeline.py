@@ -6,8 +6,8 @@ import argparse
 import os
 import yaml
 
-from cryo_challenge._map_to_map.map_to_map_distance_matrix import run
-from cryo_challenge.data._validation.config_validators import validate_input_config_mtm
+from .._map_to_map.map_to_map_pipeline import run
+from ..data._validation.config_validators import validate_input_config_mtm
 
 
 def add_args(parser):
