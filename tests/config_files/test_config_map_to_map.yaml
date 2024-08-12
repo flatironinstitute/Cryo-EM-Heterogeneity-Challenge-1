@@ -15,6 +15,9 @@ data:
 analysis:
   metrics:
     - l2
+    - corr
+    - bioem
+    - fsc
   chunk_size_submission: 80
   chunk_size_gt: 190
   normalize:
