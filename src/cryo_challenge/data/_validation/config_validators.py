@@ -48,7 +48,6 @@ def validate_config_preprocessing(config_data: dict) -> None:
         "BOT_loss": str,
         "BOT_iter": Number,
         "BOT_refine": bool,
-        "seed_flavor_assignment": int,
     }
     validate_generic_config(config_data, keys_and_types)
     return

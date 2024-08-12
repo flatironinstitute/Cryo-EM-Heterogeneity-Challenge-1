@@ -12,8 +12,28 @@ The "-e" flag will install the package in editable mode, which means you can edi
 
 ## Things to do before pushing to GitHub
 
-In this project we use Ruff for linting, and pre-commit to make sure that the code being pushed is not broken or goes against PEP8 guidelines. When you run `git commit` the pre-commit pipeline should rune automatically. In the near future we will start using pytest and mypy to perform more checks.
+### Using pre-commit hooks for code formatting and linting
 
+When you install in developer mode with `".[dev]` you will install the [pre-commit](https://pre-commit.com/) package. To set up this package simply run
+
+```bash
+pre-commit install
+```
+
+Then, everytime before doing a commit (that is before `git add` and `git commit`) run the following command:
+
+```bash
+pre-commit run --all-files
+```
+
+This will run `ruff` linting and formatting. If there is anything that cannot be automatically fixed, the command will let you know the file and line that needs to be fixed before being able to commit. Once you have fixed everything, you will be able to run `git add` and `git commit` without issue.
+
+
+### Make sure tests run
+
+```bash
+python -m pytest tests/
+```
 
 ## Best practices for contributing
 
