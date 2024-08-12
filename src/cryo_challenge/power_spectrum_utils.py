@@ -1,7 +1,3 @@
-"""
-Power spectrum normalization and required utility functions
-"""
-
 import torch
 
 
@@ -58,7 +54,7 @@ def _compute_power_spectrum_shell(index, volume, radii, shell_width=0.5):
     inner_diameter = shell_width + index
     outer_diameter = shell_width + (index + 1)
     mask = (radii > inner_diameter) & (radii < outer_diameter)
-    return torch.norm(mask * volume) ** 2
+    return torch.sum(mask * volume) / torch.sum(mask)
 
 
 def compute_power_spectrum(volume, shell_width=0.5):
@@ -67,36 +63,9 @@ def compute_power_spectrum(volume, shell_width=0.5):
     radii = _grid_3d(L, dtype=dtype)["r"]
 
     # Compute centered Fourier transforms.
-    vol_fft = _centered_fftn(volume)
+    vol_fft = torch.abs(_centered_fftn(volume)) ** 2
 
     power_spectrum = torch.vmap(
         _compute_power_spectrum_shell, in_dims=(0, None, None, None)
     )(torch.arange(0, L // 2), vol_fft, radii, shell_width)
     return power_spectrum
-
-
-def normalize_power_spectrum(volumes, power_spectrum_ref, shell_width=0.5):
-    L = volumes.shape[-1]
-    dtype = torch.float32
-    radii = _grid_3d(L, dtype=dtype)["r"]
-
-    # Compute centered Fourier transforms.
-    vols_fft = _centered_fftn(volumes, dim=(1, 2, 3))
-
-    inner_diameter = shell_width
-    for i in range(0, L // 2):
-        # Compute ring mask
-        outer_diameter = shell_width + (i + 1)
-        ring_mask = (radii > inner_diameter) & (radii < outer_diameter)
-
-        power_spectrum_sqrt = torch.norm(vols_fft[:, ring_mask], dim=1)
-        vols_fft[:, ring_mask] = (
-            vols_fft[:, ring_mask]
-            / (power_spectrum_sqrt[:, None] + 1e-12)
-            * torch.sqrt(power_spectrum_ref[i])
-        )
-
-        # # Update ring
-        inner_diameter = outer_diameter
-
-    return _centered_ifftn(vols_fft, dim=(1, 2, 3)).real
