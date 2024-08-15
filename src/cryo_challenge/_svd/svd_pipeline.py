@@ -8,10 +8,8 @@ from ..data._io.svd_io_utils import (
     load_volumes,
     load_ref_vols,
     remove_mean_volumes,
-    normalize_power_spectrum_sub,
 )
 from ..data._validation.config_validators import validate_config_svd
-from .._preprocessing.normalize import compute_power_spectrum, normalize_power_spectrum
 
 
 def run_svd_with_ref(
@@ -127,13 +125,6 @@ def run_all_vs_all_pipeline(config: dict):
         dtype=dtype,
     )
 
-    volumes = normalize_power_spectrum_sub(
-        volumes,
-        metadata,
-        config["power_spectrum_normalization"]["ref_vol_key"],
-        config["power_spectrum_normalization"]["ref_vol_index"],
-    )
-
     volumes, mean_volumes = remove_mean_volumes(volumes, metadata)
 
     U, S, V, coeffs = run_svd_all_vs_all(volumes=volumes)
@@ -201,21 +192,6 @@ def run_all_vs_ref_pipeline(config: dict):
         submission_list=config["submission_list"],
         path_to_submissions=config["path_to_volumes"],
         dtype=dtype,
-    )
-
-    # Normalize Power spectrums
-    idx_ref_vol = (
-        metadata[config["power_spectrum_normalization"]["ref_vol_key"]]["indices"][0]
-        + config["power_spectrum_normalization"]["ref_vol_index"]
-    )
-    ref_power_spectrum = compute_power_spectrum(volumes[idx_ref_vol])
-    ref_volumes = normalize_power_spectrum(ref_volumes, ref_power_spectrum)
-
-    volumes = normalize_power_spectrum_sub(
-        volumes,
-        metadata,
-        config["power_spectrum_normalization"]["ref_vol_key"],
-        config["power_spectrum_normalization"]["ref_vol_index"],
     )
 
     # Remove mean volumes

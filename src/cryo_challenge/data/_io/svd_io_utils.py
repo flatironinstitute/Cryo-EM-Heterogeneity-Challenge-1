@@ -2,7 +2,6 @@ import torch
 from typing import Tuple
 
 from ..._preprocessing.fourier_utils import downsample_volume
-from ..._preprocessing.normalize import compute_power_spectrum, normalize_power_spectrum
 
 
 def _remove_mean_volumes_sub(volumes, metadata):
@@ -31,20 +30,6 @@ def remove_mean_volumes(volumes, metadata=None):
         volumes, mean_volumes = _remove_mean_volumes_sub(volumes, metadata)
 
     return volumes, mean_volumes
-
-
-def normalize_power_spectrum_sub(volumes, metadata, ref_vol_key, ref_vol_index):
-    volumes = volumes.clone()
-    idx_ref_vol = metadata[ref_vol_key]["indices"][0] + ref_vol_index
-    ref_power_spectrum = compute_power_spectrum(volumes[idx_ref_vol])
-
-    for key in metadata.keys():
-        indices = metadata[key]["indices"]
-        volumes[indices[0] : indices[1]] = normalize_power_spectrum(
-            volumes[indices[0] : indices[1]], ref_power_spectrum
-        )
-
-    return volumes
 
 
 def load_volumes(
