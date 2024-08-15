@@ -13,7 +13,7 @@ from .config_validators import (
 @dataclass_json
 @dataclass
 class MapToMapResultsValidator:
-    '''
+    """
     Validate the output dictionary of the map-to-map distance matrix computation.
 
     config: dict, input config dictionary.
@@ -22,13 +22,15 @@ class MapToMapResultsValidator:
     l2: dict, L2 results.
     bioem: dict, BioEM results.
     fsc: dict, FSC results.
-    '''
+    """
+
     config: dict
     user_submitted_populations: torch.Tensor
     corr: Optional[dict] = None
     l2: Optional[dict] = None
     bioem: Optional[dict] = None
     fsc: Optional[dict] = None
+    res: Optional[dict] = None
 
     def __post_init__(self):
         validate_input_config_mtm(self.config)
@@ -49,7 +51,7 @@ class ReplicateValidatorEMD:
     Validate the output dictionary of one EMD in the the distribution-to-distribution pipeline.
 
     q_opt: List[float], optimal user submitted distribution, which sums to 1.
-    EMD_opt: float, EMD between the ground truth distribution (p) and the (optimized) user submitted distribution (q_opt). 
+    EMD_opt: float, EMD between the ground truth distribution (p) and the (optimized) user submitted distribution (q_opt).
         The transport plan is a joint distribution, such that:
         summing over the rows gives the (optimized) user submitted distribution, and summing over the columns gives the ground truth distribution.
     transport_plan_opt: List[List[float]], transport plan between the ground truth distribution (p, rows) and the (optimized) user submitted distribution (q_opt, columns).
@@ -61,6 +63,7 @@ class ReplicateValidatorEMD:
         The transport plan is a joint distribution, such that:
         summing over the rows gives the user submitted distribution, and summing over the columns gives the ground truth distribution.
     """
+
     q_opt: List[float]
     EMD_opt: float
     transport_plan_opt: List[List[float]]
@@ -87,8 +90,9 @@ class ReplicateValidatorKL:
     iter_stop: int, number of iterations until convergence.
     eps_stop: float, stopping criterion.
     klpq_submitted: float, KL divergence between the ground truth distribution (p) and the user submitted distribution (q).
-    klqp_submitted: float, KL divergence between the user submitted distribution (q) and the ground truth distribution (p).    
+    klqp_submitted: float, KL divergence between the user submitted distribution (q) and the ground truth distribution (p).
     """
+
     q_opt: List[float]
     klpq_opt: float
     klqp_opt: float
@@ -106,11 +110,12 @@ class ReplicateValidatorKL:
 @dataclass_json
 @dataclass
 class MetricDistToDistValidator:
-    '''
+    """
     Validate the output dictionary of one map to map metric in the the distribution-to-distribution pipeline.
 
     replicates: dict, dictionary of replicates.
-    '''
+    """
+
     replicates: dict
 
     def validate_replicates(self, n_replicates):
@@ -126,7 +131,7 @@ class MetricDistToDistValidator:
 @dataclass_json
 @dataclass
 class DistributionToDistributionResultsValidator:
-    '''
+    """
     Validate the output dictionary of the distribution-to-distribution pipeline.
 
     config: dict, input config dictionary.
@@ -136,12 +141,14 @@ class DistributionToDistributionResultsValidator:
     bioem: dict, BioEM distance results.
     l2: dict, L2 distance results.
     corr: dict, correlation distance results.
-    '''
+    """
+
     config: dict
     user_submitted_populations: torch.Tensor
     id: str
     fsc: Optional[dict] = None
     bioem: Optional[dict] = None
+    res: Optional[dict] = None
     l2: Optional[dict] = None
     corr: Optional[dict] = None
 

@@ -6,7 +6,7 @@ import argparse
 import os
 import yaml
 
-from .._map_to_map.map_to_map_distance_matrix import run
+from .._map_to_map.map_to_map_pipeline import run
 from ..data._validation.config_validators import validate_input_config_mtm
 
 
@@ -46,5 +46,5 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    args = parser.parse_args()
+    # args = parser.parse_args()
     main(add_args(parser).parse_args())
