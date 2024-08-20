@@ -135,11 +135,10 @@ def align_submission(
     volumes (torch.Tensor): aligned submission volumes
     """
     for i in range(len(volumes)):
-        print('aligning ' + str(i) + 'th volume' )
-        obj_vol = volumes[i].numpy().astype(np.float32)
+        obj_vol = volumes[i].numpy().astype(np.float32).copy()
 
         obj_vol = Volume(obj_vol / obj_vol.sum())
-        ref_vol = Volume(ref_volume / ref_volume.sum())
+        ref_vol = Volume(ref_volume.copy() / ref_volume.sum())
 
         _, R_est = align_BO(
             ref_vol,
