@@ -7,6 +7,12 @@ from cryo_challenge._preprocessing.bfactor_normalize import (
 
 
 def test_compute_power_spectrum():
+    """
+    Test the computation of the power spectrum of a radially symmetric Gaussian volume.
+    Since the volume is radially symmetric, the power spectrum of the whole volume should be
+    approximately the power spectrum in a central slice. The computation is not exact as our
+    averaging over shells is approximated.
+    """
     box_size = 224
     volume_shape = (box_size, box_size, box_size)
     voxel_size = 1.073 * 2
@@ -37,6 +43,13 @@ def test_compute_power_spectrum():
 
 
 def test_bfactor_normalize_volumes():
+    """
+    Similarly to the other test, we test the normalization of a radially symmetric volume.
+    In this case we test with an oscillatory volume, which is a volume with a sinusoidal.
+    Since both the b-factor correction volume and the volume are radially symmetric, the
+    power spectrum of the normalized volume should be the same as the power spectrum of
+    a normalized central slice
+    """
     box_size = 128
     volume_shape = (box_size, box_size, box_size)
     voxel_size = 1.5

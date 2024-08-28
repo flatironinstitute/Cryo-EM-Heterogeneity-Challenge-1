@@ -134,21 +134,22 @@ def align_submission(
     --------
     volumes (torch.Tensor): aligned submission volumes
     """
-    obj_vol = volumes[0].numpy().astype(np.float32)
+    for i in range(len(volumes)):
+        obj_vol = volumes[i].numpy().astype(np.float32).copy()
 
-    obj_vol = Volume(obj_vol / obj_vol.sum())
-    ref_vol = Volume(ref_volume / ref_volume.sum())
+        obj_vol = Volume(obj_vol / obj_vol.sum())
+        ref_vol = Volume(ref_volume.copy() / ref_volume.sum())
 
-    _, R_est = align_BO(
-        ref_vol,
-        obj_vol,
-        loss_type=params["BOT_loss"],
-        downsampled_size=params["BOT_box_size"],
-        max_iters=params["BOT_iter"],
-        refine=params["BOT_refine"],
-    )
-    R_est = Rotation(R_est.astype(np.float32))
+        _, R_est = align_BO(
+            ref_vol,
+            obj_vol,
+            loss_type=params["BOT_loss"],
+            downsampled_size=params["BOT_box_size"],
+            max_iters=params["BOT_iter"],
+            refine=params["BOT_refine"],
+        )
+        R_est = Rotation(R_est.astype(np.float32))
 
-    volumes = torch.from_numpy(Volume(volumes.numpy()).rotate(R_est)._data)
+        volumes[i] = torch.from_numpy(Volume(volumes[i].numpy()).rotate(R_est)._data)
 
     return volumes
