@@ -6,8 +6,8 @@ import argparse
 import os
 import yaml
 
-from .._svd.svd_pipeline import run_all_vs_all_pipeline, run_all_vs_ref_pipeline
-from ..data._validation.config_validators import validate_config_svd
+from .._svd.svd_pipeline import run_svd_noref, run_svd_with_ref
+from ..data._validation.config_validators import SVDConfig
 
 
 def add_args(parser):
@@ -35,15 +35,21 @@ def main(args):
     with open(args.config, "r") as file:
         config = yaml.safe_load(file)
 
-    validate_config_svd(config)
-    warnexists(config["output_options"]["output_file"])
-    mkbasedir(os.path.dirname(config["output_options"]["output_file"]))
+    config = SVDConfig(**config).dict()
 
-    if config["experiment_mode"] == "all_vs_all":
-        run_all_vs_all_pipeline(config)
+    warnexists(config["output_params"]["output_file"])
+    mkbasedir(os.path.dirname(config["output_params"]["output_file"]))
 
-    elif config["experiment_mode"] == "all_vs_ref":
-        run_all_vs_ref_pipeline(config)
+    output_path = os.path.dirname(config["output_params"]["output_file"])
+
+    with open(os.path.join(output_path, "config.yaml"), "w") as file:
+        yaml.dump(config, file)
+
+    if config["gt_params"] is None:
+        run_svd_noref(config)
+
+    else:
+        run_svd_with_ref(config)
 
     return
 

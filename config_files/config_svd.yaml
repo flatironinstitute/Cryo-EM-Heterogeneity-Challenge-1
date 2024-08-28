@@ -1,19 +1,21 @@
-path_to_volumes: /path/to/volumes
-box_size_ds: 32
-submission_list: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-experiment_mode: "all_vs_ref" # options are "all_vs_all", "all_vs_ref"
+path_to_submissions: path/to/preprocessed/submissions/ # where all the submission_i.pt files are
+#excluded_submissions: # you can exclude some submissions by filename, default = []
+#  - "submission_0.pt"
+#  - "submission_1.pt"
+voxel_size: 1.0 # voxel size of the input maps (will probably be removed soon)
 
-power_spectrum_normalization:
-  ref_vol_key: "FLAVOR" # which submission should be used
-  ref_vol_index: 0 # which volume of that submission should be used
+dtype: float32 # optional, default = float32
+svd_max_rank: 5 # optional, default = full rank svd
+normalize_params: # optional, if not given there will be no normalization
+  mask_path: path/to/mask.mrc # default = None, no masking applied
+  bfactor: 170 # default = None, no bfactor applied
+  box_size_ds: 16 # default = None, no downsampling applied
 
-# optional unless experiment_mode is "all_vs_ref"
-path_to_reference: /path/to/reference/volumes.pt
-dtype: "float32" # options are "float32", "float64"
-output_options:
-  # path to file will be created if it does not exist
-  output_file: /path/to/output_file.pt
-  # whether or not to save the processed volumes (downsampled, normalized, etc.)
-  save_volumes: False
-  # whether or not to save the SVD matrices (U, S, V)
-  save_svd_matrices: False
+gt_params: # optional, if provided there will be extra results
+  gt_vols_file: path/to/gt_volumes.npy # volumes must be in .npy format (memory stuff)
+  skip_vols: 1 # default = 1, no volumes skipped. Equivalent to volumes[::skip_vols]
+
+output_params:
+  output_file: path/to/output_file.pt # where the results will be saved
+  save_svd_data: True # optional, default = False
+  generate_plots: True # optional, default = False
