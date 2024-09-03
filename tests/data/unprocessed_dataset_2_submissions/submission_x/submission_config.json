@@ -8,13 +8,13 @@
     },
     "0": {
         "name": "raw_submission_in_testdata",
-        "align": 1,
         "flavor_name": "test flavor",
+        "path": "tests/data/unprocessed_dataset_2_submissions/submission_x",
+        "populations_file": "tests/data/unprocessed_dataset_2_submissions/submission_x/populations.txt",
+        "submission_version": "1.0",
         "box_size": 32,
         "pixel_size": 15.022,
-        "path": "tests/data/unprocessed_dataset_2_submissions/submission_x",
         "flip": 1,
-        "populations_file": "tests/data/unprocessed_dataset_2_submissions/submission_x/populations.txt",
-        "submission_version": "1.0"
+        "align": 1
     }
 }
