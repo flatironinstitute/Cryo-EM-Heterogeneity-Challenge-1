@@ -62,9 +62,7 @@ def run_svd_noref(config: dict):
 
     submissions_data = load_submissions_svd(config)
     dist_mtx_results = compute_distance_matrix(submissions_data)
-    common_embeddings_results = compute_common_embedding(submissions_data)[
-        "common_embedding"
-    ]
+    common_embeddings_results = compute_common_embedding(submissions_data)
 
     results = {
         "distance_matrix_results": dist_mtx_results,

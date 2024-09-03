@@ -84,7 +84,7 @@ def compute_common_embedding(submissions_data, gt_data=None):
     for i, label in enumerate(labels):
         eigenvectors[i * shape_per_sub[0] : (i + 1) * shape_per_sub[0], :] = (
             submissions_data[label]["eigenvectors"].T
-        )
+        ) * submissions_data[label]["singular_values"][:, None]
 
     U, S, V = torch.linalg.svd(eigenvectors, full_matrices=False)
 
@@ -92,14 +92,15 @@ def compute_common_embedding(submissions_data, gt_data=None):
     embeddings = {}
 
     for i, label in enumerate(labels):
-        Z_i = submissions_data[label]["u_matrices"] @ torch.diag(
-            submissions_data[label]["singular_values"]
-        )
+        Z_i = submissions_data[label]["u_matrices"]  # @ torch.diag(
+        # submissions_data[label]["singular_values"]
+        # )
         Z_i_common = torch.einsum("ij, jk -> ik", Z_i, Z_common[i])
         embeddings[labels[i]] = Z_i_common
 
     results = {
         "common_embedding": embeddings,
+        "singular_values": S,
     }
 
     if gt_data is not None:
