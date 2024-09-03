@@ -2,7 +2,7 @@ import torch
 import json
 import os
 
-from .align_utils import align_submission, center_submission, threshold_submissions
+from .align_utils import align_submission, threshold_submissions
 from .crop_pad_utils import crop_pad_submission
 from .fourier_utils import downsample_submission
 
@@ -80,7 +80,7 @@ def preprocess_submissions(submission_dataset, config):
 
         # center submission
         print("    Centering submission")
-        volumes = center_submission(volumes, pixel_size=pixel_size_gt)
+        # volumes = center_submission(volumes, pixel_size=pixel_size_gt)
 
         # flip handedness
         if submission_dataset.submission_config[str(idx)]["flip"] == 1:
