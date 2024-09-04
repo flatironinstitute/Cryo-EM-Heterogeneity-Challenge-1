@@ -27,6 +27,7 @@ class MapToMapResultsValidator:
     config: dict
     user_submitted_populations: torch.Tensor
     corr: Optional[dict] = None
+    corr_low_memory: Optional[dict] = None
     l2: Optional[dict] = None
     bioem: Optional[dict] = None
     fsc: Optional[dict] = None

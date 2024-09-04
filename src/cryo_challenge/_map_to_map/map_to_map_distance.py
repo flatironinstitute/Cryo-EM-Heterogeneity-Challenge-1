@@ -60,6 +60,42 @@ class L2DistanceSum(MapToMapDistance):
         return self.compute_cost_l2(map1, map2)
 
 
+class CorrelationLowMemory(MapToMapDistance):
+    """Correlation distance.
+
+    Not technically a distance metric, but a similarity."""
+
+    def __init__(self, config):
+        super().__init__(config)
+
+    def compute_cost_corr(self, map_1, map_2):
+        return (map_1 * map_2).sum()
+
+    @override
+    def get_distance(self, map1, map2, global_store_of_running_results):
+        map1 = map1.flatten()
+        map1 -= map1.median()
+        map1 /= map1.std()
+        map1 = map1[global_store_of_running_results["mask"]]
+
+        return self.compute_cost_corr(map1, map2)
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        maps_gt_flat = maps1
+        maps_user_flat = maps2
+        cost_matrix = torch.empty(len(maps_gt_flat), len(maps_user_flat))
+        for idx_gt in range(len(maps_gt_flat)):
+            for idx_user in range(len(maps_user_flat)):
+                cost_matrix[idx_gt, idx_user] = self.get_distance(
+                    maps_gt_flat[idx_gt],
+                    maps_user_flat[idx_user],
+                    global_store_of_running_results,
+                )
+
+        return cost_matrix
+
+
 class Correlation(MapToMapDistance):
     """Correlation distance.
 
