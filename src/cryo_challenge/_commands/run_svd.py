@@ -35,7 +35,7 @@ def main(args):
     with open(args.config, "r") as file:
         config = yaml.safe_load(file)
 
-    config = SVDConfig(**config).dict()
+    config = SVDConfig(**config).model_dump()
 
     warnexists(config["output_params"]["output_file"])
     mkbasedir(os.path.dirname(config["output_params"]["output_file"]))

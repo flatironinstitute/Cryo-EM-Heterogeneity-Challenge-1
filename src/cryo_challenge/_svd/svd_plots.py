@@ -18,10 +18,7 @@ import numpy as np
 #     "Rocky Road": {"color": "#4daf4a", "marker": "*"},
 # }
 
-COLORS = sns.color_palette("Set3", 12)
-COLORS = [color for color in COLORS.as_hex()]
-
-MARKERS = ["o", "v", "^", "<", ">", "D", "x", "*", "s", "p", "P", "*"]
+MARKERS = ["o", "v", "^", "<", ">", "D", "X", "*", "s", "p", "P", "*", "h", "H"]
 LABELS = [
     "Ground Truth",
     "Cookie Dough",
@@ -35,17 +32,24 @@ LABELS = [
     "Salted Caramel",
     "Chocolate Chip",
     "Rocky Road",
+    "Pina Colada",
+    "Bubble Gum",
 ]
+
+assert len(MARKERS) >= len(LABELS)
+
+COLORS = sns.color_palette("Set3", len(LABELS))
+COLORS = [color for color in COLORS.as_hex()]
 
 PLOT_SETUP = {}
 
-for i in range(12):
+for i in range(len(LABELS)):
     PLOT_SETUP[LABELS[i]] = {
         "color": COLORS[i],
         "marker": MARKERS[i],
     }
 
-PLOT_SETUP["gt_left"] = {"color": "#e41a1c", "marker": "o"}
+PLOT_SETUP["Coffee"] = {"color": "#e41a1c", "marker": "o"}
 PLOT_SETUP["gt_right"] = {"color": "#377eb8", "marker": "v"}
 
 
@@ -58,8 +62,8 @@ def plot_distance_matrix(dist_matrix, labels, title="", save_path=None):
 
     ax.set_title(title)
     if save_path is not None:
-        plt.savefig(save_path)
-    plt.show()
+        plt.savefig(save_path, bbox_inches="tight", pad_inches=0.1)
+
     return
 
 
@@ -77,7 +81,8 @@ def plot_common_embedding(
     plot_setup = {}
     for i, label in enumerate(labels):
         for possible_label in PLOT_SETUP.keys():
-            if label in possible_label:
+            # print(label, possible_label)
+            if possible_label in label:
                 plot_setup[label] = PLOT_SETUP[possible_label]
 
     for label in labels:
@@ -106,19 +111,17 @@ def plot_common_embedding(
         n_rows = np.ceil(n_rows).astype(int)
         n_cols = np.ceil(len(labels) / n_rows).astype(int)
 
-    print(n_cols, n_rows)
     fig, ax = plt.subplots(
         n_rows, n_cols, figsize=(n_cols * 5, n_rows * 3), sharex=True, sharey=True
     )
     if n_rows == 1 and n_cols == 1:
         ax = np.array([ax])
 
-    print(all_embeddings.shape)
     for i in range(len(labels)):
         sns.kdeplot(
             x=all_embeddings[:, pc1],
             y=all_embeddings[:, pc2],
-            cmap="viridis",
+            cmap="gray",
             fill=True,
             cbar=False,
             ax=ax.flatten()[i],
@@ -130,7 +133,7 @@ def plot_common_embedding(
         sns.kdeplot(
             x=all_embeddings[:, pc1],
             y=all_embeddings[:, pc2],
-            cmap="viridis",
+            cmap="gray",
             fill=True,
             cbar=False,
             ax=ax.flatten()[len(labels)],
@@ -163,8 +166,8 @@ def plot_common_embedding(
             label=str(i + 1) + ". " + labels[i],
         )
 
-        ax.flatten()[i].set_xticks([])
-        ax.flatten()[i].set_yticks([])
+        # ax.flatten()[i].set_xticks([])
+        # ax.flatten()[i].set_yticks([])
 
         if i >= n_rows:
             ax.flatten()[i].set_xlabel(f"Z{pc1 + 1}", fontsize=12)
@@ -215,7 +218,7 @@ def plot_common_embedding(
     )
 
     if save_path is not None:
-        plt.savefig(save_path)
+        plt.savefig(save_path, bbox_inches="tight", pad_inches=0.1)
 
     return
 
@@ -237,19 +240,21 @@ def plot_gt_embedding(submissions_data, gt_embedding_results, title="", save_pat
     fig, ax = plt.subplots(
         n_rows, n_cols, figsize=(n_cols * 4, n_rows * 3), sharex=True, sharey=True
     )
+    if n_rows == 1 and n_cols == 1:
+        ax = np.array([ax])
 
     plot_setup = {}
     for i, label in enumerate(submissions_data.keys()):
         for possible_label in PLOT_SETUP.keys():
-            if label in possible_label:
+            if possible_label in label:
                 plot_setup[label] = PLOT_SETUP[possible_label]
 
     for label in submissions_data.keys():
         if label not in plot_setup.keys():
             raise ValueError(f"Label {label} not found in PLOT_SETUP")
 
-    low_gt = -227.927103122416
-    high_gt = 214.014930744738
+    low_gt = -231.62100638454024
+    high_gt = 243.32448171011487
     Z = np.linspace(low_gt, high_gt, gt_embedding_results["gt_embedding"].shape[0])
     x_axis = np.linspace(
         torch.min(gt_embedding_results["gt_embedding"][:, 0]),
@@ -327,6 +332,61 @@ def plot_gt_embedding(submissions_data, gt_embedding_results, title="", save_pat
     )
 
     if save_path is not None:
-        plt.savefig(save_path)
+        plt.savefig(save_path, bbox_inches="tight", pad_inches=0.1)
+
+    return
+
+
+def plot_common_eigenvectors(
+    common_eigenvectors, n_eig_to_plot=None, title="", save_path=None
+):
+    n_eig_to_plot = min(10, len(common_eigenvectors))
+    n_cols = 5
+    n_rows = int(np.ceil(n_eig_to_plot / n_cols))
+
+    fig, ax = plt.subplots(n_rows, n_cols, figsize=(n_cols * 4, n_rows * 5))
+
+    box_size = int(round((common_eigenvectors[0].shape[-1]) ** (1 / 3)))
+    for i in range(n_eig_to_plot):
+        eigvol = common_eigenvectors[i].reshape(box_size, box_size, box_size)
+
+        mask_small = torch.where(torch.abs(eigvol) < 1e-3)
+        mask_pos = torch.where(eigvol > 0)
+        mask_neg = torch.where(eigvol < 0)
+
+        eigvol_pos = torch.zeros_like(eigvol)
+        eigvol_neg = torch.zeros_like(eigvol)
+
+        eigvol_pos[mask_pos] = 1.0
+        eigvol_neg[mask_neg] = -1.0
+
+        eigvol_for_img = eigvol_neg + eigvol_pos
+        eigvol_for_img[mask_small] = 0.0
+
+        ax.flatten()[i].imshow(
+            eigvol_for_img.sum(0), cmap="coolwarm", label=f"Eigenvector {i}"
+        )
+        ax.flatten()[i].set_title(f"Eigenvector {i}")
+        ax.flatten()[i].axis("off")
+        i_max = i
+
+    if i_max < n_cols * n_rows:
+        for j in range(i_max + 1, n_cols * n_rows):
+            ax.flatten()[j].axis("off")
+
+    plt.subplots_adjust(wspace=0.0)
+
+    # add a colorbar for the whole figure
+    fig.colorbar(
+        ax.flatten()[i].imshow(eigvol_for_img.sum(0), cmap="coolwarm"),
+        ax=ax,
+        orientation="horizontal",
+        label="Eigenvector value (neg or pos)",
+    )
+
+    fig.suptitle(title, fontsize=16)
+
+    if save_path is not None:
+        plt.savefig(save_path, bbox_inches="tight", pad_inches=0.1)
 
     return

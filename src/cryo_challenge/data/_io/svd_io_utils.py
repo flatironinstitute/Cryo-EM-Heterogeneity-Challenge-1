@@ -59,6 +59,9 @@ def load_submissions_svd(
         label = submission["id"]
         populations = submission["populations"]
 
+        if not isinstance(populations, torch.Tensor):
+            populations = torch.tensor(populations)
+
         volumes = submission["volumes"]
         if config["normalize_params"]["mask_path"] is not None:
             volumes = volumes * mask
@@ -101,7 +104,7 @@ def load_submissions_svd(
             )
 
         submissions_data[label] = {
-            "populations": torch.tensor(populations / populations.sum()),
+            "populations": populations / populations.sum(),
             "u_matrices": u_matrices.clone(),
             "singular_values": singular_values.clone(),
             "eigenvectors": eigenvectors.clone(),

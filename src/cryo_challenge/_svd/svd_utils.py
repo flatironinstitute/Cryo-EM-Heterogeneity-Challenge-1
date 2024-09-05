@@ -29,6 +29,24 @@ def sort_matrix_using_gt(dist_matrix: torch.Tensor, labels: np.ndarray):
     return dist_matrix, labels
 
 
+def sort_matrix(dist_matrix, labels):
+    dist_matrix = dist_matrix.clone()
+    labels = labels.copy()
+
+    # Sort by sum of rows
+    row_sum = torch.sum(dist_matrix, dim=0)
+    sort_idx = torch.argsort(row_sum, descending=True)
+    dist_matrix = dist_matrix[:, sort_idx][sort_idx]
+    labels = labels[sort_idx.numpy()]
+
+    # Sort the first row
+    sort_idx = torch.argsort(dist_matrix[:, 0], descending=True)
+    dist_matrix = dist_matrix[:, sort_idx][sort_idx]
+    labels = labels[sort_idx.numpy()]
+
+    return dist_matrix, labels
+
+
 def compute_distance_matrix(submissions_data, gt_data=None):
     n_subs = len(list(submissions_data.keys()))
     labels = list(submissions_data.keys())
@@ -64,7 +82,10 @@ def compute_distance_matrix(submissions_data, gt_data=None):
 
         dist_matrix, labels = sort_matrix_using_gt(dist_matrix, labels)
 
-    labels = np.array(labels)
+    else:
+        labels = np.array(labels)
+        dist_matrix, labels = sort_matrix(dist_matrix, labels)
+
     results = {"dist_matrix": dist_matrix, "labels": labels}
     return results
 
@@ -101,6 +122,7 @@ def compute_common_embedding(submissions_data, gt_data=None):
     results = {
         "common_embedding": embeddings,
         "singular_values": S,
+        "common_eigenvectors": V,
     }
 
     if gt_data is not None:
