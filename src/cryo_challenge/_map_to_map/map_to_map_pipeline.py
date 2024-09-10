@@ -1,11 +1,11 @@
 import mrcfile
 import pandas as pd
-import numpy as np
 import pickle
 import torch
 
 from ..data._validation.output_validators import MapToMapResultsValidator
 from .._map_to_map.map_to_map_distance import (
+    GT_Dataset,
     FSCDistance,
     Correlation,
     CorrelationLowMemory,
@@ -35,7 +35,9 @@ def run(config):
         for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
     }
 
-    # n_pix = config["data"]["n_pix"]
+    low_memory_mode = False
+    if not low_memory_mode:
+        n_pix = config["data"]["n_pix"]
 
     submission = torch.load(config["data"]["submission"]["fname"])
     submission_volume_key = config["data"]["submission"]["volume_key"]
@@ -54,45 +56,31 @@ def run(config):
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
     )
-    # maps_gt_flat = np.load(config["data"]["ground_truth"]["volumes"], mmap_mode='r+')#.reshape(-1, n_pix**3)
-    from torch.utils.data import Dataset
-
-    class GT_Dataset(Dataset):
-        def __init__(self, npy_file):
-            self.npy_file = npy_file
-            self.data = np.load(npy_file, mmap_mode="r+")
-
-            self.shape = self.data.shape
-            self._dim = len(self.data.shape)
-
-        def dim(self):
-            return self._dim
-
-        def __len__(self):
-            return len(self.data)
-
-        def __getitem__(self, idx):
-            if torch.is_tensor(idx):
-                idx = idx.tolist()
-            sample = self.data[idx]
-            return torch.from_numpy(sample.copy())
-
-    maps_gt_flat = GT_Dataset(config["data"]["ground_truth"]["volumes"])
+    if low_memory_mode:
+        maps_gt_flat = GT_Dataset(config["data"]["ground_truth"]["volumes"])
+    else:
+        maps_gt_flat = torch.load(config["data"]["ground_truth"]["volumes"]).reshape(
+            -1, n_pix**3
+        )
 
     if config["data"]["mask"]["do"]:
         mask = (
             mrcfile.open(config["data"]["mask"]["volume"]).data.astype(bool).flatten()
         )
-        # maps_gt_flat = maps_gt_flat[:, mask]
+        if not low_memory_mode:
+            maps_gt_flat = maps_gt_flat[:, mask]
         maps_user_flat = maps_user_flat[:, mask]
     else:
-        # maps_gt_flat.reshape(len(maps_gt_flat), -1, inplace=True)
+        if not low_memory_mode:
+            maps_gt_flat.reshape(len(maps_gt_flat), -1, inplace=True)
         maps_user_flat.reshape(len(maps_gt_flat), -1, inplace=True)
 
     if config["analysis"]["normalize"]["do"]:
         if config["analysis"]["normalize"]["method"] == "median_zscore":
-            # maps_gt_flat -= maps_gt_flat.median(dim=1, keepdim=True).values
-            # maps_gt_flat /= maps_gt_flat.std(dim=1, keepdim=True)
+            if not low_memory_mode:
+                maps_gt_flat -= maps_gt_flat.median(dim=1, keepdim=True).values
+            if not low_memory_mode:
+                maps_gt_flat /= maps_gt_flat.std(dim=1, keepdim=True)
             maps_user_flat -= maps_user_flat.median(dim=1, keepdim=True).values
             maps_user_flat /= maps_user_flat.std(dim=1, keepdim=True)
 
