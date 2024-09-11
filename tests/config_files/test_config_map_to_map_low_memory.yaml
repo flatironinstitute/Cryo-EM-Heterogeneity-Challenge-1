@@ -17,7 +17,7 @@ analysis:
     - l2_low_memory
     - corr_low_memory
     - bioem_low_memory
-    # - fsc_low_memory
+    - fsc_low_memory
     # - res_low_memory
   chunk_size_submission: 80
   chunk_size_gt: 190

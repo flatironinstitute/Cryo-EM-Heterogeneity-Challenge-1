@@ -486,26 +486,26 @@ class FSCDistanceLowMemory(MapToMapDistance):
 
     def __init__(self, config):
         super().__init__(config)
-        self.npix = self.config["data"]["n_pix"]
+        self.n_pix = self.config["data"]["n_pix"]
 
     def compute_cost(self, map_1, map_2):
         raise NotImplementedError()
 
     @override
     def get_distance(self, map1, map2, global_store_of_running_results):
-        maps_gt_flat = map1 = map1.flatten()
+        map_gt_flat = map1 = map1.flatten()
         map1 -= map1.median()
         map1 /= map1.std()
-        maps_gt_flat_cube = torch.zeros(self.n_pix**3)
+        map_gt_flat_cube = torch.zeros(self.n_pix**3)
         map1 = map1[global_store_of_running_results["mask"]]
-        maps_gt_flat_cube[:, global_store_of_running_results["mask"]] = maps_gt_flat
+        map_gt_flat_cube[global_store_of_running_results["mask"]] = map_gt_flat
 
         corr_vector = fourier_shell_correlation(
-            maps_gt_flat_cube.reshape(self.n_pix, self.n_pix, self.n_pix),
+            map_gt_flat_cube.reshape(self.n_pix, self.n_pix, self.n_pix),
             map2.reshape(self.n_pix, self.n_pix, self.n_pix),
         )
-        dist = 1 - corr_vector.mean(dim=1)  # TODO: spectral cutoff
-        self.stored_computed_assets["corr_vector"] = corr_vector
+        dist = 1 - corr_vector.mean()  # TODO: spectral cutoff
+        self.stored_computed_assets = {"corr_vector": corr_vector}
         return dist
 
     @override

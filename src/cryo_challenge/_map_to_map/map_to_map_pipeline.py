@@ -7,6 +7,7 @@ from ..data._validation.output_validators import MapToMapResultsValidator
 from .._map_to_map.map_to_map_distance import (
     GT_Dataset,
     FSCDistance,
+    FSCDistanceLowMemory,
     Correlation,
     CorrelationLowMemory,
     L2DistanceNorm,
@@ -14,6 +15,7 @@ from .._map_to_map.map_to_map_distance import (
     BioEM3dDistance,
     BioEM3dDistanceLowMemory,
     FSCResDistance,
+    FSCResDistanceLowMemory,
 )
 
 
@@ -29,8 +31,8 @@ AVAILABLE_MAP2MAP_DISTANCES_LOW_MEMORY = {
     "corr_low_memory": CorrelationLowMemory,
     "l2_low_memory": L2DistanceNormLowMemory,
     "bioem_low_memory": BioEM3dDistanceLowMemory,
-    "fsc_low_memory": FSCDistance,
-    "res_low_memory": FSCResDistance,
+    "fsc_low_memory": FSCDistanceLowMemory,
+    "res_low_memory": FSCResDistanceLowMemory,
 }
 
 
