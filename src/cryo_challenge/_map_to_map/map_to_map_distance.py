@@ -60,6 +60,7 @@ class MapToMapDistanceLowMemory(MapToMapDistance):
 
     def __init__(self, config):
         super().__init__(config)
+        self.config = config
 
     def compute_cost(self, map_1, map_2):
         raise NotImplementedError()
@@ -67,8 +68,14 @@ class MapToMapDistanceLowMemory(MapToMapDistance):
     @override
     def get_distance(self, map1, map2, global_store_of_running_results):
         map1 = map1.flatten()
-        map1 -= map1.median()
-        map1 /= map1.std()
+        if self.config["analysis"]["normalize"]["do"]:
+            if self.config["analysis"]["normalize"]["method"] == "median_zscore":
+                map1 -= map1.median()
+                map1 /= map1.std()
+            else:
+                raise NotImplementedError(
+                    f"Normalization method {self.config['analysis']['normalize']['method']} not implemented."
+                )
         map1 = map1[global_store_of_running_results["mask"]]
 
         return self.compute_cost(map1, map2)
@@ -308,14 +315,19 @@ class FSCDistance(MapToMapDistance):
         maps_user_flat = maps2
         n_pix = self.config["data"]["n_pix"]
         maps_gt_flat_cube = torch.zeros(len(maps_gt_flat), n_pix**3)
-        mask = (
-            mrcfile.open(self.config["data"]["mask"]["volume"])
-            .data.astype(bool)
-            .flatten()
-        )
-        maps_gt_flat_cube[:, mask] = maps_gt_flat
         maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
-        maps_user_flat_cube[:, mask] = maps_user_flat
+
+        if self.config["data"]["mask"]["do"]:
+            mask = (
+                mrcfile.open(self.config["data"]["mask"]["volume"])
+                .data.astype(bool)
+                .flatten()
+            )
+            maps_gt_flat_cube[:, mask] = maps_gt_flat
+            maps_user_flat_cube[:, mask] = maps_user_flat
+        else:
+            maps_gt_flat_cube = maps_gt_flat
+            maps_user_flat_cube = maps_user_flat
 
         cost_matrix, fsc_matrix = self.compute_cost_fsc_chunk(
             maps_gt_flat_cube, maps_user_flat_cube, n_pix
@@ -334,6 +346,7 @@ class FSCDistanceLowMemory(MapToMapDistance):
     def __init__(self, config):
         super().__init__(config)
         self.n_pix = self.config["data"]["n_pix"]
+        self.config = config
 
     def compute_cost(self, map_1, map_2):
         raise NotImplementedError()
@@ -341,11 +354,12 @@ class FSCDistanceLowMemory(MapToMapDistance):
     @override
     def get_distance(self, map1, map2, global_store_of_running_results):
         map_gt_flat = map1 = map1.flatten()
-        map1 -= map1.median()
-        map1 /= map1.std()
         map_gt_flat_cube = torch.zeros(self.n_pix**3)
-        map1 = map1[global_store_of_running_results["mask"]]
-        map_gt_flat_cube[global_store_of_running_results["mask"]] = map_gt_flat
+        if self.config["data"]["mask"]["do"]:
+            map_gt_flat = map_gt_flat[global_store_of_running_results["mask"]]
+            map_gt_flat_cube[global_store_of_running_results["mask"]] = map_gt_flat
+        else:
+            map_gt_flat_cube = map_gt_flat
 
         corr_vector = fourier_shell_correlation(
             map_gt_flat_cube.reshape(self.n_pix, self.n_pix, self.n_pix),

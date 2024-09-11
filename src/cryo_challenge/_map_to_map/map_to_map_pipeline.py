@@ -108,6 +108,10 @@ def run(config):
                 maps_gt_flat /= maps_gt_flat.std(dim=1, keepdim=True)
             maps_user_flat -= maps_user_flat.median(dim=1, keepdim=True).values
             maps_user_flat /= maps_user_flat.std(dim=1, keepdim=True)
+        else:
+            raise NotImplementedError(
+                f"Normalization method {config['analysis']['normalize']['method']} not implemented."
+            )
 
     computed_assets = {}
     results_dict["mask"] = mask
