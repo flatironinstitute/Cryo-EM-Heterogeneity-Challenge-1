@@ -21,6 +21,13 @@ def test_run_map2map_pipeline():
                     "fsc_matrix"
                 ],
             )
+        elif metric == "res":
+            np.allclose(
+                results_dict[metric]["computed_assets"]["fraction_nyquist"],
+                results_dict_low_memory[metric + "_low_memory"]["computed_assets"][
+                    "fraction_nyquist"
+                ],
+            )
         np.allclose(
             results_dict[metric]["cost_matrix"].values,
             results_dict_low_memory[metric + "_low_memory"]["cost_matrix"].values,
