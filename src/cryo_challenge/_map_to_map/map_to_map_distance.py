@@ -55,6 +55,39 @@ class MapToMapDistance:
         return {}
 
 
+class MapToMapDistanceLowMemory(MapToMapDistance):
+    """General class for map-to-map distance metrics that require low memory."""
+
+    def __init__(self, config):
+        super().__init__(config)
+
+    def compute_cost(self, map_1, map_2):
+        raise NotImplementedError()
+
+    @override
+    def get_distance(self, map1, map2, global_store_of_running_results):
+        map1 = map1.flatten()
+        map1 -= map1.median()
+        map1 /= map1.std()
+        map1 = map1[global_store_of_running_results["mask"]]
+
+        return self.compute_cost(map1, map2)
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        maps_gt_flat = maps1
+        maps_user_flat = maps2
+        cost_matrix = torch.empty(len(maps_gt_flat), len(maps_user_flat))
+        for idx_gt in range(len(maps_gt_flat)):
+            for idx_user in range(len(maps_user_flat)):
+                cost_matrix[idx_gt, idx_user] = self.get_distance(
+                    maps_gt_flat[idx_gt],
+                    maps_user_flat[idx_user],
+                    global_store_of_running_results,
+                )
+        return cost_matrix
+
+
 class L2DistanceNorm(MapToMapDistance):
     """L2 distance norm"""
 
@@ -66,24 +99,19 @@ class L2DistanceNorm(MapToMapDistance):
         return torch.norm(map1 - map2) ** 2
 
 
-class L2DistanceSum(MapToMapDistance):
-    """L2 distance.
-
-    Computed by summing the squared differences between the two maps."""
+class L2DistanceNormLowMemory(MapToMapDistanceLowMemory):
+    """L2 distance norm"""
 
     def __init__(self, config):
         super().__init__(config)
 
-    def compute_cost_l2(self, map_1, map_2):
-        return ((map_1 - map_2) ** 2).sum()
-
     @override
-    def get_distance(self, map1, map2):
-        return self.compute_cost_l2(map1, map2)
+    def compute_cost(self, map1, map2):
+        return torch.norm(map1 - map2) ** 2
 
 
-class CorrelationLowMemory(MapToMapDistance):
-    """Correlation distance.
+class CorrelationLowMemoryCheck(MapToMapDistance):
+    """Correlation.
 
     Not technically a distance metric, but a similarity."""
 
@@ -118,8 +146,12 @@ class CorrelationLowMemory(MapToMapDistance):
         return cost_matrix
 
 
+def correlation(map1, map2):
+    return (map1 * map2).sum()
+
+
 class Correlation(MapToMapDistance):
-    """Correlation distance.
+    """Correlation.
 
     Not technically a distance metric, but a similarity."""
 
@@ -132,6 +164,61 @@ class Correlation(MapToMapDistance):
     @override
     def get_distance(self, map1, map2):
         return self.compute_cost_corr(map1, map2)
+
+
+class CorrelationLowMemory(MapToMapDistanceLowMemory):
+    """Correlation."""
+
+    def __init__(self, config):
+        super().__init__(config)
+
+    @override
+    def compute_cost(self, map1, map2):
+        return correlation(map1, map2)
+
+
+def compute_bioem3d_cost(map1, map2):
+    """
+    Compute the cost between two maps using the BioEM cost function in 3D.
+
+    Notes
+    -----
+    See Eq. 10 in 10.1016/j.jsb.2013.10.006
+
+    Parameters
+    ----------
+    map1 : torch.Tensor
+        shape (n_pix,n_pix,n_pix)
+    map2 : torch.Tensor
+        shape (n_pix,n_pix,n_pix)
+
+    Returns
+    -------
+    cost : torch.Tensor
+        shape (1,)
+    """
+    m1, m2 = map1.reshape(-1), map2.reshape(-1)
+    co = m1.sum()
+    cc = m2.sum()
+    coo = m1.pow(2).sum()
+    ccc = m2.pow(2).sum()
+    coc = (m1 * m2).sum()
+
+    N = len(m1)
+
+    t1 = 2 * torch.pi * math.exp(1)
+    t2 = N * (ccc * coo - coc * coc) + 2 * co * coc * cc - ccc * co * co - coo * cc * cc
+    t3 = (N - 2) * (N * ccc - cc * cc)
+
+    smallest_float = torch.finfo(m1.dtype).tiny
+    log_prob = (
+        0.5 * torch.pi
+        + math.log(t1) * (1 - N / 2)
+        + t2.clamp(smallest_float).log() * (3 / 2 - N / 2)
+        + t3.clamp(smallest_float).log() * (N / 2 - 2)
+    )
+    cost = -log_prob
+    return cost
 
 
 class BioEM3dDistance(MapToMapDistance):
@@ -191,6 +278,83 @@ class BioEM3dDistance(MapToMapDistance):
     @override
     def get_distance(self, map1, map2):
         return self.compute_bioem3d_cost(map1, map2)
+
+
+class BioEM3dDistanceLowMemory(MapToMapDistanceLowMemory):
+    """BioEM 3D distance."""
+
+    def __init__(self, config):
+        super().__init__(config)
+
+    @override
+    def compute_cost(self, map1, map2):
+        return compute_bioem3d_cost(map1, map2)
+
+
+def fourier_shell_correlation(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    dim: Sequence[int] = (-3, -2, -1),
+    normalize: bool = True,
+    max_k: Optional[int] = None,
+):
+    """Computes Fourier Shell / Ring Correlation (FSC) between x and y.
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        First input tensor.
+    y : torch.Tensor
+        Second input tensor.
+    dim : Tuple[int, ...]
+        Dimensions over which to take the Fourier transform.
+    normalize : bool
+        Whether to normalize (i.e. compute correlation) or not (i.e. compute covariance).
+        Note that when `normalize=False`, we still divide by the number of elements in each shell.
+    max_k : int
+        The maximum shell to compute the correlation for.
+
+    Returns
+    -------
+    torch.Tensor
+        The correlation between x and y for each Fourier shell.
+    """  # noqa: E501
+    batch_shape = x.shape[: -len(dim)]
+
+    freqs = [torch.fft.fftfreq(x.shape[d], d=1 / x.shape[d]).to(x) for d in dim]
+    freq_total = (
+        torch.cartesian_prod(*freqs).view(*[len(f) for f in freqs], -1).norm(dim=-1)
+    )
+
+    x_f = torch.fft.fftn(x, dim=dim)
+    y_f = torch.fft.fftn(y, dim=dim)
+
+    n = min(x.shape[d] for d in dim)
+
+    if max_k is None:
+        max_k = n // 2
+
+    result = x.new_zeros(batch_shape + (max_k,))
+
+    for i in range(1, max_k + 1):
+        mask = (freq_total >= i - 0.5) & (freq_total < i + 0.5)
+        x_ri = x_f[..., mask]
+        y_fi = y_f[..., mask]
+
+        if x.is_cuda:
+            c_i = torch.linalg.vecdot(x_ri, y_fi).real
+        else:
+            # vecdot currently bugged on CPU for torch 2.0 in some configurations
+            c_i = torch.sum(x_ri * y_fi.conj(), dim=-1).real
+
+        if normalize:
+            c_i /= torch.linalg.norm(x_ri, dim=-1) * torch.linalg.norm(y_fi, dim=-1)
+        else:
+            c_i /= x_ri.shape[-1]
+
+        result[..., i - 1] = c_i
+
+    return result
 
 
 class FSCDistance(MapToMapDistance):
@@ -317,6 +481,59 @@ class FSCDistance(MapToMapDistance):
         return self.stored_computed_assets  # must run get_distance_matrix first
 
 
+class FSCDistanceLowMemory(MapToMapDistance):
+    """Fourier Shell Correlation distance."""
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.npix = self.config["data"]["n_pix"]
+
+    def compute_cost(self, map_1, map_2):
+        raise NotImplementedError()
+
+    @override
+    def get_distance(self, map1, map2, global_store_of_running_results):
+        maps_gt_flat = map1 = map1.flatten()
+        map1 -= map1.median()
+        map1 /= map1.std()
+        maps_gt_flat_cube = torch.zeros(self.n_pix**3)
+        map1 = map1[global_store_of_running_results["mask"]]
+        maps_gt_flat_cube[:, global_store_of_running_results["mask"]] = maps_gt_flat
+
+        corr_vector = fourier_shell_correlation(
+            maps_gt_flat_cube.reshape(self.n_pix, self.n_pix, self.n_pix),
+            map2.reshape(self.n_pix, self.n_pix, self.n_pix),
+        )
+        dist = 1 - corr_vector.mean(dim=1)  # TODO: spectral cutoff
+        self.stored_computed_assets["corr_vector"] = corr_vector
+        return dist
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        maps_gt_flat = maps1
+        maps_user_flat = maps2
+        cost_matrix = torch.empty(len(maps_gt_flat), len(maps_user_flat))
+        fsc_matrix = torch.zeros(
+            len(maps_gt_flat), len(maps_user_flat), self.n_pix // 2
+        )
+        for idx_gt in range(len(maps_gt_flat)):
+            for idx_user in range(len(maps_user_flat)):
+                cost_matrix[idx_gt, idx_user] = self.get_distance(
+                    maps_gt_flat[idx_gt],
+                    maps_user_flat[idx_user],
+                    global_store_of_running_results,
+                )
+                fsc_matrix[idx_gt, idx_user] = self.stored_computed_assets[
+                    "corr_vector"
+                ]
+        self.stored_computed_assets = {"fsc_matrix": fsc_matrix}
+        return cost_matrix
+
+    @override
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
+        return self.stored_computed_assets  # must run get_distance_matrix first
+
+
 class FSCResDistance(MapToMapDistance):
     """FSC Resolution distance.
 
@@ -351,3 +568,7 @@ class FSCResDistance(MapToMapDistance):
         res_fsc_half, fraction_nyquist = res_at_fsc_threshold(fsc_matrix)
         self.stored_computed_assets = {"fraction_nyquist": fraction_nyquist}
         return units_Angstroms[res_fsc_half]
+
+
+class FSCResDistanceLowMemory(MapToMapDistance):
+    pass

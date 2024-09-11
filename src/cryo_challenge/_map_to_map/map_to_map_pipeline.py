@@ -9,8 +9,10 @@ from .._map_to_map.map_to_map_distance import (
     FSCDistance,
     Correlation,
     CorrelationLowMemory,
-    L2DistanceSum,
+    L2DistanceNorm,
+    L2DistanceNormLowMemory,
     BioEM3dDistance,
+    BioEM3dDistanceLowMemory,
     FSCResDistance,
 )
 
@@ -18,10 +20,17 @@ from .._map_to_map.map_to_map_distance import (
 AVAILABLE_MAP2MAP_DISTANCES = {
     "fsc": FSCDistance,
     "corr": Correlation,
-    "corr_low_memory": CorrelationLowMemory,
-    "l2": L2DistanceSum,
+    "l2": L2DistanceNorm,
     "bioem": BioEM3dDistance,
     "res": FSCResDistance,
+}
+
+AVAILABLE_MAP2MAP_DISTANCES_LOW_MEMORY = {
+    "corr_low_memory": CorrelationLowMemory,
+    "l2_low_memory": L2DistanceNormLowMemory,
+    "bioem_low_memory": BioEM3dDistanceLowMemory,
+    "fsc_low_memory": FSCDistance,
+    "res_low_memory": FSCResDistance,
 }
 
 
@@ -33,9 +42,23 @@ def run(config):
     map_to_map_distances = {
         distance_label: distance_class(config)
         for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
+        if distance_label in config["analysis"]["metrics"]
     }
 
-    low_memory_mode = False
+    map_to_map_distances_low_memory = {
+        distance_label: distance_class(config)
+        for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES_LOW_MEMORY.items()
+        if distance_label in config["analysis"]["metrics"]
+    }
+
+    assert len(map_to_map_distances_low_memory) == 0 or len(map_to_map_distances) == 0
+
+    if len(map_to_map_distances_low_memory) > 0:
+        map_to_map_distances = map_to_map_distances_low_memory
+        low_memory_mode = True
+    else:
+        low_memory_mode = False
+
     if not low_memory_mode:
         n_pix = config["data"]["n_pix"]
 
