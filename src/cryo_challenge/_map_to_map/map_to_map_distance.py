@@ -40,14 +40,30 @@ class MapToMapDistance:
         """Compute the distance matrix between two sets of maps."""
         chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
         chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
-        distance_matrix = torch.vmap(
-            lambda maps1: torch.vmap(
-                lambda maps2: self.get_distance(maps1, maps2),
-                chunk_size=chunk_size_submission,
-            )(maps2),
-            chunk_size=chunk_size_gt,
-        )(maps1)
+        # load in memory as torch tensors
+        if True:  # config.low_memory:
+            distance_matrix = torch.empty(len(maps1), len(maps2))
+            n_chunks_low_memory = 100
+            for idxs in torch.arange(len(maps1)).chunk(n_chunks_low_memory):
+                maps1_in_memory = maps1[idxs]
+                sub_distance_matrix = torch.vmap(
+                    lambda maps1: torch.vmap(
+                        lambda maps2: self.get_distance(maps1, maps2),
+                        chunk_size=chunk_size_submission,
+                    )(maps2),
+                    chunk_size=chunk_size_gt,
+                )(maps1_in_memory)
+                distance_matrix[idxs] = sub_distance_matrix
 
+        else:
+            assert False, "Not implemented"
+            distance_matrix = torch.vmap(
+                lambda maps1: torch.vmap(
+                    lambda maps2: self.get_distance(maps1, maps2),
+                    chunk_size=chunk_size_submission,
+                )(maps2),
+                chunk_size=chunk_size_gt,
+            )(maps1)
         return distance_matrix
 
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
