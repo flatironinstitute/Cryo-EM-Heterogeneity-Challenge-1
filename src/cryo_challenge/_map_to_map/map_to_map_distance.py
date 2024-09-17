@@ -34,6 +34,7 @@ class MapToMapDistance:
         self.chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
         self.chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
         self.n_pix = self.config["data"]["n_pix"]
+        self.chunk_size_low_memory = self.config["analysis"]["chunk_size_low_memory"]
 
     def get_distance(self, map1, map2):
         """Compute the distance between two maps."""
@@ -58,9 +59,9 @@ class MapToMapDistance:
         """Compute the distance matrix between two sets of maps."""
         # load in memory as torch tensors
         if True:  # config.low_memory:
+            self.n_chunks_low_memory = len(maps1) // self.chunk_size_low_memory
             distance_matrix = torch.empty(len(maps1), len(maps2))
-            n_chunks_low_memory = 100
-            for idxs in torch.arange(len(maps1)).chunk(n_chunks_low_memory):
+            for idxs in torch.arange(len(maps1)).chunk(self.n_chunks_low_memory):
                 maps1_in_memory = maps1[idxs]
                 sub_distance_matrix = self.get_sub_distance_matrix(
                     maps1_in_memory,
