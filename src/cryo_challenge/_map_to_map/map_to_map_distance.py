@@ -33,6 +33,7 @@ class MapToMapDistance:
         self.config = config
         self.chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
         self.chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
+        self.n_pix = self.config["data"]["n_pix"]
 
     def get_distance(self, map1, map2):
         """Compute the distance between two maps."""
@@ -48,6 +49,10 @@ class MapToMapDistance:
             chunk_size=self.chunk_size_gt,
         )(maps1)
         return sub_distance_matrix
+
+    def distance_matrix_precomputation(maps1, maps2, global_store_of_running_results):
+        """Pre-compute any assets needed for the distance matrix computation."""
+        return
 
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         """Compute the distance matrix between two sets of maps."""
@@ -313,7 +318,6 @@ class FSCDistance(MapToMapDistance):
 
     def __init__(self, config):
         super().__init__(config)
-        self.stored_computed_assets = {"fsc_matrix": torch.empty(10, 8, 8)}
 
     def compute_cost_fsc_chunk(self, maps_gt_flat, maps_user_flat, n_pix):
         """
@@ -335,6 +339,15 @@ class FSCDistance(MapToMapDistance):
             fsc_matrix[idx] = corr_vector
             cost_matrix[idx] = dist
         return cost_matrix, fsc_matrix
+
+    @override
+    def distance_matrix_precomputation(self, maps1, maps2):
+        self.len_maps1 = len(maps1)
+        self.len_maps2 = len(maps2)
+        self.stored_computed_assets = {
+            "fsc_matrix": torch.empty(self.len_maps1, self.len_maps2, self.n_pix // 2)
+        }
+        return
 
     @override
     def get_sub_distance_matrix(self, maps1, maps2, idxs):

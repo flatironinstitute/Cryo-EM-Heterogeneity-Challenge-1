@@ -121,6 +121,9 @@ def run(config):
             print("maps_gt_flat", maps_gt_flat.shape)
             print("maps_user_flat", maps_user_flat.shape)
 
+            map_to_map_distance.distance_matrix_precomputation(
+                maps_gt_flat, maps_user_flat
+            )
             cost_matrix = map_to_map_distance.get_distance_matrix(
                 maps_gt_flat,
                 maps_user_flat,
