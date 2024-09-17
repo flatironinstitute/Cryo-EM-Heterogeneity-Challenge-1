@@ -44,6 +44,11 @@ class MapToMapDistance:
         self.chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
         self.n_pix = self.config["data"]["n_pix"]
         self.chunk_size_low_memory = self.config["analysis"]["chunk_size_low_memory"]
+        self.mask = (
+            mrcfile.open(self.config["data"]["mask"]["volume"])
+            .data.astype(bool)
+            .flatten()
+        )
 
     def get_distance(self, map1, map2):
         """Compute the distance between two maps."""
@@ -66,7 +71,11 @@ class MapToMapDistance:
 
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         """Compute the distance matrix between two sets of maps."""
-        # load in memory as torch tensors
+        if self.config["data"]["mask"]["do"]:
+            maps2 = maps2[:, self.mask]
+        else:
+            maps2.reshape(len(maps2), -1, inplace=True)
+
         if self.config["analysis"]["normalize"]["do"]:
             maps2 = normalize(
                 maps2, method=self.config["analysis"]["normalize"]["method"]
@@ -76,6 +85,10 @@ class MapToMapDistance:
             distance_matrix = torch.empty(len(maps1), len(maps2))
             for idxs in torch.arange(len(maps1)).chunk(self.n_chunks_low_memory):
                 maps1_in_memory = maps1[idxs]
+                if self.config["data"]["mask"]["do"]:
+                    maps1_in_memory = maps1_in_memory[:, self.mask]
+                else:
+                    maps1_in_memory.reshape(len(maps1_in_memory), -1, inplace=True)
                 if self.config["analysis"]["normalize"]["do"]:
                     maps1_in_memory = normalize(
                         maps1_in_memory,
@@ -125,7 +138,7 @@ class MapToMapDistanceLowMemory(MapToMapDistance):
                 raise NotImplementedError(
                     f"Normalization method {self.config['analysis']['normalize']['method']} not implemented."
                 )
-        map1 = map1[global_store_of_running_results["mask"]]
+        map1 = map1[self.mask]
 
         return self.compute_cost(map1, map2)
 
@@ -380,13 +393,8 @@ class FSCDistance(MapToMapDistance):
         maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
 
         if self.config["data"]["mask"]["do"]:
-            mask = (
-                mrcfile.open(self.config["data"]["mask"]["volume"])
-                .data.astype(bool)
-                .flatten()
-            )
-            maps_gt_flat_cube[:, mask] = maps_gt_flat
-            maps_user_flat_cube[:, mask] = maps_user_flat
+            maps_gt_flat_cube[:, self.mask] = maps_gt_flat
+            maps_user_flat_cube[:, self.mask] = maps_user_flat
         else:
             maps_gt_flat_cube = maps_gt_flat
             maps_user_flat_cube = maps_user_flat
@@ -396,35 +404,6 @@ class FSCDistance(MapToMapDistance):
         )
         self.stored_computed_assets["fsc_matrix"][idxs] = fsc_matrix
         return cost_matrix
-
-    # @override
-    # def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
-    #     """
-    #     Applies a mask to the maps and computes the cost matrix using the Fourier Shell Correlation.
-    #     """
-    #     maps_gt_flat = maps1
-    #     maps_user_flat = maps2
-    #     n_pix = self.config["data"]["n_pix"]
-    #     maps_gt_flat_cube = torch.zeros(len(maps_gt_flat), n_pix**3)
-    #     maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
-
-    #     if self.config["data"]["mask"]["do"]:
-    #         mask = (
-    #             mrcfile.open(self.config["data"]["mask"]["volume"])
-    #             .data.astype(bool)
-    #             .flatten()
-    #         )
-    #         maps_gt_flat_cube[:, mask] = maps_gt_flat
-    #         maps_user_flat_cube[:, mask] = maps_user_flat
-    #     else:
-    #         maps_gt_flat_cube = maps_gt_flat
-    #         maps_user_flat_cube = maps_user_flat
-
-    #     cost_matrix, fsc_matrix = self.compute_cost_fsc_chunk(
-    #         maps_gt_flat_cube, maps_user_flat_cube, n_pix
-    #     )
-    #     self.stored_computed_assets = {"fsc_matrix": fsc_matrix}
-    #     return cost_matrix
 
     @override
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
@@ -447,8 +426,8 @@ class FSCDistanceLowMemory(MapToMapDistance):
         map_gt_flat = map1 = map1.flatten()
         map_gt_flat_cube = torch.zeros(self.n_pix**3)
         if self.config["data"]["mask"]["do"]:
-            map_gt_flat = map_gt_flat[global_store_of_running_results["mask"]]
-            map_gt_flat_cube[global_store_of_running_results["mask"]] = map_gt_flat
+            map_gt_flat = map_gt_flat[self.mask]
+            map_gt_flat_cube[self.mask] = map_gt_flat
         else:
             map_gt_flat_cube = map_gt_flat
 
@@ -483,7 +462,15 @@ class FSCDistanceLowMemory(MapToMapDistance):
 
     @override
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
-        return self.stored_computed_assets  # must run get_distance_matrix first
+        """
+        Return any computed assets that are needed for (downstream) analysis.
+
+        Notes
+        -----
+        The FSC matrix is stored in the computed assets.
+        Must run get_distance_matrix first.
+        """
+        return self.stored_computed_assets
 
 
 class FSCResDistance(MapToMapDistance):

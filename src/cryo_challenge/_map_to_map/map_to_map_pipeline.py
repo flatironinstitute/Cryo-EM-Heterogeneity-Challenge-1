@@ -1,4 +1,4 @@
-import mrcfile
+import numpy as np
 import pandas as pd
 import pickle
 import torch
@@ -84,24 +84,11 @@ def run(config):
     if low_memory_mode:
         maps_gt_flat = GT_Dataset(config["data"]["ground_truth"]["volumes"])
     else:
-        maps_gt_flat = torch.load(config["data"]["ground_truth"]["volumes"]).reshape(
-            -1, n_pix**3
-        )
-
-    if config["data"]["mask"]["do"]:
-        mask = (
-            mrcfile.open(config["data"]["mask"]["volume"]).data.astype(bool).flatten()
-        )
-        if not low_memory_mode:
-            maps_gt_flat = maps_gt_flat[:, mask]
-        maps_user_flat = maps_user_flat[:, mask]
-    else:
-        if not low_memory_mode:
-            maps_gt_flat.reshape(len(maps_gt_flat), -1, inplace=True)
-        maps_user_flat.reshape(len(maps_gt_flat), -1, inplace=True)
+        maps_gt_flat = torch.from_numpy(
+            np.load(config["data"]["ground_truth"]["volumes"])
+        ).reshape(-1, n_pix**3)
 
     computed_assets = {}
-    results_dict["mask"] = mask
     for distance_label, map_to_map_distance in map_to_map_distances.items():
         if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
             print("cost matrix", distance_label)
