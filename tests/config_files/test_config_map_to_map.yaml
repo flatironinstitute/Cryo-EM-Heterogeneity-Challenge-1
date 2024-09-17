@@ -23,7 +23,7 @@ analysis:
   chunk_size_gt: 190
   low_memory:
     do: false
-    chunk_size_low_memory: 10
+    chunk_size_low_memory: null
   normalize:
     do: true
     method: median_zscore

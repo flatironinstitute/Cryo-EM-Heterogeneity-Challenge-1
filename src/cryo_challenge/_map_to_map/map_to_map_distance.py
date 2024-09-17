@@ -83,7 +83,7 @@ class MapToMapDistance:
             maps2 = normalize(
                 maps2, method=self.config["analysis"]["normalize"]["method"]
             )
-        if True:  # self.do_low_memory_mode:
+        if self.do_low_memory_mode:
             self.n_chunks_low_memory = len(maps1) // self.chunk_size_low_memory
             distance_matrix = torch.empty(len(maps1), len(maps2))
             for idxs in torch.arange(len(maps1)).chunk(self.n_chunks_low_memory):
@@ -408,6 +408,11 @@ class FSCDistance(MapToMapDistance):
         )
         self.stored_computed_assets["fsc_matrix"][idxs] = fsc_matrix
         return cost_matrix
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        idxs = torch.arange(len(maps1))
+        return self.get_sub_distance_matrix(maps1, maps2, idxs)
 
     @override
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
