@@ -28,6 +28,15 @@ class GT_Dataset(Dataset):
         return torch.from_numpy(sample.copy())
 
 
+def normalize(maps, method):
+    if method == "median_zscore":
+        maps -= maps.median(dim=1, keepdim=True).values
+        maps /= maps.std(dim=1, keepdim=True)
+    else:
+        raise NotImplementedError(f"Normalization method {method} not implemented.")
+    return maps
+
+
 class MapToMapDistance:
     def __init__(self, config):
         self.config = config
@@ -58,11 +67,20 @@ class MapToMapDistance:
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         """Compute the distance matrix between two sets of maps."""
         # load in memory as torch tensors
+        if self.config["analysis"]["normalize"]["do"]:
+            maps2 = normalize(
+                maps2, method=self.config["analysis"]["normalize"]["method"]
+            )
         if True:  # config.low_memory:
             self.n_chunks_low_memory = len(maps1) // self.chunk_size_low_memory
             distance_matrix = torch.empty(len(maps1), len(maps2))
             for idxs in torch.arange(len(maps1)).chunk(self.n_chunks_low_memory):
                 maps1_in_memory = maps1[idxs]
+                if self.config["analysis"]["normalize"]["do"]:
+                    maps1_in_memory = normalize(
+                        maps1_in_memory,
+                        method=self.config["analysis"]["normalize"]["method"],
+                    )
                 sub_distance_matrix = self.get_sub_distance_matrix(
                     maps1_in_memory,
                     maps2,

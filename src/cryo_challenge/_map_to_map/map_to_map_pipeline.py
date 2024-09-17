@@ -100,19 +100,6 @@ def run(config):
             maps_gt_flat.reshape(len(maps_gt_flat), -1, inplace=True)
         maps_user_flat.reshape(len(maps_gt_flat), -1, inplace=True)
 
-    if config["analysis"]["normalize"]["do"]:
-        if config["analysis"]["normalize"]["method"] == "median_zscore":
-            if not low_memory_mode:
-                maps_gt_flat -= maps_gt_flat.median(dim=1, keepdim=True).values
-            if not low_memory_mode:
-                maps_gt_flat /= maps_gt_flat.std(dim=1, keepdim=True)
-            maps_user_flat -= maps_user_flat.median(dim=1, keepdim=True).values
-            maps_user_flat /= maps_user_flat.std(dim=1, keepdim=True)
-        else:
-            raise NotImplementedError(
-                f"Normalization method {config['analysis']['normalize']['method']} not implemented."
-            )
-
     computed_assets = {}
     results_dict["mask"] = mask
     for distance_label, map_to_map_distance in map_to_map_distances.items():
