@@ -158,6 +158,7 @@ def validate_config_mtm_analysis(config_analysis: dict) -> None:
         "chunk_size_submission": Number,
         "chunk_size_gt": Number,
         "normalize": dict,
+        "low_memory": dict,
     }
 
     validate_generic_config(config_analysis, keys_and_types)

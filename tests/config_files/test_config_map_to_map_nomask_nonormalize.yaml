@@ -21,7 +21,9 @@ analysis:
     - res
   chunk_size_submission: 80
   chunk_size_gt: 190
-  chunk_size_low_memory: 10
+  low_memory:
+    do: true
+    chunk_size_low_memory: 10
   normalize:
     do: false
     method: median_zscore

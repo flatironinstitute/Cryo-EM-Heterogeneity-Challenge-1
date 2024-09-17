@@ -54,15 +54,12 @@ def run(config):
     }
 
     assert len(map_to_map_distances_low_memory) == 0 or len(map_to_map_distances) == 0
-
     if len(map_to_map_distances_low_memory) > 0:
         map_to_map_distances = map_to_map_distances_low_memory
-        low_memory_mode = True
-    else:
-        low_memory_mode = False
 
-    if not low_memory_mode:
-        n_pix = config["data"]["n_pix"]
+    do_low_memory_mode = config["analysis"]["low_memory"]["do"]
+
+    n_pix = config["data"]["n_pix"]
 
     submission = torch.load(config["data"]["submission"]["fname"])
     submission_volume_key = config["data"]["submission"]["volume_key"]
@@ -81,7 +78,7 @@ def run(config):
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
     )
-    if low_memory_mode:
+    if do_low_memory_mode:
         maps_gt_flat = GT_Dataset(config["data"]["ground_truth"]["volumes"])
     else:
         maps_gt_flat = torch.from_numpy(

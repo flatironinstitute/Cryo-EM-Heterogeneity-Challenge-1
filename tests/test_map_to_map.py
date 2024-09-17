@@ -7,11 +7,11 @@ def test_run_map2map_pipeline():
     for config_fname, config_fname_low_memory in zip(
         [
             "tests/config_files/test_config_map_to_map.yaml",
-            "tests/config_files/test_config_map_to_map.yaml",
+            "tests/config_files/test_config_map_to_map_nomask_nonormalize.yaml",
         ],
         [
             "tests/config_files/test_config_map_to_map_low_memory.yaml",
-            "tests/config_files/test_config_map_to_map_low_memory.yaml",
+            "tests/config_files/test_config_map_to_map_low_memory_nomask_nonormalize.yaml",
         ],
     ):
         args = OmegaConf.create({"config": config_fname})

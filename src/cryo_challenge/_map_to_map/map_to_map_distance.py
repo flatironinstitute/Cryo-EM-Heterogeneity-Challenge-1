@@ -40,10 +40,13 @@ def normalize(maps, method):
 class MapToMapDistance:
     def __init__(self, config):
         self.config = config
+        self.do_low_memory_mode = self.config["analysis"]["low_memory"]["do"]
         self.chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
         self.chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
         self.n_pix = self.config["data"]["n_pix"]
-        self.chunk_size_low_memory = self.config["analysis"]["chunk_size_low_memory"]
+        self.chunk_size_low_memory = self.config["analysis"]["low_memory"][
+            "chunk_size_low_memory"
+        ]
         self.mask = (
             mrcfile.open(self.config["data"]["mask"]["volume"])
             .data.astype(bool)
@@ -74,21 +77,23 @@ class MapToMapDistance:
         if self.config["data"]["mask"]["do"]:
             maps2 = maps2[:, self.mask]
         else:
-            maps2.reshape(len(maps2), -1, inplace=True)
+            maps2 = maps2.reshape(len(maps2), -1)
 
         if self.config["analysis"]["normalize"]["do"]:
             maps2 = normalize(
                 maps2, method=self.config["analysis"]["normalize"]["method"]
             )
-        if True:  # config.low_memory:
+        if True:  # self.do_low_memory_mode:
             self.n_chunks_low_memory = len(maps1) // self.chunk_size_low_memory
             distance_matrix = torch.empty(len(maps1), len(maps2))
             for idxs in torch.arange(len(maps1)).chunk(self.n_chunks_low_memory):
                 maps1_in_memory = maps1[idxs]
                 if self.config["data"]["mask"]["do"]:
-                    maps1_in_memory = maps1_in_memory[:, self.mask]
+                    maps1_in_memory = maps1_in_memory.reshape(len(idxs), -1)[
+                        :, self.mask
+                    ]
                 else:
-                    maps1_in_memory.reshape(len(maps1_in_memory), -1, inplace=True)
+                    maps1_in_memory = maps1_in_memory.reshape(len(maps1_in_memory), -1)
                 if self.config["analysis"]["normalize"]["do"]:
                     maps1_in_memory = normalize(
                         maps1_in_memory,
@@ -102,7 +107,6 @@ class MapToMapDistance:
                 distance_matrix[idxs] = sub_distance_matrix
 
         else:
-            assert False, "Not implemented"
             distance_matrix = torch.vmap(
                 lambda maps1: torch.vmap(
                     lambda maps2: self.get_distance(maps1, maps2),
