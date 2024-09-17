@@ -31,28 +31,35 @@ class GT_Dataset(Dataset):
 class MapToMapDistance:
     def __init__(self, config):
         self.config = config
+        self.chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
+        self.chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
 
     def get_distance(self, map1, map2):
         """Compute the distance between two maps."""
         raise NotImplementedError()
 
+    def get_sub_distance_matrix(self, maps1, maps2):
+        """Compute the distance matrix between two sets of maps."""
+        sub_distance_matrix = torch.vmap(
+            lambda maps1: torch.vmap(
+                lambda maps2: self.get_distance(maps1, maps2),
+                chunk_size=self.chunk_size_submission,
+            )(maps2),
+            chunk_size=self.chunk_size_gt,
+        )(maps1)
+        return sub_distance_matrix
+
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         """Compute the distance matrix between two sets of maps."""
-        chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
-        chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
         # load in memory as torch tensors
         if True:  # config.low_memory:
             distance_matrix = torch.empty(len(maps1), len(maps2))
             n_chunks_low_memory = 100
             for idxs in torch.arange(len(maps1)).chunk(n_chunks_low_memory):
                 maps1_in_memory = maps1[idxs]
-                sub_distance_matrix = torch.vmap(
-                    lambda maps1: torch.vmap(
-                        lambda maps2: self.get_distance(maps1, maps2),
-                        chunk_size=chunk_size_submission,
-                    )(maps2),
-                    chunk_size=chunk_size_gt,
-                )(maps1_in_memory)
+                sub_distance_matrix = self.get_sub_distance_matrix(
+                    maps1_in_memory, maps2
+                )
                 distance_matrix[idxs] = sub_distance_matrix
 
         else:
@@ -60,9 +67,9 @@ class MapToMapDistance:
             distance_matrix = torch.vmap(
                 lambda maps1: torch.vmap(
                     lambda maps2: self.get_distance(maps1, maps2),
-                    chunk_size=chunk_size_submission,
+                    chunk_size=self.chunk_size_submission,
                 )(maps2),
-                chunk_size=chunk_size_gt,
+                chunk_size=self.chunk_size_gt,
             )(maps1)
         return distance_matrix
 
