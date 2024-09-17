@@ -118,6 +118,8 @@ def run(config):
     for distance_label, map_to_map_distance in map_to_map_distances.items():
         if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
             print("cost matrix", distance_label)
+            print("maps_gt_flat", maps_gt_flat.shape)
+            print("maps_user_flat", maps_user_flat.shape)
 
             cost_matrix = map_to_map_distance.get_distance_matrix(
                 maps_gt_flat,

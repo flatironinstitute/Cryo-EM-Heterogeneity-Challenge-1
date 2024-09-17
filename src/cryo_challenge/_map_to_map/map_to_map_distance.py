@@ -38,7 +38,7 @@ class MapToMapDistance:
         """Compute the distance between two maps."""
         raise NotImplementedError()
 
-    def get_sub_distance_matrix(self, maps1, maps2):
+    def get_sub_distance_matrix(self, maps1, maps2, idxs):
         """Compute the distance matrix between two sets of maps."""
         sub_distance_matrix = torch.vmap(
             lambda maps1: torch.vmap(
@@ -58,7 +58,9 @@ class MapToMapDistance:
             for idxs in torch.arange(len(maps1)).chunk(n_chunks_low_memory):
                 maps1_in_memory = maps1[idxs]
                 sub_distance_matrix = self.get_sub_distance_matrix(
-                    maps1_in_memory, maps2
+                    maps1_in_memory,
+                    maps2,
+                    idxs,
                 )
                 distance_matrix[idxs] = sub_distance_matrix
 
@@ -311,6 +313,7 @@ class FSCDistance(MapToMapDistance):
 
     def __init__(self, config):
         super().__init__(config)
+        self.stored_computed_assets = {"fsc_matrix": torch.empty(10, 8, 8)}
 
     def compute_cost_fsc_chunk(self, maps_gt_flat, maps_user_flat, n_pix):
         """
@@ -334,7 +337,7 @@ class FSCDistance(MapToMapDistance):
         return cost_matrix, fsc_matrix
 
     @override
-    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+    def get_sub_distance_matrix(self, maps1, maps2, idxs):
         """
         Applies a mask to the maps and computes the cost matrix using the Fourier Shell Correlation.
         """
@@ -359,8 +362,37 @@ class FSCDistance(MapToMapDistance):
         cost_matrix, fsc_matrix = self.compute_cost_fsc_chunk(
             maps_gt_flat_cube, maps_user_flat_cube, n_pix
         )
-        self.stored_computed_assets = {"fsc_matrix": fsc_matrix}
+        self.stored_computed_assets["fsc_matrix"][idxs] = fsc_matrix
         return cost_matrix
+
+    # @override
+    # def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+    #     """
+    #     Applies a mask to the maps and computes the cost matrix using the Fourier Shell Correlation.
+    #     """
+    #     maps_gt_flat = maps1
+    #     maps_user_flat = maps2
+    #     n_pix = self.config["data"]["n_pix"]
+    #     maps_gt_flat_cube = torch.zeros(len(maps_gt_flat), n_pix**3)
+    #     maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
+
+    #     if self.config["data"]["mask"]["do"]:
+    #         mask = (
+    #             mrcfile.open(self.config["data"]["mask"]["volume"])
+    #             .data.astype(bool)
+    #             .flatten()
+    #         )
+    #         maps_gt_flat_cube[:, mask] = maps_gt_flat
+    #         maps_user_flat_cube[:, mask] = maps_user_flat
+    #     else:
+    #         maps_gt_flat_cube = maps_gt_flat
+    #         maps_user_flat_cube = maps_user_flat
+
+    #     cost_matrix, fsc_matrix = self.compute_cost_fsc_chunk(
+    #         maps_gt_flat_cube, maps_user_flat_cube, n_pix
+    #     )
+    #     self.stored_computed_assets = {"fsc_matrix": fsc_matrix}
+    #     return cost_matrix
 
     @override
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
