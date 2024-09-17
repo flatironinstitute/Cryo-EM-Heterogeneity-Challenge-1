@@ -95,6 +95,10 @@ class MapToMapDistanceLowMemory(MapToMapDistance):
         return cost_matrix
 
 
+def norm2(map1, map2):
+    return torch.norm(map1 - map2) ** 2
+
+
 class L2DistanceNorm(MapToMapDistance):
     """L2 distance norm"""
 
@@ -103,7 +107,7 @@ class L2DistanceNorm(MapToMapDistance):
 
     @override
     def get_distance(self, map1, map2):
-        return torch.norm(map1 - map2) ** 2
+        return norm2(map1, map2)
 
 
 class L2DistanceNormLowMemory(MapToMapDistanceLowMemory):
@@ -114,7 +118,7 @@ class L2DistanceNormLowMemory(MapToMapDistanceLowMemory):
 
     @override
     def compute_cost(self, map1, map2):
-        return torch.norm(map1 - map2) ** 2
+        return norm2(map1, map2)
 
 
 def correlation(map1, map2):
