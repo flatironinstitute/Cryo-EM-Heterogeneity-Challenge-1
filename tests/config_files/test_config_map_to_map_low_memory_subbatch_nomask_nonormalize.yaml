@@ -10,8 +10,8 @@ data:
     volumes: tests/data/Ground_truth/test_maps_gt_flat_10.npy
     metadata: tests/data/Ground_truth/test_metadata_10.csv
   mask:
-    do: true
-    volume: tests/data/Ground_truth/test_mask_dilated_wide.mrc
+    do: false
+    volume: dummy-string
 analysis:
   metrics:
     - l2
@@ -21,10 +21,11 @@ analysis:
     - res
   chunk_size_submission: 80
   chunk_size_gt: 190
+  chunk_size_low_memory: 10
   low_memory:
-    do: false
-    chunk_size_low_memory: null
-  normalize:
     do: true
-    method: median_zscore
+    chunk_size_low_memory: 10
+  normalize:
+    do: false
+    method: dummy-string
 output: tests/results/test_map_to_map_distance_matrix_submission_0.pkl
