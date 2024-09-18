@@ -397,8 +397,9 @@ class FSCDistance(MapToMapDistance):
         maps_user_flat_cube = torch.zeros(len(maps_user_flat), n_pix**3)
 
         if self.config["data"]["mask"]["do"]:
-            maps_gt_flat_cube[:, self.mask] = maps_gt_flat
+            maps_gt_flat_cube[:, self.mask] = maps_gt_flat[:]
             maps_user_flat_cube[:, self.mask] = maps_user_flat
+
         else:
             maps_gt_flat_cube = maps_gt_flat
             maps_user_flat_cube = maps_user_flat
@@ -411,8 +412,43 @@ class FSCDistance(MapToMapDistance):
 
     @override
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
-        idxs = torch.arange(len(maps1))
-        return self.get_sub_distance_matrix(maps1, maps2, idxs)
+        """Compute the distance matrix between two sets of maps."""
+        if self.config["data"]["mask"]["do"]:
+            maps2 = maps2[:, self.mask]
+        else:
+            maps2 = maps2.reshape(len(maps2), -1)
+
+        if self.config["analysis"]["normalize"]["do"]:
+            maps2 = normalize(
+                maps2, method=self.config["analysis"]["normalize"]["method"]
+            )
+        if self.chunk_size_low_memory is None:
+            self.n_chunks_low_memory = 1
+        else:
+            self.n_chunks_low_memory = len(maps1) // self.chunk_size_low_memory
+        distance_matrix = torch.empty(len(maps1), len(maps2))
+        for idxs in torch.arange(len(maps1)).chunk(self.n_chunks_low_memory):
+            maps1_in_memory = maps1[idxs]
+
+            if self.config["data"]["mask"]["do"]:
+                maps1_in_memory = maps1_in_memory[:].reshape(len(idxs), -1)[
+                    :, self.mask
+                ]
+
+            else:
+                maps1_in_memory = maps1_in_memory.reshape(len(maps1_in_memory), -1)
+            if self.config["analysis"]["normalize"]["do"]:
+                maps1_in_memory = normalize(
+                    maps1_in_memory,
+                    method=self.config["analysis"]["normalize"]["method"],
+                )
+            sub_distance_matrix = self.get_sub_distance_matrix(
+                maps1_in_memory,
+                maps2,
+                idxs,
+            )
+            distance_matrix[idxs] = sub_distance_matrix
+        return distance_matrix
 
     @override
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
