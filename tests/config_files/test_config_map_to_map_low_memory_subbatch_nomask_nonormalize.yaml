@@ -7,7 +7,7 @@ data:
     metadata_key: populations
     label_key: id
   ground_truth:
-    volumes: tests/data/Ground_truth/test_maps_gt_flat_10.npy
+    volumes: tests/data/Ground_truth/test_maps_gt_flat_10.pt
     metadata: tests/data/Ground_truth/test_metadata_10.csv
   mask:
     do: false
@@ -19,12 +19,11 @@ analysis:
     - bioem
     - fsc
     - res
-  chunk_size_submission: 80
-  chunk_size_gt: 190
-  chunk_size_low_memory: 10
+  chunk_size_submission: 4
+  chunk_size_gt: 5
   low_memory:
     do: true
-    chunk_size_low_memory: 10
+    chunk_size_low_memory: 2
   normalize:
     do: false
     method: dummy-string

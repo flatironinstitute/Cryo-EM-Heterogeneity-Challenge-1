@@ -1,11 +1,9 @@
-import numpy as np
 import pandas as pd
 import pickle
 import torch
 
 from ..data._validation.output_validators import MapToMapResultsValidator
 from .._map_to_map.map_to_map_distance import (
-    GT_Dataset,
     FSCDistance,
     Correlation,
     L2DistanceNorm,
@@ -36,8 +34,6 @@ def run(config):
 
     do_low_memory_mode = config["analysis"]["low_memory"]["do"]
 
-    n_pix = config["data"]["n_pix"]
-
     submission = torch.load(config["data"]["submission"]["fname"])
     submission_volume_key = config["data"]["submission"]["volume_key"]
     submission_metadata_key = config["data"]["submission"]["metadata_key"]
@@ -55,12 +51,9 @@ def run(config):
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
     )
-    if do_low_memory_mode:
-        maps_gt_flat = GT_Dataset(config["data"]["ground_truth"]["volumes"])
-    else:
-        maps_gt_flat = torch.from_numpy(
-            np.load(config["data"]["ground_truth"]["volumes"])
-        ).reshape(-1, n_pix**3)
+    maps_gt_flat = torch.load(
+        config["data"]["ground_truth"]["volumes"], mmap=do_low_memory_mode
+    )
 
     computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():

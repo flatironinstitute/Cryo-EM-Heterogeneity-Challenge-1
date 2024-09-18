@@ -4,28 +4,6 @@ from typing import Optional, Sequence
 from typing_extensions import override
 import mrcfile
 import numpy as np
-from torch.utils.data import Dataset
-
-
-class GT_Dataset(Dataset):
-    def __init__(self, npy_file):
-        self.npy_file = npy_file
-        self.data = np.load(npy_file, mmap_mode="r+")
-
-        self.shape = self.data.shape
-        self._dim = len(self.data.shape)
-
-    def dim(self):
-        return self._dim
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-        sample = self.data[idx]
-        return torch.from_numpy(sample.copy())
 
 
 def normalize(maps, method):
@@ -108,6 +86,8 @@ class MapToMapDistance:
                 distance_matrix[idxs] = sub_distance_matrix
 
         else:
+            maps1 = maps1.reshape(len(maps1), -1)
+            maps2 = maps2.reshape(len(maps2), -1)
             distance_matrix = torch.vmap(
                 lambda maps1: torch.vmap(
                     lambda maps2: self.get_distance(maps1, maps2),
