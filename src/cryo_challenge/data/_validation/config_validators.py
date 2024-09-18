@@ -151,6 +151,7 @@ def validate_config_mtm_analysis(config_analysis: dict) -> None:
     chunk_size_submission: int, is the chunk size for the submission volume.
     chunk_size_gt: int, is the chunk size for the ground truth volume.
     normalize: dict, is the normalize part of the analysis part of the config.
+    low_memory: dict, is the low memory part of the analysis part of the config. # TODO: add validation for low_memory
 
     """  # noqa: E501
     keys_and_types = {
@@ -158,6 +159,7 @@ def validate_config_mtm_analysis(config_analysis: dict) -> None:
         "chunk_size_submission": Number,
         "chunk_size_gt": Number,
         "normalize": dict,
+        "low_memory": dict,
     }
 
     validate_generic_config(config_analysis, keys_and_types)

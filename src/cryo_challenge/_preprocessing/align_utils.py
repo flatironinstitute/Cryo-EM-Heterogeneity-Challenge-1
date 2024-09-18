@@ -116,6 +116,45 @@ def center_submission(volumes: torch.Tensor, pixel_size: float) -> torch.Tensor:
     return volumes
 
 
+# def align_submission(
+#     volumes: torch.Tensor, ref_volume: torch.Tensor, params: dict
+# ) -> torch.Tensor:
+#     """
+#     Align submission volumes to ground truth volume
+
+#     Parameters:
+#     -----------
+#     volumes (torch.Tensor): submission volumes
+#         shape: (n_volumes, im_x, im_y, im_z)
+#     ref_volume (torch.Tensor): ground truth volume
+#         shape: (im_x, im_y, im_z)
+#     params (dict): dictionary containing alignment parameters
+
+#     Returns:
+#     --------
+#     volumes (torch.Tensor): aligned submission volumes
+#     """
+#     for i in range(len(volumes)):
+#         obj_vol = volumes[i].numpy().astype(np.float32).copy()
+
+#         obj_vol = Volume(obj_vol / obj_vol.sum())
+#         ref_vol = Volume(ref_volume.copy() / ref_volume.sum())
+
+#         _, R_est = align_BO(
+#             ref_vol,
+#             obj_vol,
+#             loss_type=params["BOT_loss"],
+#             downsampled_size=params["BOT_box_size"],
+#             max_iters=params["BOT_iter"],
+#             refine=params["BOT_refine"],
+#         )
+#         R_est = Rotation(R_est.astype(np.float32))
+
+#         volumes[i] = torch.from_numpy(Volume(volumes[i].numpy()).rotate(R_est)._data)
+
+#     return volumes
+
+
 def align_submission(
     volumes: torch.Tensor, ref_volume: torch.Tensor, params: dict
 ) -> torch.Tensor:
