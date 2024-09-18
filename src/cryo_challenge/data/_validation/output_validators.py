@@ -19,27 +19,18 @@ class MapToMapResultsValidator:
     config: dict, input config dictionary.
     user_submitted_populations: torch.Tensor, user submitted populations, which sum to 1.
     corr: dict, correlation results.
-    corr_low_memory: dict, correlation results in low memory mode.
     l2: dict, L2 results.
-    l2_low_memory: dict, L2 results in low memory mode.
     bioem: dict, BioEM results.
-    bioem_low_memory: dict, BioEM results in low memory mode.
     fsc: dict, FSC results.
-    fsc_low_memory: dict, FSC results in low memory mode.
     """
 
     config: dict
     user_submitted_populations: torch.Tensor
     corr: Optional[dict] = None
-    corr_low_memory: Optional[dict] = None
     l2: Optional[dict] = None
-    l2_low_memory: Optional[dict] = None
     bioem: Optional[dict] = None
-    bioem_low_memory: Optional[dict] = None
     fsc: Optional[dict] = None
-    fsc_low_memory: Optional[dict] = None
     res: Optional[dict] = None
-    res_low_memory: Optional[dict] = None
 
     def __post_init__(self):
         validate_input_config_mtm(self.config)
@@ -150,10 +141,6 @@ class DistributionToDistributionResultsValidator:
     bioem: dict, BioEM distance results.
     l2: dict, L2 distance results.
     corr: dict, correlation distance results.
-    fsc_low_memory: dict, FSC distance results in low memory mode.
-    bioem_low_memory: dict, BioEM distance results in low memory mode.
-    l2_low_memory: dict, L2 distance results in low memory mode.
-    corr_low_memory: dict, correlation distance results in low memory mode.
     """
 
     config: dict
@@ -164,11 +151,6 @@ class DistributionToDistributionResultsValidator:
     res: Optional[dict] = None
     l2: Optional[dict] = None
     corr: Optional[dict] = None
-    fsc_low_memory: Optional[dict] = None
-    bioem_low_memory: Optional[dict] = None
-    res_low_memory: Optional[dict] = None
-    l2_low_memory: Optional[dict] = None
-    corr_low_memory: Optional[dict] = None
 
     def __post_init__(self):
         validate_input_config_disttodist(self.config)
