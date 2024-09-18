@@ -122,47 +122,6 @@ class MapToMapDistance:
         return {}
 
 
-class MapToMapDistanceLowMemory(MapToMapDistance):
-    """General class for map-to-map distance metrics that require low memory."""
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.config = config
-
-    def compute_cost(self, map_1, map_2):
-        raise NotImplementedError()
-
-    @override
-    def get_distance(self, map1, map2, global_store_of_running_results):
-        map1 = map1.flatten()
-        if self.config["analysis"]["normalize"]["do"]:
-            if self.config["analysis"]["normalize"]["method"] == "median_zscore":
-                map1 -= map1.median()
-                map1 /= map1.std()
-            else:
-                raise NotImplementedError(
-                    f"Normalization method {self.config['analysis']['normalize']['method']} not implemented."
-                )
-        if self.config["data"]["mask"]["do"]:
-            map1 = map1[self.mask]
-
-        return self.compute_cost(map1, map2)
-
-    @override
-    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
-        maps_gt_flat = maps1
-        maps_user_flat = maps2
-        cost_matrix = torch.empty(len(maps_gt_flat), len(maps_user_flat))
-        for idx_gt in range(len(maps_gt_flat)):
-            for idx_user in range(len(maps_user_flat)):
-                cost_matrix[idx_gt, idx_user] = self.get_distance(
-                    maps_gt_flat[idx_gt],
-                    maps_user_flat[idx_user],
-                    global_store_of_running_results,
-                )
-        return cost_matrix
-
-
 def norm2(map1, map2):
     return torch.norm(map1 - map2) ** 2
 
@@ -175,17 +134,6 @@ class L2DistanceNorm(MapToMapDistance):
 
     @override
     def get_distance(self, map1, map2):
-        return norm2(map1, map2)
-
-
-class L2DistanceNormLowMemory(MapToMapDistanceLowMemory):
-    """L2 distance norm"""
-
-    def __init__(self, config):
-        super().__init__(config)
-
-    @override
-    def compute_cost(self, map1, map2):
         return norm2(map1, map2)
 
 
@@ -203,17 +151,6 @@ class Correlation(MapToMapDistance):
 
     @override
     def get_distance(self, map1, map2):
-        return correlation(map1, map2)
-
-
-class CorrelationLowMemory(MapToMapDistanceLowMemory):
-    """Correlation."""
-
-    def __init__(self, config):
-        super().__init__(config)
-
-    @override
-    def compute_cost(self, map1, map2):
         return correlation(map1, map2)
 
 
@@ -269,17 +206,6 @@ class BioEM3dDistance(MapToMapDistance):
 
     @override
     def get_distance(self, map1, map2):
-        return compute_bioem3d_cost(map1, map2)
-
-
-class BioEM3dDistanceLowMemory(MapToMapDistanceLowMemory):
-    """BioEM 3D distance."""
-
-    def __init__(self, config):
-        super().__init__(config)
-
-    @override
-    def compute_cost(self, map1, map2):
         return compute_bioem3d_cost(map1, map2)
 
 
@@ -457,69 +383,6 @@ class FSCDistance(MapToMapDistance):
         return self.stored_computed_assets  # must run get_distance_matrix first
 
 
-class FSCDistanceLowMemory(MapToMapDistance):
-    """Fourier Shell Correlation distance."""
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.n_pix = self.config["data"]["n_pix"]
-        self.config = config
-
-    def compute_cost(self, map_1, map_2):
-        raise NotImplementedError()
-
-    @override
-    def get_distance(self, map1, map2, global_store_of_running_results):
-        map_gt_flat = map1 = map1.flatten()
-        map_gt_flat_cube = torch.zeros(self.n_pix**3)
-        if self.config["data"]["mask"]["do"]:
-            map_gt_flat = map_gt_flat[self.mask]
-            map_gt_flat_cube[self.mask] = map_gt_flat
-        else:
-            map_gt_flat_cube = map_gt_flat
-
-        corr_vector = fourier_shell_correlation(
-            map_gt_flat_cube.reshape(self.n_pix, self.n_pix, self.n_pix),
-            map2.reshape(self.n_pix, self.n_pix, self.n_pix),
-        )
-        dist = 1 - corr_vector.mean()  # TODO: spectral cutoff
-        self.stored_computed_assets = {"corr_vector": corr_vector}
-        return dist
-
-    @override
-    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
-        maps_gt_flat = maps1
-        maps_user_flat = maps2
-        cost_matrix = torch.empty(len(maps_gt_flat), len(maps_user_flat))
-        fsc_matrix = torch.zeros(
-            len(maps_gt_flat), len(maps_user_flat), self.n_pix // 2
-        )
-        for idx_gt in range(len(maps_gt_flat)):
-            for idx_user in range(len(maps_user_flat)):
-                cost_matrix[idx_gt, idx_user] = self.get_distance(
-                    maps_gt_flat[idx_gt],
-                    maps_user_flat[idx_user],
-                    global_store_of_running_results,
-                )
-                fsc_matrix[idx_gt, idx_user] = self.stored_computed_assets[
-                    "corr_vector"
-                ]
-        self.stored_computed_assets = {"fsc_matrix": fsc_matrix}
-        return cost_matrix
-
-    @override
-    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
-        """
-        Return any computed assets that are needed for (downstream) analysis.
-
-        Notes
-        -----
-        The FSC matrix is stored in the computed assets.
-        Must run get_distance_matrix first.
-        """
-        return self.stored_computed_assets
-
-
 class FSCResDistance(MapToMapDistance):
     """FSC Resolution distance.
 
@@ -555,15 +418,3 @@ class FSCResDistance(MapToMapDistance):
         res_fsc_half, fraction_nyquist = res_at_fsc_threshold(fsc_matrix)
         self.stored_computed_assets = {"fraction_nyquist": fraction_nyquist}
         return units_Angstroms[res_fsc_half]
-
-
-class FSCResDistanceLowMemory(FSCResDistance):
-    """FSC Resolution distance.
-
-    The resolution at which the Fourier Shell Correlation reaches 0.5.
-    Built on top of the FSCDistance class. This needs to be run first and store the FSC matrix in the computed assets.
-    """
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.fsc_label = "fsc_low_memory"

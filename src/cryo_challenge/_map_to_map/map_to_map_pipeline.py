@@ -7,15 +7,10 @@ from ..data._validation.output_validators import MapToMapResultsValidator
 from .._map_to_map.map_to_map_distance import (
     GT_Dataset,
     FSCDistance,
-    FSCDistanceLowMemory,
     Correlation,
-    CorrelationLowMemory,
     L2DistanceNorm,
-    L2DistanceNormLowMemory,
     BioEM3dDistance,
-    BioEM3dDistanceLowMemory,
     FSCResDistance,
-    FSCResDistanceLowMemory,
 )
 
 
@@ -25,14 +20,6 @@ AVAILABLE_MAP2MAP_DISTANCES = {
     "l2": L2DistanceNorm,
     "bioem": BioEM3dDistance,
     "res": FSCResDistance,
-}
-
-AVAILABLE_MAP2MAP_DISTANCES_LOW_MEMORY = {
-    "corr_low_memory": CorrelationLowMemory,
-    "l2_low_memory": L2DistanceNormLowMemory,
-    "bioem_low_memory": BioEM3dDistanceLowMemory,
-    "fsc_low_memory": FSCDistanceLowMemory,
-    "res_low_memory": FSCResDistanceLowMemory,
 }
 
 
@@ -46,16 +33,6 @@ def run(config):
         for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
         if distance_label in config["analysis"]["metrics"]
     }
-
-    map_to_map_distances_low_memory = {
-        distance_label: distance_class(config)
-        for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES_LOW_MEMORY.items()
-        if distance_label in config["analysis"]["metrics"]
-    }
-
-    assert len(map_to_map_distances_low_memory) == 0 or len(map_to_map_distances) == 0
-    if len(map_to_map_distances_low_memory) > 0:
-        map_to_map_distances = map_to_map_distances_low_memory
 
     do_low_memory_mode = config["analysis"]["low_memory"]["do"]
 
