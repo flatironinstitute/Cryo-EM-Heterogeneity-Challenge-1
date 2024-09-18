@@ -1,0 +1,31 @@
+data:
+  n_pix: 16
+  psize: 30.044
+  submission:
+    fname: tests/data/dataset_2_submissions/submission_1000.pt
+    volume_key: volumes
+    metadata_key: populations
+    label_key: id
+  ground_truth:
+    volumes: tests/data/Ground_truth/test_maps_gt_flat_10.npy
+    metadata: tests/data/Ground_truth/test_metadata_10.csv
+  mask:
+    do: false
+    volume: dummy-string
+analysis:
+  metrics:
+    - l2
+    - corr
+    - bioem
+    - fsc
+    - res
+  chunk_size_submission: 80
+  chunk_size_gt: 190
+  chunk_size_low_memory: 10
+  low_memory:
+    do: true
+    chunk_size_low_memory: 10
+  normalize:
+    do: false
+    method: dummy-string
+output: tests/results/test_map_to_map_distance_matrix_submission_0.pkl

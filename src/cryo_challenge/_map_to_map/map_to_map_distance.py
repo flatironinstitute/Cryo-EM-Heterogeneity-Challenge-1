@@ -47,11 +47,12 @@ class MapToMapDistance:
         self.chunk_size_low_memory = self.config["analysis"]["low_memory"][
             "chunk_size_low_memory"
         ]
-        self.mask = (
-            mrcfile.open(self.config["data"]["mask"]["volume"])
-            .data.astype(bool)
-            .flatten()
-        )
+        if self.config["data"]["mask"]["do"]:
+            self.mask = (
+                mrcfile.open(self.config["data"]["mask"]["volume"])
+                .data.astype(bool)
+                .flatten()
+            )
 
     def get_distance(self, map1, map2):
         """Compute the distance between two maps."""
@@ -142,7 +143,8 @@ class MapToMapDistanceLowMemory(MapToMapDistance):
                 raise NotImplementedError(
                     f"Normalization method {self.config['analysis']['normalize']['method']} not implemented."
                 )
-        map1 = map1[self.mask]
+        if self.config["data"]["mask"]["do"]:
+            map1 = map1[self.mask]
 
         return self.compute_cost(map1, map2)
 
