@@ -1,3 +1,7 @@
+# gw
+src/cryo_challenge/_map_to_map/gromov_wasserstein/*mp4
+src/cryo_challenge/_map_to_map/gromov_wasserstein/*map
+
 # downloaded data
 data/dataset_2_submissions
 data/dataset_1_submissions
