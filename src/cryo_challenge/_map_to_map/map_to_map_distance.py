@@ -1,3 +1,5 @@
+import os
+import subprocess
 import math
 import torch
 from typing import Optional, Sequence
@@ -398,3 +400,74 @@ class FSCResDistance(MapToMapDistance):
         res_fsc_half, fraction_nyquist = res_at_fsc_threshold(fsc_matrix)
         self.stored_computed_assets = {"fraction_nyquist": fraction_nyquist}
         return units_Angstroms[res_fsc_half]
+
+
+class Zernike3DDistance(MapToMapDistance):
+    """Zernike3D based distance.
+
+    Zernike3D distance relies on the estimation of the non-linear transformation needed to align two different maps.
+    The RMSD of the associated non-linear alignment represented as a deformation field is then used as the distance
+    between two maps
+    """
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        gpuID = self.config["analysis"]["zernike3d_extra_params"]["gpuID"]
+        outputPath = self.config["analysis"]["zernike3d_extra_params"]["tmpDir"]
+        thr = self.config["analysis"]["zernike3d_extra_params"]["thr"]
+
+        # Create output directory
+        if not os.path.isdir(outputPath):
+            os.mkdir(outputPath)
+
+        # # Unmasking if mask->do is true
+        # if self.config["data"]["mask"]["do"]:
+        #     mask = (
+        #         mrcfile.open(self.config["data"]["mask"]["volume"]).data.astype(bool).flatten()
+        #     )
+        #     aux = np.zeros([maps2.shape[0], maps1.shape[1]])
+        #     aux[:, mask] = maps2
+        #     maps2 = aux
+
+        # Prepare data to call external
+        targets_paths = os.path.join(outputPath, "target_maps.npy")
+        references_path = os.path.join(outputPath, "reference_maps.npy")
+        if not os.path.isfile(targets_paths):
+            np.save(targets_paths, maps1)
+        if not os.path.isfile(references_path):
+            np.save(references_path, maps2)
+
+        # Check conda is in PATH (otherwise abort as external software is not installed)
+        try:
+            subprocess.check_call("conda", shell=True, stdout=subprocess.PIPE)
+        except:
+            raise Exception("Conda not found in PATH... Aborting")
+
+        # Check if conda env is installed
+        env_installed = subprocess.run(
+            r"conda env list | grep 'flexutils-tensorflow '",
+            shell=True, check=False, stdout=subprocess.PIPE).stdout
+        env_installed = bool(env_installed.decode("utf-8").replace('\n', '').replace("*", ""))
+        if not env_installed:
+            raise Exception("External software not found... Aborting")
+
+        # Find conda executable (needed to activate conda envs in a subprocess)
+        condabin_path = subprocess.run(r"which conda | sed 's: ::g'", shell=True, check=False,
+                                       stdout=subprocess.PIPE).stdout
+        condabin_path = condabin_path.decode("utf-8").replace('\n', '').replace("*", "")
+
+        # Call external program
+        subprocess.check_call(f'eval "$({condabin_path} shell.bash hook)" &&'
+                              f' conda activate flexutils-tensorflow && '
+                              f'compute_distance_matrix_zernike3deep.py --references_file {references_path} '
+                              f'--targets_file {targets_paths} --out_path {outputPath} --gpu {gpuID} '
+                              f'--thr {thr}', shell=True)
+
+        # Read distance matrix
+        dists = np.load(os.path.join(outputPath, "dist_mat.npy")).T
+        self.stored_computed_assets = {"zernike3d": dists}
+        return dists
+
+    @override
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
+        return self.stored_computed_assets  # must run get_distance_matrix first
