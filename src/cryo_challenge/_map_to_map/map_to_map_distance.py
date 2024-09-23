@@ -420,15 +420,6 @@ class Zernike3DDistance(MapToMapDistance):
         if not os.path.isdir(outputPath):
             os.mkdir(outputPath)
 
-        # # Unmasking if mask->do is true
-        # if self.config["data"]["mask"]["do"]:
-        #     mask = (
-        #         mrcfile.open(self.config["data"]["mask"]["volume"]).data.astype(bool).flatten()
-        #     )
-        #     aux = np.zeros([maps2.shape[0], maps1.shape[1]])
-        #     aux[:, mask] = maps2
-        #     maps2 = aux
-
         # Prepare data to call external
         targets_paths = os.path.join(outputPath, "target_maps.npy")
         references_path = os.path.join(outputPath, "reference_maps.npy")
