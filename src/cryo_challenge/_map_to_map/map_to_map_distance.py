@@ -431,7 +431,7 @@ class Zernike3DDistance(MapToMapDistance):
         # Check conda is in PATH (otherwise abort as external software is not installed)
         try:
             subprocess.check_call("conda", shell=True, stdout=subprocess.PIPE)
-        except:
+        except FileNotFoundError:
             raise Exception("Conda not found in PATH... Aborting")
 
         # Check if conda env is installed
