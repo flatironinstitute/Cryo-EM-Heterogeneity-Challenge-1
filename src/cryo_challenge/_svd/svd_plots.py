@@ -122,11 +122,12 @@ def plot_common_embedding(
             x=all_embeddings[:, pc1],
             y=all_embeddings[:, pc2],
             cmap="gray",
-            fill=True,
+            fill=False,
             cbar=False,
             ax=ax.flatten()[i],
             weights=weights,
             alpha=0.8,
+            zorder=1,
         )
 
     if "gt_embedding" in embedding_results:
@@ -134,11 +135,12 @@ def plot_common_embedding(
             x=all_embeddings[:, pc1],
             y=all_embeddings[:, pc2],
             cmap="gray",
-            fill=True,
+            fill=False,
             cbar=False,
             ax=ax.flatten()[len(labels)],
             weights=weights,
             # alpha=0.5,
+            zorder=1,
         )
 
     for i in range(len(labels)):
@@ -164,6 +166,7 @@ def plot_common_embedding(
             linewidth=0.3,
             edgecolor="black",
             label=str(i + 1) + ". " + labels[i],
+            zorder=2,
         )
 
         # ax.flatten()[i].set_xticks([])
@@ -196,6 +199,7 @@ def plot_common_embedding(
             linewidth=0.3,
             edgecolor="black",
             label=f"{i_max + 1}. Ground Truth",
+            zorder=2,
         )
 
         ax.flatten()[i_max].set_xlabel(f"Z{pc1 + 1}", fontsize=12)
@@ -378,7 +382,7 @@ def plot_common_eigenvectors(
 
     # add a colorbar for the whole figure
     fig.colorbar(
-        ax.flatten()[i].imshow(eigvol_for_img.sum(0), cmap="coolwarm"),
+        ax.flatten()[i].imshow(eigvol_for_img.sum(1), cmap="coolwarm"),
         ax=ax,
         orientation="horizontal",
         label="Eigenvector value (neg or pos)",
