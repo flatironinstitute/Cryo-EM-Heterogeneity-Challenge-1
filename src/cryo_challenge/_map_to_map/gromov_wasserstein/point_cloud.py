@@ -43,6 +43,11 @@ class PointSampler:
         self.y = j["y"]
         self.z = j["z"]
 
+    def clear_points(self):
+        self.x = []
+        self.y = []
+        self.z = []
+
     # def get_centroid(self):
     #     centroid = np.array([0., 0., 0.])
     #     for i in range(len(global_x)):
