@@ -147,6 +147,9 @@ def main():
     volumes = submission["volumes"]
 
     client = Client(local_directory="/tmp")
+    assert isinstance(
+        client, type(client)
+    )  # linter thinks client is unused, so need to do something with client as a workaround
 
     n_interval = 20
     gw_distance_function_key = "gromov_wasserstein2"
@@ -167,9 +170,12 @@ def main():
         "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/tmp/gw_weighted_voxel_23.npy",
         get_distance_matrix_dask_gw,
     )
-    del client
     return get_distance_matrix_dask_gw  #
 
 
 if __name__ == "__main__":
     main()
+
+# %%
+client = Client()
+# %%
