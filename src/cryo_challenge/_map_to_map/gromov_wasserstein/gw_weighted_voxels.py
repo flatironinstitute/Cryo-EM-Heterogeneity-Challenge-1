@@ -151,14 +151,16 @@ def main():
         client, type(client)
     )  # linter thinks client is unused, so need to do something with client as a workaround
 
-    n_interval = 20
+    n_interval = 1
     gw_distance_function_key = "gromov_wasserstein2"
+    n_downsample_pix = 10
+    top_k = 3000
     get_distance_matrix_dask_gw = get_distance_matrix_dask(
         volumes[::n_interval],
         distance_function=gw_distance_wrapper,
         gw_distance_function=gw_distance_function_d[gw_distance_function_key],
-        top_k=100,
-        n_downsample_pix=20,
+        top_k=top_k,
+        n_downsample_pix=n_downsample_pix,
         tol=1e-11,
         max_iter=10000,
         symmetric=True,
@@ -167,10 +169,10 @@ def main():
     )
 
     np.save(
-        "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/tmp/gw_weighted_voxel_23.npy",
+        f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_23.npy",
         get_distance_matrix_dask_gw,
     )
-    return get_distance_matrix_dask_gw  #
+    return get_distance_matrix_dask_gw
 
 
 if __name__ == "__main__":
