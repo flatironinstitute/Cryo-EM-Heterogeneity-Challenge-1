@@ -415,6 +415,7 @@ class Zernike3DDistance(MapToMapDistance):
         gpuID = self.config["analysis"]["zernike3d_extra_params"]["gpuID"]
         outputPath = self.config["analysis"]["zernike3d_extra_params"]["tmpDir"]
         thr = self.config["analysis"]["zernike3d_extra_params"]["thr"]
+        numProjections = self.config["analysis"]["zernike3d_extra_params"]["numProjections"]
 
         # Create output directory
         if not os.path.isdir(outputPath):
@@ -451,7 +452,7 @@ class Zernike3DDistance(MapToMapDistance):
         subprocess.check_call(f'eval "$({condabin_path} shell.bash hook)" &&'
                               f' conda activate flexutils-tensorflow && '
                               f'compute_distance_matrix_zernike3deep.py --references_file {references_path} '
-                              f'--targets_file {targets_paths} --out_path {outputPath} --gpu {gpuID} '
+                              f'--targets_file {targets_paths} --out_path {outputPath} --gpu {gpuID} --num_projections {numProjections}'
                               f'--thr {thr}', shell=True)
 
         # Read distance matrix
