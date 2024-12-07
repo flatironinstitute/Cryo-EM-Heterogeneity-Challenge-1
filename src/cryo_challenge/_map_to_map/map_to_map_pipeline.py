@@ -53,6 +53,7 @@ def run(config):
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
     )
+
     maps_gt_flat = torch.load(
         config["data"]["ground_truth"]["volumes"], mmap=do_low_memory_mode
     )

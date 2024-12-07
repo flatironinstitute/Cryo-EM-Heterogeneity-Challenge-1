@@ -57,6 +57,7 @@ class MapToMapDistance:
         """Compute the distance matrix between two sets of maps."""
         if self.config["data"]["mask"]["do"]:
             maps2 = maps2[:, self.mask]
+
         else:
             maps2 = maps2.reshape(len(maps2), -1)
 
@@ -89,6 +90,8 @@ class MapToMapDistance:
 
         else:
             maps1 = maps1.reshape(len(maps1), -1)
+            if self.config["data"]["mask"]["do"]:
+                maps1 = maps1.reshape(len(maps1), -1)[:, self.mask]
             maps2 = maps2.reshape(len(maps2), -1)
             distance_matrix = torch.vmap(
                 lambda maps1: torch.vmap(
@@ -437,22 +440,34 @@ class Zernike3DDistance(MapToMapDistance):
         # Check if conda env is installed
         env_installed = subprocess.run(
             r"conda env list | grep 'flexutils-tensorflow '",
-            shell=True, check=False, stdout=subprocess.PIPE).stdout
-        env_installed = bool(env_installed.decode("utf-8").replace('\n', '').replace("*", ""))
+            shell=True,
+            check=False,
+            stdout=subprocess.PIPE,
+        ).stdout
+        env_installed = bool(
+            env_installed.decode("utf-8").replace("\n", "").replace("*", "")
+        )
         if not env_installed:
             raise Exception("External software not found... Aborting")
 
         # Find conda executable (needed to activate conda envs in a subprocess)
-        condabin_path = subprocess.run(r"which conda | sed 's: ::g'", shell=True, check=False,
-                                       stdout=subprocess.PIPE).stdout
-        condabin_path = condabin_path.decode("utf-8").replace('\n', '').replace("*", "")
+        condabin_path = subprocess.run(
+            r"which conda | sed 's: ::g'",
+            shell=True,
+            check=False,
+            stdout=subprocess.PIPE,
+        ).stdout
+        condabin_path = condabin_path.decode("utf-8").replace("\n", "").replace("*", "")
 
         # Call external program
-        subprocess.check_call(f'eval "$({condabin_path} shell.bash hook)" &&'
-                              f' conda activate flexutils-tensorflow && '
-                              f'compute_distance_matrix_zernike3deep.py --references_file {references_path} '
-                              f'--targets_file {targets_paths} --out_path {outputPath} --gpu {gpuID} '
-                              f'--thr {thr}', shell=True)
+        subprocess.check_call(
+            f'eval "$({condabin_path} shell.bash hook)" &&'
+            f" conda activate flexutils-tensorflow && "
+            f"compute_distance_matrix_zernike3deep.py --references_file {references_path} "
+            f"--targets_file {targets_paths} --out_path {outputPath} --gpu {gpuID} "
+            f"--thr {thr}",
+            shell=True,
+        )
 
         # Read distance matrix
         dists = np.load(os.path.join(outputPath, "dist_mat.npy")).T
