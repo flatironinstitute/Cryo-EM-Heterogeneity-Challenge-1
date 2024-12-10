@@ -475,7 +475,9 @@ def plot_gt_embedding(submissions_data, gt_embedding_results, title="", save_pat
     populations_ref = submissions_data[label_ref]["populations"]
     embedding_ref = gt_embedding_results["submission_embedding"][label_ref]
 
-    n_cols = 4
+    labels.pop(labels.index(label_ref))
+
+    n_cols = 3
 
     if n_cols > len(labels):
         n_cols = len(labels)
@@ -491,15 +493,15 @@ def plot_gt_embedding(submissions_data, gt_embedding_results, title="", save_pat
     for i in range(len(labels)):
         label = labels[i]
         embedding = gt_embedding_results["submission_embedding"][label]
-        ax.flatten()[i].text(
-            0.05,
-            0.95,
-            str(i + 1),
-            fontsize=12,
-            transform=ax.flatten()[i].transAxes,
-            verticalalignment="top",
-            bbox=dict(facecolor="white", alpha=0.5),
-        )
+        # ax.flatten()[i].text(
+        #     0.05,
+        #     0.95,
+        #     str(i + 1),
+        #     fontsize=12,
+        #     transform=ax.flatten()[i].transAxes,
+        #     verticalalignment="top",
+        #     bbox=dict(facecolor="white", alpha=0.5),
+        # )
 
         # ax.flatten()[i].bar(
         #     edges[:-1],
