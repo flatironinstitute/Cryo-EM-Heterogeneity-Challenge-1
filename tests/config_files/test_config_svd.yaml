@@ -18,4 +18,4 @@ gt_params: # optional, if provided there will be extra results
 output_params:
   output_file: tests/results/svd/svd_result.pt
   save_svd_data: True
-  generate_plots: True
+  generate_plots: False
