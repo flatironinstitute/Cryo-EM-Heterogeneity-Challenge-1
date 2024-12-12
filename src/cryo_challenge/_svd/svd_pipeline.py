@@ -77,6 +77,10 @@ def run_svd_with_ref(config: dict):
             save_path=os.path.join(path_plots, "common_eigenvectors.png"),
         )
 
+        raise Warning(
+            "Plots do not yet follow the same color scheme as the published paper"
+        )
+
     return
 
 
@@ -129,4 +133,7 @@ def run_svd_noref(config: dict):
             save_path=os.path.join(path_plots, "common_eigenvectors.png"),
         )
 
+        raise Warning(
+            "Plots do not yet follow the same color scheme as the published paper"
+        )
     return
