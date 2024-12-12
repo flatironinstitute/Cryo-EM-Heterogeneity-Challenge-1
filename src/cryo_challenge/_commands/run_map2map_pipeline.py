@@ -39,9 +39,7 @@ def main(args):
     warnexists(config["output"])
     mkbasedir(os.path.dirname(config["output"]))
 
-    run(config)
-
-    return
+    return run(config)
 
 
 if __name__ == "__main__":
