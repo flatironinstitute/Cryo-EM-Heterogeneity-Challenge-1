@@ -1,4 +1,3 @@
-import mrcfile
 import pandas as pd
 import pickle
 import torch
@@ -7,7 +6,7 @@ from ..data._validation.output_validators import MapToMapResultsValidator
 from .._map_to_map.map_to_map_distance import (
     FSCDistance,
     Correlation,
-    L2DistanceSum,
+    L2DistanceNorm,
     BioEM3dDistance,
     FSCResDistance,
 )
@@ -16,7 +15,7 @@ from .._map_to_map.map_to_map_distance import (
 AVAILABLE_MAP2MAP_DISTANCES = {
     "fsc": FSCDistance,
     "corr": Correlation,
-    "l2": L2DistanceSum,
+    "l2": L2DistanceNorm,
     "bioem": BioEM3dDistance,
     "res": FSCResDistance,
 }
@@ -30,9 +29,10 @@ def run(config):
     map_to_map_distances = {
         distance_label: distance_class(config)
         for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
+        if distance_label in config["analysis"]["metrics"]
     }
 
-    n_pix = config["data"]["n_pix"]
+    do_low_memory_mode = config["analysis"]["low_memory"]["do"]
 
     submission = torch.load(config["data"]["submission"]["fname"])
     submission_volume_key = config["data"]["submission"]["volume_key"]
@@ -51,32 +51,18 @@ def run(config):
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
     )
-    maps_gt_flat = torch.load(config["data"]["ground_truth"]["volumes"]).reshape(
-        -1, n_pix**3
+    maps_gt_flat = torch.load(
+        config["data"]["ground_truth"]["volumes"], mmap=do_low_memory_mode
     )
-
-    if config["data"]["mask"]["do"]:
-        mask = (
-            mrcfile.open(config["data"]["mask"]["volume"]).data.astype(bool).flatten()
-        )
-        maps_gt_flat = maps_gt_flat[:, mask]
-        maps_user_flat = maps_user_flat[:, mask]
-    else:
-        maps_gt_flat.reshape(len(maps_gt_flat), -1, inplace=True)
-        maps_user_flat.reshape(len(maps_gt_flat), -1, inplace=True)
-
-    if config["analysis"]["normalize"]["do"]:
-        if config["analysis"]["normalize"]["method"] == "median_zscore":
-            maps_gt_flat -= maps_gt_flat.median(dim=1, keepdim=True).values
-            maps_gt_flat /= maps_gt_flat.std(dim=1, keepdim=True)
-            maps_user_flat -= maps_user_flat.median(dim=1, keepdim=True).values
-            maps_user_flat /= maps_user_flat.std(dim=1, keepdim=True)
 
     computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
         if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
             print("cost matrix", distance_label)
 
+            map_to_map_distance.distance_matrix_precomputation(
+                maps_gt_flat, maps_user_flat
+            )
             cost_matrix = map_to_map_distance.get_distance_matrix(
                 maps_gt_flat,
                 maps_user_flat,
