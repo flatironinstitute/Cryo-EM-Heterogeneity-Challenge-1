@@ -52,7 +52,9 @@ dependencies = [
   "osfclient",
   "seaborn",
   "ipyfilechooser",
-  "omegaconf"
+  "omegaconf",
+  "pydantic",
+  "ecos"
 ]
 
 [project.optional-dependencies]
