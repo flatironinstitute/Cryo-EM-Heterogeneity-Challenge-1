@@ -17,8 +17,9 @@ analysis:
     gpuID: 0
     tmpDir: tmp_zernike
     thr: 20
+    numProjections: 20 # projecions should be 20-100
   metrics:
-    - zernike3d # projecions should be 20-100
+    - zernike3d
   chunk_size_submission: 4
   chunk_size_gt: 5
   low_memory:
