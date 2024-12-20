@@ -1,3 +1,4 @@
+import argparse
 import torch
 import ot
 import numpy as np
@@ -141,7 +142,16 @@ def get_distance_matrix_dask(
     return distance_matrix
 
 
-def main():
+def parse_args():
+    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser.add_argument(
+        "--n_downsample_pix", type=int, default=20, help="Number of downsample pixels"
+    )
+    parser.add_argument("--top_k", type=int, default=500, help="Top K value")
+    return parser.parse_args()
+
+
+def main(args):
     fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
     submission = torch.load(fname)
     volumes = submission["volumes"].double()
@@ -153,8 +163,8 @@ def main():
 
     n_interval = 1
     gw_distance_function_key = "gromov_wasserstein2"
-    n_downsample_pix = 32
-    top_k = 500
+    n_downsample_pix = args.n_downsample_pix
+    top_k = args.top_k
     get_distance_matrix_dask_gw = get_distance_matrix_dask(
         volumes[::n_interval],
         distance_function=gw_distance_wrapper,
@@ -176,4 +186,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args)
