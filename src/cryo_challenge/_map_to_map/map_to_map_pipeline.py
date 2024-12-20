@@ -9,7 +9,6 @@ from .._map_to_map.map_to_map_distance import (
     L2DistanceNorm,
     BioEM3dDistance,
     FSCResDistance,
-    Zernike3DDistance,
 )
 
 
@@ -19,7 +18,6 @@ AVAILABLE_MAP2MAP_DISTANCES = {
     "l2": L2DistanceNorm,
     "bioem": BioEM3dDistance,
     "res": FSCResDistance,
-    "zernike3d": Zernike3DDistance,
 }
 
 
@@ -53,7 +51,6 @@ def run(config):
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
     )
-
     maps_gt_flat = torch.load(
         config["data"]["ground_truth"]["volumes"], mmap=do_low_memory_mode
     )
