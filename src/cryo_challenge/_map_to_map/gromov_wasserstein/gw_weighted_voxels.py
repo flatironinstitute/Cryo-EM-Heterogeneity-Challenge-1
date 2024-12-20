@@ -22,7 +22,7 @@ def make_sparse_cost(idx_above_thresh):
         torch.arange(n_downsample_pix),
     )
     coordinates = torch.stack(coordinates, dim=-1)
-    coordinates = coordinates.reshape(-1, 3).float()
+    coordinates = coordinates.reshape(-1, 3).double()
     sparse_coordiantes = coordinates[idx_above_thresh.flatten()]
     pairwise_distances = torch.cdist(sparse_coordiantes, sparse_coordiantes)
     return pairwise_distances
@@ -102,7 +102,7 @@ def get_distance_matrix_dask(
     **gw_kwargs,
 ):
     n_vols = len(volumes)
-    distance_matrix = np.zeros((n_vols, n_vols))
+    distance_matrix = np.zeros((n_vols, n_vols), dtype=np.float64)
 
     # Create a list to hold the delayed computations
     tasks = []
@@ -118,7 +118,7 @@ def get_distance_matrix_dask(
                 top_k,
                 n_downsample_pix,
                 loss_fun=gw_kwargs["loss_fun"],
-                tol=gw_kwargs["tol"],
+                tol=gw_kwargs["tol_abs"],
                 symmetric=gw_kwargs["symmetric"],
                 max_iter=gw_kwargs["max_iter"],
                 verbose=gw_kwargs["verbose"],
@@ -144,7 +144,7 @@ def get_distance_matrix_dask(
 def main():
     fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
     submission = torch.load(fname)
-    volumes = submission["volumes"]
+    volumes = submission["volumes"].double()
 
     client = Client(local_directory="/tmp")
     assert isinstance(
@@ -153,15 +153,15 @@ def main():
 
     n_interval = 1
     gw_distance_function_key = "gromov_wasserstein2"
-    n_downsample_pix = 10
-    top_k = 3000
+    n_downsample_pix = 32
+    top_k = 500
     get_distance_matrix_dask_gw = get_distance_matrix_dask(
         volumes[::n_interval],
         distance_function=gw_distance_wrapper,
         gw_distance_function=gw_distance_function_d[gw_distance_function_key],
         top_k=top_k,
         n_downsample_pix=n_downsample_pix,
-        tol=1e-11,
+        tol_abs=1e-11,
         max_iter=10000,
         symmetric=True,
         verbose=False,
