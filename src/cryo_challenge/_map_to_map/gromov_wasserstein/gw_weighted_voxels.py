@@ -42,7 +42,7 @@ def normalize_mass_to_one(p):
     return p / p.sum()
 
 
-def prepare_volume_and_distance(volume, top_k, n_downsample_pix):
+def prepare_volume_and_distance(volume, top_k, n_downsample_pix, exponent):
     volume = downsample_volume(volume, n_downsample_pix).numpy().astype(numpy_dtype)
     idx_above_thresh = return_top_k_voxel_idxs(volume, top_k)
     volume = normalize_mass_to_one(volume[idx_above_thresh].flatten())
@@ -51,18 +51,26 @@ def prepare_volume_and_distance(volume, top_k, n_downsample_pix):
         .numpy()
         .astype(numpy_dtype)
     )
-    pairwise_distances = pairwise_distances / pairwise_distances.max()
+    pairwise_distances = (pairwise_distances / pairwise_distances.max()) ** exponent
     return volume, pairwise_distances
 
 
 def gw_distance_wrapper(
-    gw_distance_function, volumes_i, volumes_j, i, j, top_k, n_downsample_pix, **kwargs
+    gw_distance_function,
+    volumes_i,
+    volumes_j,
+    i,
+    j,
+    top_k,
+    n_downsample_pix,
+    exponent,
+    **kwargs,
 ):
     volume_i, pairwise_distances_i = prepare_volume_and_distance(
-        volumes_i[i], top_k, n_downsample_pix
+        volumes_i[i], top_k, n_downsample_pix, exponent
     )
     volume_j, pairwise_distances_j = prepare_volume_and_distance(
-        volumes_j[j], top_k, n_downsample_pix
+        volumes_j[j], top_k, n_downsample_pix, exponent
     )
     gw_dist, results_dict = gw_distance(
         gw_distance_function,
@@ -113,11 +121,12 @@ def get_distance_matrix_dask(
     gw_distance_function,
     top_k,
     n_downsample_pix,
+    exponent,
     **gw_kwargs,
 ):
     n_vols_i = len(volumes_i)
     n_vols_j = len(volumes_j)
-    distance_matrix = np.zeros((n_vols_i, n_vols_j), dtype=np.float64)
+    distance_matrix = np.zeros((n_vols_i, n_vols_j), dtype=numpy_dtype)
 
     # Create a list to hold the delayed computations
     tasks = []
@@ -138,6 +147,7 @@ def get_distance_matrix_dask(
                 j,
                 top_k,
                 n_downsample_pix,
+                exponent,
                 loss_fun=gw_kwargs["loss_fun"],
                 tol_abs=gw_kwargs["tol_abs"],
                 tol_rel=gw_kwargs["tol_rel"],
@@ -171,13 +181,19 @@ def parse_args():
         "--n_downsample_pix", type=int, default=20, help="Number of downsample pixels"
     )
     parser.add_argument("--top_k", type=int, default=500, help="Top K value")
+    parser.add_argument(
+        "--exponent",
+        type=float,
+        default=1.0,
+        help="Exponent on distance matrices of marginals",
+    )
     return parser.parse_args()
 
 
 def main(args):
     fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
     submission = torch.load(fname)
-    volumes = submission["volumes"]
+    volumes = submission["volumes"].to(torch_dtype)
 
     client = Client(local_directory="/tmp")
     assert isinstance(
@@ -187,6 +203,7 @@ def main(args):
     gw_distance_function_key = "gromov_wasserstein2"
     n_downsample_pix = args.n_downsample_pix
     top_k = args.top_k
+    exponent = args.exponent
 
     get_distance_matrix_dask_gw = get_distance_matrix_dask(
         volumes_i=volumes,
@@ -195,6 +212,7 @@ def main(args):
         gw_distance_function=gw_distance_function_d[gw_distance_function_key],
         top_k=top_k,
         n_downsample_pix=n_downsample_pix,
+        exponent=exponent,
         tol_abs=1e-14,
         tol_rel=1e-14,
         max_iter=10000,
@@ -204,7 +222,7 @@ def main(args):
     )
 
     np.save(
-        f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_float{precision}_23.npy",
+        f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_float{precision}_exponent{exponent}_23.npy",
         get_distance_matrix_dask_gw,
     )
     return get_distance_matrix_dask_gw
