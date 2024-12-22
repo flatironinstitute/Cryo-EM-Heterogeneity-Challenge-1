@@ -8,6 +8,17 @@ from dask.diagnostics import ProgressBar
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
+precision = 128
+if precision == 32:
+    numpy_dtype = np.float32
+    torch_dtype = torch.float32
+elif precision == 64:
+    numpy_dtype = np.float64
+    torch_dtype = torch.float64
+elif precision == 128:
+    numpy_dtype = np.float128
+    torch_dtype = torch.float64
+
 
 def return_top_k_voxel_idxs(volume, top_k):
     thresh = np.sort(volume.flatten())[-top_k - 1]
@@ -15,15 +26,12 @@ def return_top_k_voxel_idxs(volume, top_k):
     return idx_above_thresh
 
 
-def make_sparse_cost(idx_above_thresh):
+def make_sparse_cost(idx_above_thresh, dtype):
     n_downsample_pix = len(idx_above_thresh)
-    coordinates = torch.meshgrid(
-        torch.arange(n_downsample_pix),
-        torch.arange(n_downsample_pix),
-        torch.arange(n_downsample_pix),
-    )
+    one_dim = torch.arange(n_downsample_pix, dtype=dtype)
+    coordinates = torch.meshgrid(one_dim, one_dim, one_dim)
     coordinates = torch.stack(coordinates, dim=-1)
-    coordinates = coordinates.reshape(-1, 3).double()
+    coordinates = coordinates.reshape(-1, 3)
     sparse_coordiantes = coordinates[idx_above_thresh.flatten()]
     pairwise_distances = torch.cdist(sparse_coordiantes, sparse_coordiantes)
     return pairwise_distances
@@ -35,22 +43,26 @@ def normalize_mass_to_one(p):
 
 
 def prepare_volume_and_distance(volume, top_k, n_downsample_pix):
-    volume = downsample_volume(volume, n_downsample_pix)
+    volume = downsample_volume(volume, n_downsample_pix).numpy().astype(numpy_dtype)
     idx_above_thresh = return_top_k_voxel_idxs(volume, top_k)
-    volume = normalize_mass_to_one(volume[idx_above_thresh].numpy().flatten())
-    pairwise_distances = make_sparse_cost(idx_above_thresh)
-    pairwise_distances = pairwise_distances.numpy() / pairwise_distances.numpy().max()
+    volume = normalize_mass_to_one(volume[idx_above_thresh].flatten())
+    pairwise_distances = (
+        make_sparse_cost(idx_above_thresh, dtype=torch_dtype)
+        .numpy()
+        .astype(numpy_dtype)
+    )
+    pairwise_distances = pairwise_distances / pairwise_distances.max()
     return volume, pairwise_distances
 
 
 def gw_distance_wrapper(
-    gw_distance_function, volumes, i, j, top_k, n_downsample_pix, **kwargs
+    gw_distance_function, volumes_i, volumes_j, i, j, top_k, n_downsample_pix, **kwargs
 ):
     volume_i, pairwise_distances_i = prepare_volume_and_distance(
-        volumes[i], top_k, n_downsample_pix
+        volumes_i[i], top_k, n_downsample_pix
     )
     volume_j, pairwise_distances_j = prepare_volume_and_distance(
-        volumes[j], top_k, n_downsample_pix
+        volumes_j[j], top_k, n_downsample_pix
     )
     gw_dist, results_dict = gw_distance(
         gw_distance_function,
@@ -95,31 +107,40 @@ def gw_distance(
 
 
 def get_distance_matrix_dask(
-    volumes,
+    volumes_i,
+    volumes_j,
     distance_function,
     gw_distance_function,
     top_k,
     n_downsample_pix,
     **gw_kwargs,
 ):
-    n_vols = len(volumes)
-    distance_matrix = np.zeros((n_vols, n_vols), dtype=np.float64)
+    n_vols_i = len(volumes_i)
+    n_vols_j = len(volumes_j)
+    distance_matrix = np.zeros((n_vols_i, n_vols_j), dtype=np.float64)
 
     # Create a list to hold the delayed computations
     tasks = []
+    symmetric_volumes = True
+    for i in range(n_vols_i):
+        if symmetric_volumes:
+            lower_bound_j = 0
+        else:
+            lower_bound_j = 1 + i
 
-    for i in range(n_vols):
-        for j in range(i + 1, n_vols):
+        for j in range(lower_bound_j, n_vols_j):
             # Use dask.delayed to delay the computation
             compute_task = delayed(distance_function)(
                 gw_distance_function,
-                volumes,
+                volumes_i,
+                volumes_j,
                 i,
                 j,
                 top_k,
                 n_downsample_pix,
                 loss_fun=gw_kwargs["loss_fun"],
-                tol=gw_kwargs["tol_abs"],
+                tol_abs=gw_kwargs["tol_abs"],
+                tol_rel=gw_kwargs["tol_rel"],
                 symmetric=gw_kwargs["symmetric"],
                 max_iter=gw_kwargs["max_iter"],
                 verbose=gw_kwargs["verbose"],
@@ -137,7 +158,9 @@ def get_distance_matrix_dask(
 
     # Fill in the distance matrix with the results
     for (i, j, _), result in zip(tasks, results):
-        distance_matrix[i, j] = distance_matrix[j, i] = result
+        distance_matrix[i, j] = result
+        if symmetric_volumes:
+            distance_matrix[i, j] = distance_matrix[j, i]
 
     return distance_matrix
 
@@ -154,24 +177,26 @@ def parse_args():
 def main(args):
     fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
     submission = torch.load(fname)
-    volumes = submission["volumes"].double()
+    volumes = submission["volumes"]
 
     client = Client(local_directory="/tmp")
     assert isinstance(
         client, type(client)
     )  # linter thinks client is unused, so need to do something with client as a workaround
 
-    n_interval = 1
     gw_distance_function_key = "gromov_wasserstein2"
     n_downsample_pix = args.n_downsample_pix
     top_k = args.top_k
+
     get_distance_matrix_dask_gw = get_distance_matrix_dask(
-        volumes[::n_interval],
+        volumes_i=volumes,
+        volumes_j=volumes,
         distance_function=gw_distance_wrapper,
         gw_distance_function=gw_distance_function_d[gw_distance_function_key],
         top_k=top_k,
         n_downsample_pix=n_downsample_pix,
-        tol_abs=1e-11,
+        tol_abs=1e-14,
+        tol_rel=1e-14,
         max_iter=10000,
         symmetric=True,
         verbose=False,
@@ -179,7 +204,7 @@ def main(args):
     )
 
     np.save(
-        f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_23.npy",
+        f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_float{precision}_23.npy",
         get_distance_matrix_dask_gw,
     )
     return get_distance_matrix_dask_gw
