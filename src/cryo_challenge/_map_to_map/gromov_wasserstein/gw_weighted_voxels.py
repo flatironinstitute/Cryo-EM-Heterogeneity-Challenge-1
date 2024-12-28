@@ -1,3 +1,4 @@
+import os
 import argparse
 import torch
 import ot
@@ -5,6 +6,7 @@ import numpy as np
 from dask import delayed, compute
 from dask.distributed import Client
 from dask.diagnostics import ProgressBar
+from dask_hpc_runner import SlurmRunner
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
@@ -162,7 +164,7 @@ def get_distance_matrix_dask(
         idx_of_return = 0
         idx_of_compute_task = 2
         results = compute(
-            *[task[idx_of_compute_task][idx_of_return] for task in tasks],
+            [task[idx_of_compute_task][idx_of_return] for task in tasks],
         )
 
     # Fill in the distance matrix with the results
@@ -190,41 +192,48 @@ def parse_args():
 
 
 def main(args):
-    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-    submission = torch.load(fname)[::20]
-    volumes = submission["volumes"].to(torch_dtype)
+    # client = Client(local_directory="/tmp")
 
-    client = Client(local_directory="/tmp")
-    assert isinstance(
-        client, type(client)
-    )  # linter thinks client is unused, so need to do something with client as a workaround
+    job_id = os.environ["SLURM_JOB_ID"]
 
-    gw_distance_function_key = "gromov_wasserstein2"
-    n_downsample_pix = args.n_downsample_pix
-    top_k = args.top_k
-    exponent = args.exponent
+    with SlurmRunner(
+        scheduler_file=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json"
+    ) as runner:
+        # The runner object contains the scheduler address and can be passed directly to a client
+        with Client(runner) as client:
+            assert isinstance(
+                client, type(client)
+            )  # linter thinks client is unused, so need to do something with client as a workaround
+            fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+            submission = torch.load(fname)
+            volumes = submission["volumes"].to(torch_dtype)[::20]
 
-    get_distance_matrix_dask_gw = get_distance_matrix_dask(
-        volumes_i=volumes,
-        volumes_j=volumes,
-        distance_function=gw_distance_wrapper,
-        gw_distance_function=gw_distance_function_d[gw_distance_function_key],
-        top_k=top_k,
-        n_downsample_pix=n_downsample_pix,
-        exponent=exponent,
-        tol_abs=1e-14,
-        tol_rel=1e-14,
-        max_iter=10000,
-        symmetric=True,
-        verbose=False,
-        loss_fun="square_loss",
-    )
+            gw_distance_function_key = "gromov_wasserstein2"
+            n_downsample_pix = args.n_downsample_pix
+            top_k = args.top_k
+            exponent = args.exponent
 
-    np.save(
-        f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_float{precision}_exponent{exponent}_23.npy",
-        get_distance_matrix_dask_gw,
-    )
-    return get_distance_matrix_dask_gw
+            get_distance_matrix_dask_gw = get_distance_matrix_dask(
+                volumes_i=volumes,
+                volumes_j=volumes,
+                distance_function=gw_distance_wrapper,
+                gw_distance_function=gw_distance_function_d[gw_distance_function_key],
+                top_k=top_k,
+                n_downsample_pix=n_downsample_pix,
+                exponent=exponent,
+                tol_abs=1e-14,
+                tol_rel=1e-14,
+                max_iter=10000,
+                symmetric=True,
+                verbose=False,
+                loss_fun="square_loss",
+            )
+
+            np.save(
+                f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_float{precision}_exponent{exponent}_23.npy",
+                get_distance_matrix_dask_gw,
+            )
+            return get_distance_matrix_dask_gw
 
 
 if __name__ == "__main__":
