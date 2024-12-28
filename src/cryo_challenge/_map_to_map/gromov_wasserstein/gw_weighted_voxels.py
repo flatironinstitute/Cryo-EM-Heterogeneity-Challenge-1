@@ -8,7 +8,7 @@ from dask.diagnostics import ProgressBar
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
-precision = 128
+precision = 64
 if precision == 32:
     numpy_dtype = np.float32
     torch_dtype = torch.float32
@@ -133,9 +133,9 @@ def get_distance_matrix_dask(
     symmetric_volumes = True
     for i in range(n_vols_i):
         if symmetric_volumes:
-            lower_bound_j = 0
-        else:
             lower_bound_j = 1 + i
+        else:
+            lower_bound_j = 0
 
         for j in range(lower_bound_j, n_vols_j):
             # Use dask.delayed to delay the computation
@@ -163,14 +163,13 @@ def get_distance_matrix_dask(
         idx_of_compute_task = 2
         results = compute(
             *[task[idx_of_compute_task][idx_of_return] for task in tasks],
-            scheduler="single-threaded",
         )
 
     # Fill in the distance matrix with the results
     for (i, j, _), result in zip(tasks, results):
         distance_matrix[i, j] = result
         if symmetric_volumes:
-            distance_matrix[i, j] = distance_matrix[j, i]
+            distance_matrix[j, i] = distance_matrix[i, j]
 
     return distance_matrix
 
@@ -192,7 +191,7 @@ def parse_args():
 
 def main(args):
     fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-    submission = torch.load(fname)
+    submission = torch.load(fname)[::20]
     volumes = submission["volumes"].to(torch_dtype)
 
     client = Client(local_directory="/tmp")
