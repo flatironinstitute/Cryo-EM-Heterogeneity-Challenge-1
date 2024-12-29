@@ -5,7 +5,6 @@ import numpy as np
 from dask import delayed, compute
 from dask.distributed import Client
 from dask.diagnostics import ProgressBar
-from dask_hpc_runner import SlurmRunner
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
@@ -58,8 +57,8 @@ def prepare_volume_and_distance(volume, top_k, n_downsample_pix, exponent):
 
 def gw_distance_wrapper(
     gw_distance_function,
-    volumes_i,
-    volumes_j,
+    volume_i,
+    volume_j,
     i,
     j,
     top_k,
@@ -68,10 +67,10 @@ def gw_distance_wrapper(
     **kwargs,
 ):
     volume_i, pairwise_distances_i = prepare_volume_and_distance(
-        volumes_i[i], top_k, n_downsample_pix, exponent
+        volume_i, top_k, n_downsample_pix, exponent
     )
     volume_j, pairwise_distances_j = prepare_volume_and_distance(
-        volumes_j[j], top_k, n_downsample_pix, exponent
+        volume_j, top_k, n_downsample_pix, exponent
     )
     gw_dist, results_dict = gw_distance(
         gw_distance_function,
@@ -143,8 +142,8 @@ def get_distance_matrix_dask(
             # Use dask.delayed to delay the computation
             compute_task = delayed(distance_function)(
                 gw_distance_function,
-                volumes_i,
-                volumes_j,
+                volumes_i[i],
+                volumes_j[j],
                 i,
                 j,
                 top_k,
@@ -197,15 +196,15 @@ def parse_args():
 def main(args):
     # client = Client(local_directory="/tmp")
 
-    job_id = -1  # os.environ["SLURM_JOB_ID"]
+    # job_id = -1  # os.environ["SLURM_JOB_ID"]
 
-    # if True:
-    # with Client(runner) as client:
-    with SlurmRunner(
-        scheduler_file=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json"
-    ) as runner:
-        # The runner object contains the scheduler address and can be passed directly to a client
-        with Client(runner) as client:
+    if True:
+        with Client() as client:
+            # with SlurmRunner(
+            #     scheduler_file=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json"
+            # ) as runner:
+            #     # The runner object contains the scheduler address and can be passed directly to a client
+            #     with Client(runner) as client:
             assert isinstance(
                 client, type(client)
             )  # linter thinks client is unused, so need to do something with client as a workaround
