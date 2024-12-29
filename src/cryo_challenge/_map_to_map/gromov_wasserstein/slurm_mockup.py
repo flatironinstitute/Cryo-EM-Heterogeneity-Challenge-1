@@ -2,16 +2,16 @@ from distributed import Client
 from dask import delayed, compute
 from dask.diagnostics import ProgressBar
 import numpy as np
-from time import time, sleep
+from time import time
 
 
 def main():
     N_I = 4000
     N_J = 8
-    F = 30_000
+    N_PIX3 = 20**3
 
-    large_matrix_I = np.arange(N_I * F).reshape(N_I, F)
-    large_matrix_J = np.arange(N_J * F).reshape(N_J, F)
+    large_matrix_I = np.random.randn(N_I * N_PIX3).reshape(N_I, N_PIX3)
+    large_matrix_J = np.random.randn(N_J * N_PIX3).reshape(N_J, N_PIX3)
 
     row_wise = True
     start = time()
@@ -22,7 +22,7 @@ def main():
         def mm_rows(large_matrix_i, N_J):
             row_of_dot_products = []
             for j in range(N_J):
-                sleep(1 / N_J)
+                # sleep(1 / N_J)
                 row_of_dot_products.append(np.dot(large_matrix_i, large_matrix_J[j]))
             return row_of_dot_products
 
