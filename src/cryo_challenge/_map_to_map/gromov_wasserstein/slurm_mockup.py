@@ -2,39 +2,56 @@ from distributed import Client
 from dask import delayed, compute
 from dask.diagnostics import ProgressBar
 import numpy as np
-from time import time
+from time import time, sleep
 
 
 def main():
-    N = 100
-    F = 1_000
+    N_I = 4000
+    N_J = 8
+    F = 30_000
 
-    large_matrix = np.arange(N * F).reshape(N, F)
+    large_matrix_I = np.arange(N_I * F).reshape(N_I, F)
+    large_matrix_J = np.arange(N_J * F).reshape(N_J, F)
 
-    @delayed
-    def mm(i, N):
-        # sleep(0.1)
-        row_of_dot_products = []
-        for j in range(N):
-            row_of_dot_products.append(np.dot(large_matrix[i], large_matrix[j]))
-        return row_of_dot_products
-
+    row_wise = True
     start = time()
-    tasks = [mm(i, N) for i in range(N)]
+
+    if row_wise:
+
+        @delayed
+        def mm_rows(large_matrix_i, N_J):
+            row_of_dot_products = []
+            for j in range(N_J):
+                sleep(1 / N_J)
+                row_of_dot_products.append(np.dot(large_matrix_i, large_matrix_J[j]))
+            return row_of_dot_products
+
+        tasks = [mm_rows(large_matrix_I[i], N_J) for i in range(N_I)]
+    else:
+
+        @delayed
+        def mm(large_matrix_i, large_matrix_j):
+            return np.dot(large_matrix_i, large_matrix_j)
+
+        tasks = [
+            mm(large_matrix_I[i], large_matrix_J[j])
+            for j in range(N_J)
+            for i in range(N_I)
+        ]
 
     with ProgressBar():
         results = compute(tasks)
         # results = tasks
     time_interval = time() - start
 
-    formatted_results = np.array(results).reshape(N, N)
+    formatted_results = np.array(results).reshape(N_I, N_J)
     return formatted_results, time_interval
 
 
 if __name__ == "__main__":
-    client = Client()
-    # cluster = LocalCluster(n_workers=n_workers, processes=True)
     n_workers = -1
+    # cluster = LocalCluster(n_workers=n_workers, processes=True)
+    client = Client()
     formatted_results, time_interval = main()
     print(formatted_results)
     print(f"n_workers={n_workers} | Time (s): {time_interval}")

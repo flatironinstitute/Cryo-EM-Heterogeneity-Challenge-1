@@ -3,7 +3,7 @@
 #SBATCH --output=slurm/logs/%j.out
 #SBATCH --error=slurm/logs/%j.err
 #SBATCH --partition=ccb
-#SBATCH -n 3
+#SBATCH -n 40
 #SBATCH --time=1:00:00
 
 
