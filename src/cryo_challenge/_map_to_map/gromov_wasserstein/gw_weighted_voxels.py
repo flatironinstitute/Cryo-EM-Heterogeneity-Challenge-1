@@ -46,38 +46,40 @@ def prepare_volume_and_distance(volume, top_k, n_downsample_pix, exponent):
     volume = downsample_volume(volume, n_downsample_pix).numpy().astype(numpy_dtype)
     idx_above_thresh = return_top_k_voxel_idxs(volume, top_k)
     volume = normalize_mass_to_one(volume[idx_above_thresh].flatten())
-    pairwise_distances = (
+    pairwise_distance = (
         make_sparse_cost(idx_above_thresh, dtype=torch_dtype)
         .numpy()
         .astype(numpy_dtype)
     )
-    pairwise_distances = (pairwise_distances / pairwise_distances.max()) ** exponent
-    return volume, pairwise_distances
+    pairwise_distance = (pairwise_distance / pairwise_distance.max()) ** exponent
+    return volume, pairwise_distance
 
 
 def gw_distance_wrapper(
     gw_distance_function,
     volume_i,
     volume_j,
+    pairwise_distance_i,
+    pairwise_distance_j,
     i,
     j,
-    top_k,
-    n_downsample_pix,
-    exponent,
+    # top_k,
+    # n_downsample_pix,
+    # exponent,
     **kwargs,
 ):
-    volume_i, pairwise_distances_i = prepare_volume_and_distance(
-        volume_i, top_k, n_downsample_pix, exponent
-    )
-    volume_j, pairwise_distances_j = prepare_volume_and_distance(
-        volume_j, top_k, n_downsample_pix, exponent
-    )
+    # volume_i, pairwise_distances_i = prepare_volume_and_distance(
+    #     volume_i, top_k, n_downsample_pix, exponent
+    # )
+    # volume_j, pairwise_distances_j = prepare_volume_and_distance(
+    #     volume_j, top_k, n_downsample_pix, exponent
+    # )
     gw_dist, results_dict = gw_distance(
         gw_distance_function,
         volume_i,
         volume_j,
-        pairwise_distances_i,
-        pairwise_distances_j,
+        pairwise_distance_i,
+        pairwise_distance_j,
         **kwargs,
     )
 
@@ -99,13 +101,13 @@ def gw_distance(
     gw_distance_function,
     volume_i,
     volume_j,
-    pairwise_distances_i,
-    pairwise_distances_j,
+    pairwise_distance_i,
+    pairwise_distance_j,
     **kwargs,
 ):
     gw_dist, results_dict = gw_distance_function(
-        pairwise_distances_i,
-        pairwise_distances_j,
+        pairwise_distance_i,
+        pairwise_distance_j,
         volume_i,
         volume_j,
         log=True,
@@ -117,11 +119,13 @@ def gw_distance(
 def get_distance_matrix_dask(
     volumes_i,
     volumes_j,
+    pairwise_distances_i,
+    pairwise_distances_j,
     distance_function,
     gw_distance_function,
-    top_k,
-    n_downsample_pix,
-    exponent,
+    # top_k,
+    # n_downsample_pix,
+    # exponent,
     scheduler,
     **gw_kwargs,
 ):
@@ -144,11 +148,13 @@ def get_distance_matrix_dask(
                 gw_distance_function,
                 volumes_i[i],
                 volumes_j[j],
+                pairwise_distances_i[i],
+                pairwise_distances_j[j],
                 i,
                 j,
-                top_k,
-                n_downsample_pix,
-                exponent,
+                # top_k,
+                # n_downsample_pix,
+                # exponent,
                 loss_fun=gw_kwargs["loss_fun"],
                 tol_abs=gw_kwargs["tol_abs"],
                 tol_rel=gw_kwargs["tol_rel"],
@@ -211,6 +217,8 @@ def main(args):
             fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
             submission = torch.load(fname)
             volumes = submission["volumes"].to(torch_dtype)[::20]
+            volumes_i = volumes
+            volumes_j = volumes
 
             gw_distance_function_key = "gromov_wasserstein2"
             n_downsample_pix = args.n_downsample_pix
@@ -218,14 +226,34 @@ def main(args):
             exponent = args.exponent
             scheduler = args.scheduler
 
+            prepared_volumes_i = np.empty((len(volumes), top_k))
+            prepared_volumes_j = np.empty((len(volumes), top_k))
+            pairwise_distances_i = np.empty((len(volumes), top_k, top_k))
+            pairwise_distances_j = np.empty((len(volumes), top_k, top_k))
+
+            for i in range(len(volumes_i)):
+                volume_i, pairwise_distance_i = prepare_volume_and_distance(
+                    volumes_i[i], top_k, n_downsample_pix, exponent
+                )
+                prepared_volumes_i[i] = volume_i
+                pairwise_distances_i[i] = pairwise_distance_i
+            for j in range(len(volumes_j)):
+                volume_j, pairwise_distance_j = prepare_volume_and_distance(
+                    volumes_j[j], top_k, n_downsample_pix, exponent
+                )
+                prepared_volumes_j[j] = volume_j
+                pairwise_distances_j[j] = pairwise_distance_j
+
             get_distance_matrix_dask_gw = get_distance_matrix_dask(
-                volumes_i=volumes,
-                volumes_j=volumes,
+                volumes_i=prepared_volumes_i,
+                volumes_j=prepared_volumes_j,
+                pairwise_distances_i=pairwise_distances_i,
+                pairwise_distances_j=pairwise_distances_j,
                 distance_function=gw_distance_wrapper,
                 gw_distance_function=gw_distance_function_d[gw_distance_function_key],
-                top_k=top_k,
-                n_downsample_pix=n_downsample_pix,
-                exponent=exponent,
+                # top_k=top_k,
+                # n_downsample_pix=n_downsample_pix,
+                # exponent=exponent,
                 scheduler=scheduler,
                 tol_abs=1e-14,
                 tol_rel=1e-14,
