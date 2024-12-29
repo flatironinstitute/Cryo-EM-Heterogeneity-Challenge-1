@@ -1,3 +1,4 @@
+import os
 import argparse
 import torch
 import ot
@@ -5,10 +6,11 @@ import numpy as np
 from dask import delayed, compute
 from dask.distributed import Client
 from dask.diagnostics import ProgressBar
+from dask_hpc_runner import SlurmRunner
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
-precision = 64
+precision = 32
 if precision == 32:
     numpy_dtype = np.float32
     torch_dtype = torch.float32
@@ -187,21 +189,21 @@ def parse_args():
 def main(args):
     # client = Client(local_directory="/tmp")
 
-    # job_id = -1  # os.environ["SLURM_JOB_ID"]
+    job_id = os.environ["SLURM_JOB_ID"]
 
-    if True:
-        with Client() as client:
-            # with SlurmRunner(
-            #     scheduler_file=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json"
-            # ) as runner:
-            #     # The runner object contains the scheduler address and can be passed directly to a client
-            #     with Client(runner) as client:
+    # if True:
+    #     with Client() as client:
+    with SlurmRunner(
+        scheduler_file=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json"
+    ) as runner:
+        # The runner object contains the scheduler address and can be passed directly to a client
+        with Client(runner) as client:
             assert isinstance(
                 client, type(client)
             )  # linter thinks client is unused, so need to do something with client as a workaround
             fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-            submission = torch.load(fname)
-            volumes = submission["volumes"].to(torch_dtype)[::20]
+            submission = torch.load(fname, weights_only=False)
+            volumes = submission["volumes"].to(torch_dtype)[::40]
             volumes_i = volumes
             volumes_j = volumes
 
@@ -211,8 +213,8 @@ def main(args):
             exponent = args.exponent
             scheduler = args.scheduler
 
-            marginals_i = np.empty((len(volumes), top_k))
-            marginals_j = np.empty((len(volumes), top_k))
+            marginals_i = np.empty((len(volumes_i), top_k))
+            marginals_j = np.empty((len(volumes_j), top_k))
             pairwise_distances_i = np.empty((len(volumes), top_k, top_k))
             pairwise_distances_j = np.empty((len(volumes), top_k, top_k))
 
