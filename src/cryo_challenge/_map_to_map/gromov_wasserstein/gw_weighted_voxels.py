@@ -57,7 +57,7 @@ def prepare_volume_and_distance(volume, top_k, n_downsample_pix, exponent):
     return marginal, pairwise_distance
 
 
-def gw_distance_wrapper(
+def gw_distance_wrapper_element_wise(
     gw_distance_function,
     marginal_i,
     marginal_j,
@@ -82,6 +82,38 @@ def gw_distance_wrapper(
         "results_dict": results_dict,
     }
     return gw_dist, ij_results
+
+
+def gw_distance_wrapper_row_wise(
+    gw_distance_function,
+    marginal_i,
+    marginals_j,
+    pairwise_distance_i,
+    pairwise_distances_j,
+    i,
+    **kwargs,
+):
+    ij_results = []
+    gw_dists = []
+    for j in range(len(marginals_j)):
+        gw_dist, results_dict = gw_distance(
+            gw_distance_function,
+            marginal_i,
+            marginals_j[j],
+            pairwise_distance_i,
+            pairwise_distances_j[j],
+            **kwargs,
+        )
+        gw_dists.append(gw_dist)
+
+        ij_results.append(
+            {
+                "i": i,
+                "j": j,
+                "results_dict": results_dict,
+            }
+        )
+    return gw_dists, ij_results
 
 
 gw_distance_function_d = {
@@ -109,7 +141,7 @@ def gw_distance(
     return gw_dist, results_dict
 
 
-def get_distance_matrix_dask(
+def get_distance_matrix_dask_element_wise(
     marginals_i,
     marginals_j,
     pairwise_distances_i,
@@ -168,6 +200,56 @@ def get_distance_matrix_dask(
     return distance_matrix
 
 
+def get_distance_matrix_dask_row_wise(
+    marginals_i,
+    marginals_j,
+    pairwise_distances_i,
+    pairwise_distances_j,
+    distance_function,
+    gw_distance_function,
+    scheduler,
+    **gw_kwargs,
+):
+    n_i = len(marginals_i)
+    n_j = len(marginals_j)
+    distance_matrix = np.zeros((n_i, n_j), dtype=numpy_dtype)
+
+    # Create a list to hold the delayed computations
+    tasks = []
+    for i in range(n_i):
+        # Use dask.delayed to delay the computation
+        compute_task = delayed(distance_function)(
+            gw_distance_function,
+            marginals_i[i],
+            marginals_j,
+            pairwise_distances_i[i],
+            pairwise_distances_j,
+            i,
+            loss_fun=gw_kwargs["loss_fun"],
+            tol_abs=gw_kwargs["tol_abs"],
+            tol_rel=gw_kwargs["tol_rel"],
+            symmetric=gw_kwargs["symmetric"],
+            max_iter=gw_kwargs["max_iter"],
+            verbose=gw_kwargs["verbose"],
+        )
+        tasks.append((i, compute_task))
+
+    # Compute all tasks in parallel using the Dask client
+    with ProgressBar():
+        idx_of_return = 0
+        idx_of_compute_task = 1
+        results = compute(
+            [task[idx_of_compute_task][idx_of_return] for task in tasks],
+            scheduler=scheduler,
+        )
+
+    # Fill in the distance matrix with the results
+    for (i, _), result in zip(tasks, results[0]):
+        distance_matrix[i] = result
+
+    return distance_matrix
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument(
@@ -183,77 +265,126 @@ def parse_args():
     parser.add_argument(
         "--scheduler", type=str, default=None, help="Dask scheduler to use"
     )
+    parser.add_argument("--element_wise", action="store_true", default=False)
+    parser.add_argument("--slurm", action="store_true", default=False)
+    parser.add_argument(
+        "--local_directory", type=str, default="/tmp", help="Local directory for dask"
+    )
+    parser.add_argument(
+        "--outdir",
+        type=str,
+        default="/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/",
+        help="Output directory for npy file",
+    )
+
+    try:
+        job_id = os.environ["SLURM_JOB_ID"]
+    except KeyError:
+        job_id = "local" + str(np.random.randint(0, 1000))
+
+    parser.add_argument(
+        "--scheduler_file",
+        type=str,
+        default=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json",
+        help="Dask scheduler file (output file name)",
+    )
+
     return parser.parse_args()
 
 
 def main(args):
-    # client = Client(local_directory="/tmp")
+    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+    submission = torch.load(fname, weights_only=False)
+    volumes = submission["volumes"].to(torch_dtype)
+    volumes_i = volumes[:4]
+    volumes_j = volumes[:4]
 
-    job_id = os.environ["SLURM_JOB_ID"]
+    gw_distance_function_key = "gromov_wasserstein2"
+    n_downsample_pix = args.n_downsample_pix
+    top_k = args.top_k
+    exponent = args.exponent
+    scheduler = args.scheduler
+    element_wise = args.element_wise
 
-    # if True:
-    #     with Client() as client:
-    with SlurmRunner(
-        scheduler_file=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json"
-    ) as runner:
-        # The runner object contains the scheduler address and can be passed directly to a client
-        with Client(runner) as client:
-            assert isinstance(
-                client, type(client)
-            )  # linter thinks client is unused, so need to do something with client as a workaround
-            fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-            submission = torch.load(fname, weights_only=False)
-            volumes = submission["volumes"].to(torch_dtype)[::40]
-            volumes_i = volumes
-            volumes_j = volumes
+    marginals_i = np.empty((len(volumes_i), top_k))
+    marginals_j = np.empty((len(volumes_j), top_k))
+    pairwise_distances_i = np.empty((len(volumes), top_k, top_k))
+    pairwise_distances_j = np.empty((len(volumes), top_k, top_k))
 
-            gw_distance_function_key = "gromov_wasserstein2"
-            n_downsample_pix = args.n_downsample_pix
-            top_k = args.top_k
-            exponent = args.exponent
-            scheduler = args.scheduler
+    for i in range(len(volumes_i)):
+        volume_i, pairwise_distance_i = prepare_volume_and_distance(
+            volumes_i[i], top_k, n_downsample_pix, exponent
+        )
+        marginals_i[i] = volume_i
+        pairwise_distances_i[i] = pairwise_distance_i
+    for j in range(len(volumes_j)):
+        volume_j, pairwise_distance_j = prepare_volume_and_distance(
+            volumes_j[j], top_k, n_downsample_pix, exponent
+        )
+        marginals_j[j] = volume_j
+        pairwise_distances_j[j] = pairwise_distance_j
 
-            marginals_i = np.empty((len(volumes_i), top_k))
-            marginals_j = np.empty((len(volumes_j), top_k))
-            pairwise_distances_i = np.empty((len(volumes), top_k, top_k))
-            pairwise_distances_j = np.empty((len(volumes), top_k, top_k))
+    # TODO: dask.array.from_array for marginals and pairwise_distances
 
-            for i in range(len(volumes_i)):
-                volume_i, pairwise_distance_i = prepare_volume_and_distance(
-                    volumes_i[i], top_k, n_downsample_pix, exponent
-                )
-                marginals_i[i] = volume_i
-                pairwise_distances_i[i] = pairwise_distance_i
-            for j in range(len(volumes_j)):
-                volume_j, pairwise_distance_j = prepare_volume_and_distance(
-                    volumes_j[j], top_k, n_downsample_pix, exponent
-                )
-                marginals_j[j] = volume_j
-                pairwise_distances_j[j] = pairwise_distance_j
+    if element_wise:
+        print("element wise")
+        get_distance_matrix_dask_gw = get_distance_matrix_dask_element_wise(
+            marginals_i=marginals_i,
+            marginals_j=marginals_j,
+            pairwise_distances_i=pairwise_distances_i,
+            pairwise_distances_j=pairwise_distances_j,
+            distance_function=gw_distance_wrapper_element_wise,
+            gw_distance_function=gw_distance_function_d[gw_distance_function_key],
+            scheduler=scheduler,
+            tol_abs=1e-14,
+            tol_rel=1e-14,
+            max_iter=10000,
+            symmetric=True,
+            verbose=False,
+            loss_fun="square_loss",
+        )
+    else:
+        print("row wise")
+        get_distance_matrix_dask_gw = get_distance_matrix_dask_row_wise(
+            marginals_i=marginals_i,
+            marginals_j=marginals_j,
+            pairwise_distances_i=pairwise_distances_i,
+            pairwise_distances_j=pairwise_distances_j,
+            distance_function=gw_distance_wrapper_row_wise,
+            gw_distance_function=gw_distance_function_d[gw_distance_function_key],
+            scheduler=scheduler,
+            tol_abs=1e-14,
+            tol_rel=1e-14,
+            max_iter=10000,
+            symmetric=True,
+            verbose=False,
+            loss_fun="square_loss",
+        )
 
-            get_distance_matrix_dask_gw = get_distance_matrix_dask(
-                marginals_i=marginals_i,
-                marginals_j=marginals_j,
-                pairwise_distances_i=pairwise_distances_i,
-                pairwise_distances_j=pairwise_distances_j,
-                distance_function=gw_distance_wrapper,
-                gw_distance_function=gw_distance_function_d[gw_distance_function_key],
-                scheduler=scheduler,
-                tol_abs=1e-14,
-                tol_rel=1e-14,
-                max_iter=10000,
-                symmetric=True,
-                verbose=False,
-                loss_fun="square_loss",
-            )
-
-            np.save(
-                f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_float{precision}_exponent{exponent}_23.npy",
-                get_distance_matrix_dask_gw,
-            )
-            return get_distance_matrix_dask_gw
+    np.save(
+        os.path.join(
+            args.outdir,
+            f"gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_float{precision}_exponent{exponent}_{len(volumes_i)}x{len(volumes_j)}_23.npy",
+        ),
+        get_distance_matrix_dask_gw,
+    )
+    return get_distance_matrix_dask_gw
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args)
+    if args.slurm:
+        job_id = os.environ["SLURM_JOB_ID"]
+        with SlurmRunner(
+            scheduler_file=args.scheduler_file,
+        ) as runner:
+            # The runner object contains the scheduler address and can be passed directly to a client
+            with Client(runner) as client:
+                get_distance_matrix_dask_gw = main(args)
+
+    else:
+        with Client(local_directory=args.local_directory) as client:
+            get_distance_matrix_dask_gw = main(args)
+
+    # linter thinks client is unused, so need to do something with client as a workaround
+    assert isinstance(client, type(client))

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=slurm_cluster
+#SBATCH --job-name=row_wise
 #SBATCH --output=slurm/logs/%j.out
 #SBATCH --error=slurm/logs/%j.err
 #SBATCH --partition=ccb
