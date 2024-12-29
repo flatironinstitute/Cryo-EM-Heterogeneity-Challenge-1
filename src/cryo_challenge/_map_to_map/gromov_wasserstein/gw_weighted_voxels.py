@@ -1,4 +1,3 @@
-import os
 import argparse
 import torch
 import ot
@@ -124,6 +123,7 @@ def get_distance_matrix_dask(
     top_k,
     n_downsample_pix,
     exponent,
+    scheduler,
     **gw_kwargs,
 ):
     n_vols_i = len(volumes_i)
@@ -165,10 +165,10 @@ def get_distance_matrix_dask(
         idx_of_compute_task = 2
         results = compute(
             [task[idx_of_compute_task][idx_of_return] for task in tasks],
+            scheduler=scheduler,
         )
-
     # Fill in the distance matrix with the results
-    for (i, j, _), result in zip(tasks, results):
+    for (i, j, _), result in zip(tasks, results[0]):
         distance_matrix[i, j] = result
         if symmetric_volumes:
             distance_matrix[j, i] = distance_matrix[i, j]
@@ -188,14 +188,19 @@ def parse_args():
         default=1.0,
         help="Exponent on distance matrices of marginals",
     )
+    parser.add_argument(
+        "--scheduler", type=str, default=None, help="Dask scheduler to use"
+    )
     return parser.parse_args()
 
 
 def main(args):
     # client = Client(local_directory="/tmp")
 
-    job_id = os.environ["SLURM_JOB_ID"]
+    job_id = -1  # os.environ["SLURM_JOB_ID"]
 
+    # if True:
+    # with Client(runner) as client:
     with SlurmRunner(
         scheduler_file=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json"
     ) as runner:
@@ -212,6 +217,7 @@ def main(args):
             n_downsample_pix = args.n_downsample_pix
             top_k = args.top_k
             exponent = args.exponent
+            scheduler = args.scheduler
 
             get_distance_matrix_dask_gw = get_distance_matrix_dask(
                 volumes_i=volumes,
@@ -221,6 +227,7 @@ def main(args):
                 top_k=top_k,
                 n_downsample_pix=n_downsample_pix,
                 exponent=exponent,
+                scheduler=scheduler,
                 tol_abs=1e-14,
                 tol_rel=1e-14,
                 max_iter=10000,
