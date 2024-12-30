@@ -10,7 +10,7 @@ from dask_hpc_runner import SlurmRunner
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
-precision = 32
+precision = 128
 if precision == 32:
     numpy_dtype = np.float32
     torch_dtype = torch.float32
@@ -253,6 +253,9 @@ def get_distance_matrix_dask_row_wise(
 def parse_args():
     parser = argparse.ArgumentParser(description="Process some integers.")
     parser.add_argument(
+        "--n_i", type=int, default=80, help="Number of volumes in set i"
+    )
+    parser.add_argument(
         "--n_downsample_pix", type=int, default=20, help="Number of downsample pixels"
     )
     parser.add_argument("--top_k", type=int, default=500, help="Top K value")
@@ -296,8 +299,8 @@ def main(args):
     fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
     submission = torch.load(fname, weights_only=False)
     volumes = submission["volumes"].to(torch_dtype)
-    volumes_i = volumes[:4]
-    volumes_j = volumes[:4]
+    volumes_i = volumes[: args.n_i]
+    volumes_j = volumes
 
     gw_distance_function_key = "gromov_wasserstein2"
     n_downsample_pix = args.n_downsample_pix
