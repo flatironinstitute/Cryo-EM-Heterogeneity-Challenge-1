@@ -57,6 +57,7 @@ dependencies = [
   "ecos",
   "dask",
   "dask[distributed]",
+  "git+https://github.com/jacobtomlinson/dask-hpc-runner.git",
 ]
 
 [project.optional-dependencies]
