@@ -54,7 +54,8 @@ dependencies = [
   "ipyfilechooser",
   "omegaconf",
   "pydantic",
-  "ecos"
+  "ecos",
+  "dask"
 ]
 
 [project.optional-dependencies]
