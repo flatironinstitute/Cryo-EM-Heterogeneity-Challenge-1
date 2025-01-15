@@ -55,7 +55,8 @@ dependencies = [
   "omegaconf",
   "pydantic",
   "ecos",
-  "dask"
+  "dask",
+  "dask[distributed]",
 ]
 
 [project.optional-dependencies]
