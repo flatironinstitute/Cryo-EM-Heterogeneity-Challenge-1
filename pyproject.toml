@@ -61,7 +61,7 @@ dependencies = [
 
 [tool.hatch.envs.default]
 dependencies = [
-  "git+https://github.com/jacobtomlinson/dask-hpc-runner.git@main",
+  "dask_hpc_runner @ git+https://github.com/jacobtomlinson/dask-hpc-runner.git@main",
 ]
 
 [project.optional-dependencies]
