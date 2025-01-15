@@ -57,6 +57,10 @@ dependencies = [
   "ecos",
   "dask",
   "dask[distributed]",
+]
+
+[tool.hatch.envs.default]
+dependencies = [
   "git+https://github.com/jacobtomlinson/dask-hpc-runner.git@main",
 ]
 
