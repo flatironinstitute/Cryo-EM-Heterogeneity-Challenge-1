@@ -494,16 +494,15 @@ class GromovWassersteinDistance(MapToMapDistance):
 
     @override
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
-        maps1 = maps1
-        print(maps1.shape)
+        extra_params = self.config["analysis"]["gromov_wasserstein_extra_params"]
+
         maps2 = maps2.reshape((len(maps2),) + maps1.shape[1:])
-        print(maps2.shape)
 
-        slurm = False
-
-        if slurm:
+        if extra_params["slurm"]:
             job_id = os.environ["SLURM_JOB_ID"]
-            scheduler_file = f"scheduler-{job_id}.json"
+            scheduler_file = os.path.join(
+                extra_params["scheduler_file_dir"], f"scheduler-{job_id}.json"
+            )
             with SlurmRunner(
                 scheduler_file=scheduler_file,
             ) as runner:
@@ -512,26 +511,26 @@ class GromovWassersteinDistance(MapToMapDistance):
                     distance_matrix_dask_gw = get_distance_matrix_dask_gw(
                         volumes_i=maps1,
                         volumes_j=maps2,
-                        top_k=10,
-                        n_downsample_pix=4,
-                        exponent=1,
-                        cost_scale_factor=1,
-                        scheduler=None,
-                        element_wise=False,
+                        top_k=extra_params["top_k"],
+                        n_downsample_pix=extra_params["n_downsample_pix"],
+                        exponent=extra_params["exponent"],
+                        cost_scale_factor=extra_params["cost_scale_factor"],
+                        scheduler=extra_params["scheduler"],
+                        element_wise=extra_params["element_wise"],
                     )
 
         else:
-            local_directory = "/tmp"
+            local_directory = extra_params["local_directory"]
             with Client(local_directory=local_directory) as client:
                 distance_matrix_dask_gw = get_distance_matrix_dask_gw(
                     volumes_i=maps1,
                     volumes_j=maps2,
-                    top_k=10,
-                    n_downsample_pix=4,
-                    exponent=1,
-                    cost_scale_factor=1,
-                    scheduler=None,
-                    element_wise=False,
+                    top_k=extra_params["top_k"],
+                    n_downsample_pix=extra_params["n_downsample_pix"],
+                    exponent=extra_params["exponent"],
+                    cost_scale_factor=extra_params["cost_scale_factor"],
+                    scheduler=extra_params["scheduler"],
+                    element_wise=extra_params["element_wise"],
                 )
         assert isinstance(client, type(client))
 
