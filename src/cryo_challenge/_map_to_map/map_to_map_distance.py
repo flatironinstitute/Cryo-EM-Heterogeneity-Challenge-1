@@ -6,6 +6,9 @@ from typing import Optional, Sequence
 from typing_extensions import override
 import mrcfile
 import numpy as np
+# from dask.distributed import Client
+# from dask.diagnostics import ProgressBar
+# from dask_hpc_runner import SlurmRunner
 
 
 def normalize(maps, method):
@@ -475,6 +478,23 @@ class Zernike3DDistance(MapToMapDistance):
         # Read distance matrix
         dists = np.load(os.path.join(outputPath, "dist_mat.npy")).T
         self.stored_computed_assets = {"zernike3d": dists}
+        return dists
+
+    @override
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
+        return self.stored_computed_assets  # must run get_distance_matrix first
+
+
+class GromovWassersteinDistance(MapToMapDistance):
+    """Gromov-Wasserstein distance.
+
+    Gromov-Wasserstein distance is invariant to map alignment, because it compares the self-distances in a map, which are S3(3) equivariant.
+    """
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        dists = np.zeros((len(maps1), len(maps2)))
+        self.stored_computed_assets = {"gromov_wasserstein": dists}
         return dists
 
     @override

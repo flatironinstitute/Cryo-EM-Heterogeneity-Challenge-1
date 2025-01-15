@@ -10,6 +10,7 @@ from .._map_to_map.map_to_map_distance import (
     BioEM3dDistance,
     FSCResDistance,
     Zernike3DDistance,
+    GromovWassersteinDistance,
 )
 
 
@@ -20,6 +21,7 @@ AVAILABLE_MAP2MAP_DISTANCES = {
     "bioem": BioEM3dDistance,
     "res": FSCResDistance,
     "zernike3d": Zernike3DDistance,
+    "gromov_wasserstein": GromovWassersteinDistance,
 }
 
 

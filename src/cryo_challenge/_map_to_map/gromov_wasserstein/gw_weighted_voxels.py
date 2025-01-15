@@ -44,7 +44,9 @@ def normalize_mass_to_one(p):
     return p / p.sum()
 
 
-def prepare_volume_and_distance(volume, top_k, n_downsample_pix, exponent):
+def prepare_volume_and_distance(
+    volume, top_k, n_downsample_pix, exponent, cost_scale_factor
+):
     volume = downsample_volume(volume, n_downsample_pix).numpy().astype(numpy_dtype)
     idx_above_thresh = return_top_k_voxel_idxs(volume, top_k)
     marginal = normalize_mass_to_one(volume[idx_above_thresh].flatten())
@@ -53,7 +55,9 @@ def prepare_volume_and_distance(volume, top_k, n_downsample_pix, exponent):
         .numpy()
         .astype(numpy_dtype)
     )
-    pairwise_distance = (pairwise_distance / pairwise_distance.max()) ** exponent
+    pairwise_distance = (
+        cost_scale_factor * pairwise_distance / pairwise_distance.max()
+    ) ** exponent
     return marginal, pairwise_distance
 
 
@@ -266,6 +270,12 @@ def parse_args():
         help="Exponent on distance matrices of marginals",
     )
     parser.add_argument(
+        "--cost_scale_factor",
+        type=float,
+        default=1.0,
+        help="Scaling of distance matrices of marginals (before exponentiation)",
+    )
+    parser.add_argument(
         "--scheduler", type=str, default=None, help="Dask scheduler to use"
     )
     parser.add_argument("--element_wise", action="store_true", default=False)
@@ -295,34 +305,31 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args):
-    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-    submission = torch.load(fname, weights_only=False)
-    volumes = submission["volumes"].to(torch_dtype)
-    volumes_i = volumes[: args.n_i]
-    volumes_j = volumes
-
+def get_distance_matrix_dask_gw(
+    volumes_i,
+    volumes_j,
+    top_k,
+    n_downsample_pix,
+    exponent,
+    cost_scale_factor,
+    scheduler,
+    element_wise,
+):
     gw_distance_function_key = "gromov_wasserstein2"
-    n_downsample_pix = args.n_downsample_pix
-    top_k = args.top_k
-    exponent = args.exponent
-    scheduler = args.scheduler
-    element_wise = args.element_wise
-
     marginals_i = np.empty((len(volumes_i), top_k))
     marginals_j = np.empty((len(volumes_j), top_k))
-    pairwise_distances_i = np.empty((len(volumes), top_k, top_k))
-    pairwise_distances_j = np.empty((len(volumes), top_k, top_k))
+    pairwise_distances_i = np.empty((len(volumes_i), top_k, top_k))
+    pairwise_distances_j = np.empty((len(volumes_j), top_k, top_k))
 
     for i in range(len(volumes_i)):
         volume_i, pairwise_distance_i = prepare_volume_and_distance(
-            volumes_i[i], top_k, n_downsample_pix, exponent
+            volumes_i[i], top_k, n_downsample_pix, exponent, cost_scale_factor
         )
         marginals_i[i] = volume_i
         pairwise_distances_i[i] = pairwise_distance_i
     for j in range(len(volumes_j)):
         volume_j, pairwise_distance_j = prepare_volume_and_distance(
-            volumes_j[j], top_k, n_downsample_pix, exponent
+            volumes_j[j], top_k, n_downsample_pix, exponent, cost_scale_factor
         )
         marginals_j[j] = volume_j
         pairwise_distances_j[j] = pairwise_distance_j
@@ -331,7 +338,7 @@ def main(args):
 
     if element_wise:
         print("element wise")
-        get_distance_matrix_dask_gw = get_distance_matrix_dask_element_wise(
+        distance_matrix_dask_gw = get_distance_matrix_dask_element_wise(
             marginals_i=marginals_i,
             marginals_j=marginals_j,
             pairwise_distances_i=pairwise_distances_i,
@@ -348,7 +355,7 @@ def main(args):
         )
     else:
         print("row wise")
-        get_distance_matrix_dask_gw = get_distance_matrix_dask_row_wise(
+        distance_matrix_dask_gw = get_distance_matrix_dask_row_wise(
             marginals_i=marginals_i,
             marginals_j=marginals_j,
             pairwise_distances_i=pairwise_distances_i,
@@ -356,22 +363,48 @@ def main(args):
             distance_function=gw_distance_wrapper_row_wise,
             gw_distance_function=gw_distance_function_d[gw_distance_function_key],
             scheduler=scheduler,
-            tol_abs=1e-14,
-            tol_rel=1e-14,
+            tol_abs=1e-18,
+            tol_rel=1e-18,
             max_iter=10000,
             symmetric=True,
             verbose=False,
             loss_fun="square_loss",
         )
+    return distance_matrix_dask_gw
+
+
+def main(args):
+    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+    submission = torch.load(fname, weights_only=False)
+    volumes = submission["volumes"].to(torch_dtype)
+    volumes_i = volumes[: args.n_i]
+    volumes_j = volumes
+    n_downsample_pix = args.n_downsample_pix
+    top_k = args.top_k
+    exponent = args.exponent
+    scheduler = args.scheduler
+    element_wise = args.element_wise
+    cost_scale_factor = args.cost_scale_factor
+
+    distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+        volumes_i,
+        volumes_j,
+        top_k,
+        n_downsample_pix,
+        exponent,
+        cost_scale_factor,
+        scheduler,
+        element_wise,
+    )
 
     np.save(
         os.path.join(
             args.outdir,
-            f"gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_float{precision}_exponent{exponent}_{len(volumes_i)}x{len(volumes_j)}_23.npy",
+            f"gw_weighted_voxel_topk{top_k}_ds{n_downsample_pix}_float{precision}_costscalefactor{cost_scale_factor}_exponent{exponent}_{len(volumes_i)}x{len(volumes_j)}_23.npy",
         ),
-        get_distance_matrix_dask_gw,
+        distance_matrix_dask_gw,
     )
-    return get_distance_matrix_dask_gw
+    return distance_matrix_dask_gw
 
 
 if __name__ == "__main__":

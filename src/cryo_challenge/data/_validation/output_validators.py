@@ -32,6 +32,7 @@ class MapToMapResultsValidator:
     fsc: Optional[dict] = None
     res: Optional[dict] = None
     zernike3d: Optional[dict] = None
+    gromov_wasserstein: Optional[dict] = None
 
     def __post_init__(self):
         validate_input_config_mtm(self.config)
@@ -153,6 +154,7 @@ class DistributionToDistributionResultsValidator:
     l2: Optional[dict] = None
     corr: Optional[dict] = None
     zernike3d: Optional[dict] = None
+    gromov_wasserstein: Optional[dict] = None
 
     def __post_init__(self):
         validate_input_config_disttodist(self.config)
