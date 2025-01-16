@@ -7,7 +7,6 @@ from typing_extensions import override
 import mrcfile
 import numpy as np
 from dask.distributed import Client
-# from dask_hpc_runner import SlurmRunner
 
 from .gromov_wasserstein.gw_weighted_voxels import get_distance_matrix_dask_gw
 

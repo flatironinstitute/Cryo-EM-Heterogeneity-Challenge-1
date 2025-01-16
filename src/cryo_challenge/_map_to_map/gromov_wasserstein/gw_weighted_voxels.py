@@ -6,7 +6,6 @@ import numpy as np
 from dask import delayed, compute
 from dask.distributed import Client
 from dask.diagnostics import ProgressBar
-# from dask_hpc_runner import SlurmRunner
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
