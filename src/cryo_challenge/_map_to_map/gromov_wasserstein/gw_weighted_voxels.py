@@ -6,6 +6,7 @@ import numpy as np
 from dask import delayed, compute
 from dask.distributed import Client
 from dask.diagnostics import ProgressBar
+from dask_hpc_runner import SlurmRunner
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
@@ -409,14 +410,13 @@ def main(args):
 if __name__ == "__main__":
     args = parse_args()
     if args.slurm:
-        pass
-    #     job_id = os.environ["SLURM_JOB_ID"]
-    #     with SlurmRunner(
-    #         scheduler_file=args.scheduler_file,
-    #     ) as runner:
-    #         # The runner object contains the scheduler address and can be passed directly to a client
-    #         with Client(runner) as client:
-    #             get_distance_matrix_dask_gw = main(args)
+        job_id = os.environ["SLURM_JOB_ID"]
+        with SlurmRunner(
+            scheduler_file=args.scheduler_file,
+        ) as runner:
+            # The runner object contains the scheduler address and can be passed directly to a client
+            with Client(runner) as client:
+                get_distance_matrix_dask_gw = main(args)
 
     else:
         with Client(local_directory=args.local_directory) as client:
