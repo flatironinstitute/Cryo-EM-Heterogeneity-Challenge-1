@@ -146,7 +146,7 @@ def validate_config_mtm_analysis_normalize(config_analysis_normalize: dict) -> N
     return
 
 
-class GWConfig(BaseModel):
+class GromovWassersteinConfig(BaseModel):
     """
     Gromov-Wasserstein extra parameters config
 
@@ -181,7 +181,7 @@ class GWConfig(BaseModel):
 
 
 def validate_config_mtm_analysis_gromov_wasserstein_extra_arams(config):
-    _ = GWConfig(**config).model_dump()
+    _ = GromovWassersteinConfig(**config).model_dump()
 
 
 def validate_config_mtm_analysis(config_analysis: dict) -> None:
