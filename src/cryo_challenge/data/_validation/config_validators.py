@@ -375,3 +375,37 @@ class SVDConfig(BaseModel):
         if value <= 0:
             raise ValueError("Voxel size must be positive.")
         return value
+
+
+class GWConfig(BaseModel):
+    """
+    Config for the GW distance computation
+
+    Parameters
+    ----------
+    top_k : int
+        Number of voxels to use (ranked according to highest mass)
+    n_downsample_pix : int
+        Number of pixels to downsample to (in each dimension)
+    exponent : float
+        exponential weighting of GW cost. Base cost is Euclindean distance
+    cost_scale_factor : float
+        multiplicative scaling factor for the cost (before exponentiation)
+    element_wise : bool
+        dask parralelization: whether to call dask.compute on each map-to-map computation, or naively loop through each (80) submitted maps row-wise
+    slurm : bool
+        parallelization configuration: whether to use dask_hpc_runner.SlurmRunner as a runner for dask.Client(runner)
+    scheduler : Optional[str]
+        string argument to dask.compute
+    local_directory : Optional[str]
+        directory for dask.distributed.Client
+    """
+
+    top_k: int
+    n_downsample_pix: int
+    exponent: float
+    cost_scale_factor: float
+    element_wise: bool
+    slurm: bool
+    scheduler: Optional[str] = None
+    local_directory: Optional[str] = None

@@ -22,6 +22,7 @@ analysis:
     element_wise: false
     local_directory: /tmp
     slurm: false
+    scheduler_file_dir: null
   metrics:
     - gromov_wasserstein
   chunk_size_submission: 4
