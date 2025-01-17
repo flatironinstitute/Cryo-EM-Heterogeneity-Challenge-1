@@ -4,6 +4,12 @@ import numpy as np
 
 
 def test_run_map2map_pipeline():
+    args = OmegaConf.create(
+        {"config": "tests/config_files/test_config_map_to_map_gw.yaml"}
+    )
+    results_dict = run_map2map_pipeline.main(args)
+    assert "gromov_wasserstein" in results_dict.keys()
+
     try:
         args = OmegaConf.create(
             {"config": "tests/config_files/test_config_map_to_map_external.yaml"}

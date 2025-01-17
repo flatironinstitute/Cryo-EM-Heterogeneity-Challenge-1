@@ -6,6 +6,10 @@ from typing import Optional, Sequence
 from typing_extensions import override
 import mrcfile
 import numpy as np
+from dask.distributed import Client
+from dask_hpc_runner import SlurmRunner
+
+from .gromov_wasserstein.gw_weighted_voxels import get_distance_matrix_dask_gw
 
 
 def normalize(maps, method):
@@ -476,6 +480,62 @@ class Zernike3DDistance(MapToMapDistance):
         dists = np.load(os.path.join(outputPath, "dist_mat.npy")).T
         self.stored_computed_assets = {"zernike3d": dists}
         return dists
+
+    @override
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
+        return self.stored_computed_assets  # must run get_distance_matrix first
+
+
+class GromovWassersteinDistance(MapToMapDistance):
+    """Gromov-Wasserstein distance.
+
+    Gromov-Wasserstein distance is invariant to map alignment, because it compares the self-distances in a map, which are S3(3) equivariant.
+    """
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        extra_params = self.config["analysis"]["gromov_wasserstein_extra_params"]
+
+        maps2 = maps2.reshape((len(maps2),) + maps1.shape[1:])
+
+        if extra_params["slurm"]:
+            job_id = os.environ["SLURM_JOB_ID"]
+            scheduler_file = os.path.join(
+                extra_params["scheduler_file_dir"], f"scheduler-{job_id}.json"
+            )
+            with SlurmRunner(
+                scheduler_file=scheduler_file,
+            ) as runner:
+                # The runner object contains the scheduler address and can be passed directly to a client
+                with Client(runner) as client:
+                    distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+                        volumes_i=maps1,
+                        volumes_j=maps2,
+                        top_k=extra_params["top_k"],
+                        n_downsample_pix=extra_params["n_downsample_pix"],
+                        exponent=extra_params["exponent"],
+                        cost_scale_factor=extra_params["cost_scale_factor"],
+                        scheduler=extra_params["scheduler"],
+                        element_wise=extra_params["element_wise"],
+                    )
+
+        else:
+            local_directory = extra_params["local_directory"]
+            with Client(local_directory=local_directory) as client:
+                distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+                    volumes_i=maps1,
+                    volumes_j=maps2,
+                    top_k=extra_params["top_k"],
+                    n_downsample_pix=extra_params["n_downsample_pix"],
+                    exponent=extra_params["exponent"],
+                    cost_scale_factor=extra_params["cost_scale_factor"],
+                    scheduler=extra_params["scheduler"],
+                    element_wise=extra_params["element_wise"],
+                )
+        assert isinstance(client, type(client))
+
+        self.stored_computed_assets = {"gromov_wasserstein": distance_matrix_dask_gw}
+        return distance_matrix_dask_gw
 
     @override
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
