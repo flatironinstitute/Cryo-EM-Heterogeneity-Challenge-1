@@ -6,7 +6,7 @@ import numpy as np
 from dask import delayed, compute
 from dask.distributed import Client
 from dask.diagnostics import ProgressBar
-from dask_hpc_runner import SlurmRunner
+from dask_jobqueue.slurm import SLURMRunner
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
@@ -260,6 +260,9 @@ def parse_args():
         "--n_i", type=int, default=80, help="Number of volumes in set i"
     )
     parser.add_argument(
+        "--n_j", type=int, default=80, help="Number of volumes in set j"
+    )
+    parser.add_argument(
         "--n_downsample_pix", type=int, default=20, help="Number of downsample pixels"
     )
     parser.add_argument("--top_k", type=int, default=500, help="Top K value")
@@ -378,7 +381,7 @@ def main(args):
     submission = torch.load(fname, weights_only=False)
     volumes = submission["volumes"].to(torch_dtype)
     volumes_i = volumes[: args.n_i]
-    volumes_j = volumes
+    volumes_j = volumes[: args.n_j]
     n_downsample_pix = args.n_downsample_pix
     top_k = args.top_k
     exponent = args.exponent
@@ -411,7 +414,7 @@ if __name__ == "__main__":
     args = parse_args()
     if args.slurm:
         job_id = os.environ["SLURM_JOB_ID"]
-        with SlurmRunner(
+        with SLURMRunner(
             scheduler_file=args.scheduler_file,
         ) as runner:
             # The runner object contains the scheduler address and can be passed directly to a client
