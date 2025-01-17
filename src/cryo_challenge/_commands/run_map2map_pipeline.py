@@ -38,7 +38,6 @@ def main(args):
 
     validate_input_config_mtm(config)
     if "gromov_wasserstein_extra_params" in config["analysis"]:
-        print(config["analysis"]["gromov_wasserstein_extra_params"])
         _ = GWConfig(
             **config["analysis"]["gromov_wasserstein_extra_params"]
         ).model_dump()
