@@ -8,7 +8,6 @@ import yaml
 
 from .._map_to_map.map_to_map_pipeline import run
 from ..data._validation.config_validators import validate_input_config_mtm
-from ..data._validation.config_validators import GWConfig
 
 
 def add_args(parser):
@@ -37,11 +36,6 @@ def main(args):
         config = yaml.safe_load(file)
 
     validate_input_config_mtm(config)
-    if "gromov_wasserstein_extra_params" in config["analysis"]:
-        _ = GWConfig(
-            **config["analysis"]["gromov_wasserstein_extra_params"]
-        ).model_dump()
-
     warnexists(config["output"])
     mkbasedir(os.path.dirname(config["output"]))
 
