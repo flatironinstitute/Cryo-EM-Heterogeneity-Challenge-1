@@ -309,34 +309,14 @@ def parse_args():
 
 
 def get_distance_matrix_dask_gw(
-    volumes_i,
-    volumes_j,
-    top_k,
-    n_downsample_pix,
-    exponent,
-    cost_scale_factor,
+    marginals_i,
+    marginals_j,
+    pairwise_distances_i,
+    pairwise_distances_j,
     scheduler,
     element_wise,
+    gw_distance_function_key,
 ):
-    gw_distance_function_key = "gromov_wasserstein2"
-    marginals_i = np.empty((len(volumes_i), top_k))
-    marginals_j = np.empty((len(volumes_j), top_k))
-    pairwise_distances_i = np.empty((len(volumes_i), top_k, top_k))
-    pairwise_distances_j = np.empty((len(volumes_j), top_k, top_k))
-
-    for i in range(len(volumes_i)):
-        volume_i, pairwise_distance_i = prepare_volume_and_distance(
-            volumes_i[i], top_k, n_downsample_pix, exponent, cost_scale_factor
-        )
-        marginals_i[i] = volume_i
-        pairwise_distances_i[i] = pairwise_distance_i
-    for j in range(len(volumes_j)):
-        volume_j, pairwise_distance_j = prepare_volume_and_distance(
-            volumes_j[j], top_k, n_downsample_pix, exponent, cost_scale_factor
-        )
-        marginals_j[j] = volume_j
-        pairwise_distances_j[j] = pairwise_distance_j
-
     # TODO: dask.array.from_array for marginals and pairwise_distances
 
     if element_wise:
@@ -376,28 +356,75 @@ def get_distance_matrix_dask_gw(
     return distance_matrix_dask_gw
 
 
-def main(args):
+def setup_volume_and_distance(
+    n_i, n_j, n_downsample_pix, top_k, exponent, cost_scale_factor
+):
     fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
     submission = torch.load(fname, weights_only=False)
     volumes = submission["volumes"].to(torch_dtype)
-    volumes_i = volumes[: args.n_i]
-    volumes_j = volumes[: args.n_j]
+
+    volumes_i = volumes[:n_i]
+    volumes_j = volumes[:n_j]
+
+    marginals_i = np.empty((len(volumes_i), top_k))
+    marginals_j = np.empty((len(volumes_j), top_k))
+    pairwise_distances_i = np.empty((len(volumes_i), top_k, top_k))
+    pairwise_distances_j = np.empty((len(volumes_j), top_k, top_k))
+
+    for i in range(len(volumes_i)):
+        volume_i, pairwise_distance_i = prepare_volume_and_distance(
+            volumes_i[i], top_k, n_downsample_pix, exponent, cost_scale_factor
+        )
+        marginals_i[i] = volume_i
+        pairwise_distances_i[i] = pairwise_distance_i
+    for j in range(len(volumes_j)):
+        volume_j, pairwise_distance_j = prepare_volume_and_distance(
+            volumes_j[j], top_k, n_downsample_pix, exponent, cost_scale_factor
+        )
+        marginals_j[j] = volume_j
+        pairwise_distances_j[j] = pairwise_distance_j
+
+    return (
+        marginals_i,
+        marginals_j,
+        pairwise_distances_i,
+        pairwise_distances_j,
+        volumes_i,
+        volumes_j,
+    )
+
+
+def main(args):
+    n_i = args.n_i
+    n_j = args.n_j
     n_downsample_pix = args.n_downsample_pix
     top_k = args.top_k
     exponent = args.exponent
-    scheduler = args.scheduler
-    element_wise = args.element_wise
     cost_scale_factor = args.cost_scale_factor
 
-    distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+    (
+        marginals_i,
+        marginals_j,
+        pairwise_distances_i,
+        pairwise_distances_j,
         volumes_i,
         volumes_j,
-        top_k,
-        n_downsample_pix,
-        exponent,
-        cost_scale_factor,
+    ) = setup_volume_and_distance(
+        n_i, n_j, n_downsample_pix, top_k, exponent, cost_scale_factor
+    )
+
+    gw_distance_function_key = "gromov_wasserstein2"
+    scheduler = args.scheduler
+    element_wise = args.element_wise
+
+    distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+        marginals_i,
+        marginals_j,
+        pairwise_distances_i,
+        pairwise_distances_j,
         scheduler,
         element_wise,
+        gw_distance_function_key,
     )
 
     np.save(
