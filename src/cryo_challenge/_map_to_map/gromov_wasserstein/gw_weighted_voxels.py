@@ -40,12 +40,14 @@ def make_sparse_cost(idx_above_thresh, dtype):
 
 
 def normalize_mass_to_one(p):
-    p = p - p.min()
+    """Normalize mass to one"""
+    if p.min() < 0:  # if all positive, no need to shift
+        p = p - p.min()
     return p / p.sum()
 
 
 def prepare_volume_and_distance(
-    volume, top_k, n_downsample_pix, exponent, cost_scale_factor
+    volume, top_k, n_downsample_pix, exponent, cost_scale_factor, normalize
 ):
     volume = downsample_volume(volume, n_downsample_pix).numpy().astype(numpy_dtype)
     idx_above_thresh = return_top_k_voxel_idxs(volume, top_k)
@@ -55,9 +57,9 @@ def prepare_volume_and_distance(
         .numpy()
         .astype(numpy_dtype)
     )
-    pairwise_distance = (
-        cost_scale_factor * pairwise_distance / pairwise_distance.max()
-    ) ** exponent
+    if normalize:
+        pairwise_distance /= pairwise_distance.max()
+    pairwise_distance = (cost_scale_factor * pairwise_distance) ** exponent
     return marginal, pairwise_distance
 
 
@@ -282,6 +284,7 @@ def parse_args():
         "--scheduler", type=str, default=None, help="Dask scheduler to use"
     )
     parser.add_argument("--element_wise", action="store_true", default=False)
+    parser.add_argument("--skip_normalize", action="store_false", default=False)
     parser.add_argument("--slurm", action="store_true", default=False)
     parser.add_argument(
         "--local_directory", type=str, default="/tmp", help="Local directory for dask"
@@ -357,7 +360,7 @@ def get_distance_matrix_dask_gw(
 
 
 def setup_volume_and_distance(
-    n_i, n_j, n_downsample_pix, top_k, exponent, cost_scale_factor
+    n_i, n_j, n_downsample_pix, top_k, exponent, cost_scale_factor, normalize
 ):
     fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
     submission = torch.load(fname, weights_only=False)
@@ -373,13 +376,23 @@ def setup_volume_and_distance(
 
     for i in range(len(volumes_i)):
         volume_i, pairwise_distance_i = prepare_volume_and_distance(
-            volumes_i[i], top_k, n_downsample_pix, exponent, cost_scale_factor
+            volumes_i[i],
+            top_k,
+            n_downsample_pix,
+            exponent,
+            cost_scale_factor,
+            normalize,
         )
         marginals_i[i] = volume_i
         pairwise_distances_i[i] = pairwise_distance_i
     for j in range(len(volumes_j)):
         volume_j, pairwise_distance_j = prepare_volume_and_distance(
-            volumes_j[j], top_k, n_downsample_pix, exponent, cost_scale_factor
+            volumes_j[j],
+            top_k,
+            n_downsample_pix,
+            exponent,
+            cost_scale_factor,
+            normalize,
         )
         marginals_j[j] = volume_j
         pairwise_distances_j[j] = pairwise_distance_j
@@ -401,6 +414,7 @@ def main(args):
     top_k = args.top_k
     exponent = args.exponent
     cost_scale_factor = args.cost_scale_factor
+    normalize = not args.skip_normalize
 
     (
         marginals_i,
@@ -410,7 +424,7 @@ def main(args):
         volumes_i,
         volumes_j,
     ) = setup_volume_and_distance(
-        n_i, n_j, n_downsample_pix, top_k, exponent, cost_scale_factor
+        n_i, n_j, n_downsample_pix, top_k, exponent, cost_scale_factor, normalize
     )
 
     gw_distance_function_key = "gromov_wasserstein2"
