@@ -79,7 +79,7 @@ def init_extreme_points(lower_bounds, upper_bounds):
     return E, B, D
 
 
-def extreme_points_update(E, B, D, A, b):
+def extreme_points_update(E, B, D, A, b, do_optimize_with_sparse):
     """Add a new constraint A @ x \le b to the problem and update the extreme points and the corresponding matrix B, D.
     Input
     E: Extreme points ndarray(n,d)
@@ -102,8 +102,16 @@ def extreme_points_update(E, B, D, A, b):
     C = []
     O_m = []
 
+    if do_optimize_with_sparse:
+        D_sparse = D
     for i in infeasible_indices:
-        feasible_adjacent_indices = np.where(D[i] == 1)[0]
+        if do_optimize_with_sparse:
+            feasible_adjacent_indices_sparse = D_sparse[i].indices
+            # assert np.allclose(feasible_adjacent_indices, feasible_adjacent_indices_sparse)
+            feasible_adjacent_indices = feasible_adjacent_indices_sparse
+        else:
+            feasible_adjacent_indices = np.where(D[i] == 1)[0]
+
         for j in feasible_adjacent_indices:
             if j not in infeasible_indices:
                 lamb = (b - A @ E[j].T) / (A @ (E[i] - E[j]).T)
@@ -115,7 +123,6 @@ def extreme_points_update(E, B, D, A, b):
                 new_O[i] = True
                 O_m.append(new_O)
 
-    do_optimize_with_sparse = False
     # Convert new_extreme_points to a numpy array and append to E
     if new_extreme_points:
         mask = np.ones(len(E), dtype=bool)
@@ -139,42 +146,61 @@ def extreme_points_update(E, B, D, A, b):
         # N_old = ((C.astype(int)).T @ C == r-2) | (np.eye(len(C.T),dtype=bool)) # slow
         # Convert C to integer for consistent behavior
         C_int = C.astype(int)  # Dense
-        if do_optimize_with_sparse:
-            C_sparse_int = csr_matrix(C_int)  # Sparse
-
-        # Compute N for both cases
-        N_dense = C_int.T @ C_int == r - 2
-        np.fill_diagonal(N_dense, True)
 
         if do_optimize_with_sparse:
-            N_sparse = (C_sparse_int.T @ C_sparse_int) == r - 2
-            N_sparse.setdiag(True)
-            assert np.allclose(N_sparse.toarray(), N_dense)
+            C_sparse_int = csr_matrix(C_int)
+            CC_intermediate = C_sparse_int.T @ C_sparse_int  # slow
+            ### method 1
+            # N_sparse = CC_intermediate == r - 2 # slow
+
+            ### method 2
+            # Assuming C_sparse_int is a sparse matrix
+            r_minus_2 = r - 2
+            # Perform the sparse multiplication
+            # CC_intermediate = C_sparse_int.T @ C_sparse_int
+            # Compare only non-zero elements to r-2, keeping it sparse
+            r_mask = CC_intermediate.data == r_minus_2
+            CC_intermediate.data[~r_mask] = 0  # Set non-matching entries to zero
+            CC_intermediate.eliminate_zeros()  # Remove zero entries efficiently
+            N_sparse = CC_intermediate.astype(bool)  # Convert to boolean
+            # assert np.allclose(result_sparse.toarray(), N_sparse.toarray())
+
+            N_sparse.setdiag(True)  # Set diagonal to True
+
+            # assert np.allclose(N_sparse.toarray(), N_dense)
+            # N = N_sparse
+        else:
+            N_dense = C_int.T @ C_int == r - 2
+            np.fill_diagonal(N_dense, True)
+            # N = N_dense
 
         O_m = np.array(O_m).T
 
-        D_dense = D[np.ix_(mask, mask)]  # D[:,mask][mask] # slow
         # Convert D to sparse matrix if it's sparse
         if do_optimize_with_sparse:
-            D_sparse = csr_matrix(D)
             # Apply mask to rows and columns efficiently
             D_sparse = D_sparse[mask, :][:, mask]  # Slicing in sparse format
-            D = D_sparse  # Convert back to dense if needed
-            # assert np.allclose(D, D_old)
+            # D = D_sparse  # Convert back to dense if needed
+            # assert np.allclose(D_sparse, D_dense)
+        else:
+            D_dense = D[np.ix_(mask, mask)]  # D[:,mask][mask] # slow
 
         O_dense = O_m[mask, :]  # slow
 
-        D_dense = np.block([[D_dense, O_dense], [O_dense.T, N_dense]])  # slow
         if do_optimize_with_sparse:
-            O_sparse = csr_matrix(O_m)
+            O_sparse = csr_matrix(O_m)  # slow
             O_sparse = O_sparse[mask, :]
-            assert np.allclose(O_sparse.toarray(), O_dense)
+            # assert np.allclose(O_sparse.toarray(), O_dense)
             D_sparse = bmat(
                 [[D_sparse, O_sparse], [O_sparse.T, N_sparse]], format="csr"
             )
-            assert np.allclose(D_sparse.toarray(), D_dense)
+            # assert np.allclose(D_sparse.toarray(), D_dense)
+            D = D_sparse
+        else:
+            D_dense = np.block([[D_dense, O_dense], [O_dense.T, N_dense]])  # slow
+            D = D_dense
 
-    return E, B, D_dense
+    return E, B, D
 
 
 def gw_obj(Cx, Cy, Pi):
@@ -207,7 +233,15 @@ def optimal_extreme_point(E):
 
 
 def gw_global(
-    X, Y, epsilon=1e-6, IterMax=100, verbose=False, log=False, mu_x=None, mu_y=None
+    X,
+    Y,
+    epsilon=1e-6,
+    IterMax=100,
+    verbose=False,
+    log=False,
+    mu_x=None,
+    mu_y=None,
+    do_optimize_with_sparse=True,
 ):
     """
     Globally solving the Gromov-Wasserstein problem for point clouds in low dimensional Euclidean spaces [1].
@@ -226,8 +260,8 @@ def gw_global(
 
     [1] Ryner M, Kronqvist J, Karlsson J. Globally solving the Gromov-Wasserstein problem for point clouds in low dimensional Euclidean spaces[J]. Advances in Neural Information Processing Systems, 2024, 36.
     """
-    # X ndarray (nx,lx)
-    # Y ndarray (ny,ly)
+
+    print("do_optimize_with_sparse", do_optimize_with_sparse)
 
     start_time = time.time()
 
@@ -315,10 +349,14 @@ def gw_global(
     E, B, D = init_extreme_points(
         lower_bounds, upper_bounds
     )  # TODO: bouding box changes?
+    if do_optimize_with_sparse:
+        D = csr_matrix(D)
 
     end_time = time.time()
     initialization_time = end_time - start_time
-
+    A_ = b_ = iteration_time = (
+        None  # TODO: need to pass linter. code will work find if this line is commented out
+    )
     for niter in range(IterMax):
         start_time = time.time()
 
@@ -346,7 +384,6 @@ def gw_global(
                 c_cache.append((lower_bounds, upper_bounds))
                 time_cache.append(initialization_time)
             else:
-                A_ = b_ = iteration_time = None  # TODO: problem in linter...
                 c_cache.append((A_, b_))
                 time_cache.append(iteration_time)
 
@@ -367,7 +404,9 @@ def gw_global(
         A_ = np.r_[np.array([alphan]), Zn]
         b_ = np.array([betan])
 
-        E, B, D = extreme_points_update(E, B, D, A_, b_)  # TODO: changes?
+        E, B, D = extreme_points_update(
+            E, B, D, A_, b_, do_optimize_with_sparse
+        )  # TODO: changes?
 
         end_time = time.time()
         iteration_time = end_time - start_time
@@ -408,6 +447,7 @@ def get_distance_matrix(
     marginals_j,
     IterMax,
     epsilon,
+    do_optimize_with_sparse,
 ):
     gw_distances = np.zeros((len(volumes_i), len(volumes_j)))
     m = len(marginals_i[0])
@@ -435,20 +475,25 @@ def get_distance_matrix(
                 nu = marginals_j[idx_j]
                 X = points_i[idx_i]
                 Y = points_j[idx_j]
-                transport_plan_optimal = gw_global(
+                transport_plan_optimal, logs = gw_global(
                     X,
                     Y,
                     epsilon=epsilon,
                     IterMax=IterMax,
                     verbose=True,
-                    log=False,
+                    log=True,
                     mu_x=mu,
                     mu_y=nu,
+                    do_optimize_with_sparse=do_optimize_with_sparse,
                 )
+                print(logs["cum_time"], logs["time_cache"])
                 optimum = compute_gw(
                     transport_plan_optimal, Cx, Cy, method="vectorized"
                 )
-                gw_distances[idx_i, idx_j] = gw_distances[idx_j, idx_i] = optimum
+                if len(volumes_j) == len(volumes_i):
+                    gw_distances[idx_i, idx_j] = gw_distances[idx_j, idx_i] = optimum
+                else:
+                    gw_distances[idx_i, idx_j] = optimum
 
     return gw_distances, transport_plan_optimals
 
@@ -461,8 +506,9 @@ def main(args):
     exponent = args.exponent
     cost_scale_factor = args.cost_scale_factor
     normalize = not args.skip_normalize
-    IterMax = 300
+    IterMax = 50
     epsilon = 1e-2
+    do_optimize_with_sparse = True
 
     (
         marginals_i,
@@ -488,6 +534,7 @@ def main(args):
         marginals_j,
         IterMax,
         epsilon,
+        do_optimize_with_sparse,
     )
 
     np.save(
