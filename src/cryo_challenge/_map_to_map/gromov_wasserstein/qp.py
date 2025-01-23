@@ -141,6 +141,8 @@ def main(args):
         marginals_j,
         pairwise_distances_i,
         pairwise_distances_j,
+        _,
+        _,
         volumes_i,
         volumes_j,
     ) = setup_volume_and_distance(
