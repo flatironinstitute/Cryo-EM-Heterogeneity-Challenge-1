@@ -506,7 +506,7 @@ def main(args):
     exponent = args.exponent
     cost_scale_factor = args.cost_scale_factor
     normalize = not args.skip_normalize
-    IterMax = 50
+    IterMax = 200
     epsilon = 1e-2
     do_optimize_with_sparse = True
 
