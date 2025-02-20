@@ -5,15 +5,21 @@ import argparse
 
 import pymanopt
 from pymanopt import Problem
-from pymanopt.manifolds import SpecialOrthogonalGroup
+from pymanopt.manifolds import SpecialOrthogonalGroup, Euclidean, Product
 from pymanopt.optimizers import SteepestDescent
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
 
-def voxelized_f1(volume, rotaiton, grid):
+def voxelized_f1(volume, rotaiton, translation, grid):
+    """
+
+    Notes:
+    -----
+    translation is normalized coordinates, since grid is from [-1,+1]
+    """
     n_pix = len(volume)
-    grid = grid @ rotaiton.T
+    grid = grid @ rotaiton.T + translation
     # Interpolate the 3D array at the grid points
     interpolated_volume = F.grid_sample(
         volume.reshape(1, 1, n_pix, n_pix, n_pix),
@@ -26,7 +32,7 @@ def voxelized_f1(volume, rotaiton, grid):
 
 
 def loss_l2(volume_i, volume_j):
-    return torch.linalg.norm(volume_i - volume_j)
+    return torch.linalg.norm(volume_i - volume_j) ** 2
 
 
 def prepare_grid(n_pix, torch_dtype):
@@ -47,24 +53,27 @@ def align(volume_i, volume_j):
     n_pix = len(volume_i)
     grid = prepare_grid(n_pix, torch_dtype)
 
-    manifold = SpecialOrthogonalGroup(3)
+    SO3 = SpecialOrthogonalGroup(3)
+    E3 = Euclidean(3)
+    SE3 = Product([SO3, E3])
 
-    @pymanopt.function.pytorch(manifold)
-    def loss(rotation):
+    @pymanopt.function.pytorch(SE3)
+    def loss(rotation, translation):
         # Apply the rotation R to the volume
-        interpolated_volume = voxelized_f1(volume_i, rotation, grid)
+        interpolated_volume = voxelized_f1(volume_i, rotation, translation, grid)
         # Compute the L2 loss between the two functions
         return loss_l2(interpolated_volume, volume_j)
 
     # Define the problem
-    problem = Problem(manifold=manifold, cost=loss)
+    problem = Problem(manifold=SE3, cost=loss)
 
     # Solve the problem with the custom solver
     optimizer = SteepestDescent(
         max_iterations=100,
     )
 
-    result = optimizer.run(problem, initial_point=np.eye(3))
+    initial_point = np.eye(3), np.zeros(3)
+    result = optimizer.run(problem, initial_point=initial_point)
 
     return result
 
@@ -98,12 +107,20 @@ def main(args):
     box_size_ds = args.downsample_box_size_ds
 
     size_of_rotation_matrix = (3, 3)
-    alignments = torch.empty(
+    size_of_translation_vector = (3,)
+    rotations = torch.empty(
         (
             args.n_i,
             args.n_j,
         )
         + size_of_rotation_matrix
+    )
+    translations = torch.empty(
+        (
+            args.n_i,
+            args.n_j,
+        )
+        + size_of_translation_vector
     )
     loss_initial = torch.empty(args.n_i, args.n_j, 1)
     loss_final = torch.empty(args.n_i, args.n_j, 1)
@@ -117,16 +134,18 @@ def main(args):
         for idx_j, volume_j in enumerate(volumes_j):
             volume_j_ds = downsample_volume(volume_j, box_size_ds)
             result = align(volume_i_ds, volume_j_ds)
-            rotation = torch.from_numpy(result.point)
-            alignments[idx_i, idx_j] = rotation
-            volume_i_aligned_to_j = voxelized_f1(volume_i, rotation, grid).reshape(
-                n_pix, n_pix, n_pix
-            )
+            rotation, translation = result.point
+            rotations[idx_i, idx_j] = torch.from_numpy(rotation)
+            translations[idx_i, idx_j] = torch.from_numpy(translation)
+            volume_i_aligned_to_j = voxelized_f1(
+                volume_i, rotation, translation, grid
+            ).reshape(n_pix, n_pix, n_pix)
             loss_initial[idx_i, idx_j] = loss_l2(volume_i, volume_j)
             loss_final[idx_i, idx_j] = loss_l2(volume_i_aligned_to_j, volume_j)
 
     return {
-        "alignments": alignments,
+        "rotation": rotation,
+        "translation": translation,
         "loss_initial": loss_initial,
         "loss_final": loss_final,
     }
