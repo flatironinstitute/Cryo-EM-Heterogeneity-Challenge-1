@@ -16,7 +16,7 @@ def voxelized_f1(volume, rotaiton, translation, grid):
 
     Notes:
     -----
-    translation is normalized coordinates, since grid is from [-1,+1]
+    translation is normalized coordinates, since grid is from [-1,+1]. Invariant to n_pix (from downsampling volume)
     """
     n_pix = len(volume)
     grid = grid @ rotaiton.T + translation
