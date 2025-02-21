@@ -113,9 +113,15 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--do_normalize",
+        "--no_normalize",
         action="store_false",
         help="Disable normalization of volumes (default: True)",
+    )
+
+    parser.add_argument(
+        "--apply_alignments",
+        action="store_true",
+        help="Apply alignments and compute loss before/after (default: False)",
     )
 
     return parser.parse_args()
@@ -210,7 +216,7 @@ def run_all_by_all_alignment_mp(volumes_i, volumes_j, args):
     volumes_i = deepcopy(volumes_i)
     volumes_j = deepcopy(volumes_j)
 
-    if args.do_normalize:
+    if args.no_normalize:  # if use flag, no_normalize = False and do not normalize
         volumes_i = normalize(volumes_i, "l2")
         volumes_j = normalize(volumes_j, "l2")
 
@@ -299,11 +305,13 @@ if __name__ == "__main__":
     results = run_all_by_all_alignment_mp(volumes_i, volumes_j, args)
     rotations = results["rotations"]  # torch.eye(3).repeat(args.n_i, args.n_j, 1, 1)
     translations = results["translations"]  # torch.zeros(args.n_i, args.n_j, 3)
-    (
-        results["interpolated_volumes_i_to_j"],
-        results["loss_initial"],
-        results["loss_final"],
-    ) = apply_alignments(volumes_i, rotations, translations, volumes_j)
+
+    if args.apply_alignments:
+        (
+            results["interpolated_volumes_i_to_j"],
+            results["loss_initial"],
+            results["loss_final"],
+        ) = apply_alignments(volumes_i, rotations, translations, volumes_j)
 
     odir = "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/alignment/"
     torch.save(
