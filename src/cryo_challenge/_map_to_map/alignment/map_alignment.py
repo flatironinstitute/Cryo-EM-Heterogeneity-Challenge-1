@@ -96,6 +96,13 @@ def parse_args():
         "--n_j", type=int, default=80, help="Number of volumes in set j"
     )
     parser.add_argument(
+        "--n_cpus",
+        type=int,
+        default=mp.cpu_count(),
+        help="Number of cpus for multiprocessing",
+    )
+
+    parser.add_argument(
         "--downsample_box_size",
         type=int,
         default=32,
@@ -113,7 +120,7 @@ def run_all_by_all_naive_loop(args):
     volumes = submission["volumes"].to(torch_dtype)
     volumes_i = volumes[: args.n_i]
     volumes_j = volumes[: args.n_j]
-    box_size_ds = args.downsample_box_size_ds
+    box_size_ds = args.downsample_box_size
 
     size_of_rotation_matrix = (3, 3)
     size_of_translation_vector = (3,)
@@ -177,8 +184,8 @@ def process_pair(idx_i, idx_j, volume_i, volume_j, box_size_ds):
         volume_i = volume_i.clone()
         volume_j = volume_j.clone()
         logging.info(f"Starting alignment for pair ({idx_i}, {idx_j})")
-        logging.info(f"({idx_i}, {idx_j}) is shared memory? {volume_i.is_shared()}")
         result = align(volume_i, volume_j)
+        logging.info(f"Finished alignment for pair ({idx_i}, {idx_j})")
         rotation, translation = result.point
 
         # loss_init = loss_l2(volume_i, volume_j)
@@ -192,69 +199,67 @@ def process_pair(idx_i, idx_j, volume_i, volume_j, box_size_ds):
         return idx_i, idx_j, None, None, None, None
 
 
-def mp_main(args):
-    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-    submission = torch.load(fname, weights_only=False)
+def run_all_by_all_alignment_mp(volumes_i, volumes_j, args):
+    torch_dtype = volumes_i.dtype
+    assert torch_dtype == volumes_j.dtype
+    box_size_ds = args.downsample_box_size
 
-    torch_dtype = torch.float32  # Use float32 to reduce memory usage
-    volumes = submission["volumes"].to(torch_dtype)
-
-    _volumes_i = volumes[: args.n_i]
-    _volumes_j = volumes[: args.n_j]
-    box_size_ds = args.downsample_box_size_ds
-
-    volumes_i = torch.empty(
+    volumes_downsampled_i = torch.empty(
         (args.n_i, box_size_ds, box_size_ds, box_size_ds), dtype=torch_dtype
     )
-    volumes_j = torch.empty(
+    volumes_downsampled_j = torch.empty(
         (args.n_j, box_size_ds, box_size_ds, box_size_ds), dtype=torch_dtype
     )
-    for i, v in enumerate(_volumes_i):
-        volumes_i[i] = downsample_volume(v, box_size_ds)
-    for j, v in enumerate(_volumes_j):
-        volumes_j[j] = downsample_volume(v, box_size_ds)
+    for i, v in enumerate(volumes_i):
+        volumes_downsampled_i[i] = downsample_volume(v, box_size_ds)
+    for j, v in enumerate(volumes_j):
+        volumes_downsampled_j[j] = downsample_volume(v, box_size_ds)
 
-    box_size_ds = args.downsample_box_size_ds
-
-    rotations = torch.empty((args.n_i, args.n_j, 3, 3))
-    translations = torch.empty((args.n_i, args.n_j, 3))
-    loss_initial = torch.empty((args.n_i, args.n_j, 1))
-    loss_final = torch.empty((args.n_i, args.n_j, 1))
+    rotations = torch.empty(len(volumes_i), len(volumes_j), 3, 3)
+    translations = torch.empty(len(volumes_i), len(volumes_j), 3)
 
     # Prepare arguments for starmap
     tasks = []
-    for idx_i, volume_i in enumerate(volumes_i):
-        for idx_j, volume_j in enumerate(volumes_j):
+    for idx_i, volume_i in enumerate(volumes_downsampled_i):
+        for idx_j, volume_j in enumerate(volumes_downsampled_j):
             tasks.append(
                 (idx_i, idx_j, volume_i.clone(), volume_j.clone(), box_size_ds)
             )
 
     # Use multiprocessing with starmap
     s = time.time()
-    with mp.Pool(processes=mp.cpu_count()) as pool:
+    with mp.Pool(processes=args.n_cpus) as pool:
         results = pool.starmap(process_pair, tasks)
     e = time.time()
     logging.info(f"Time taken: {e-s:.2f}s")
 
     # Store results
     for idx_i, idx_j, rotation, translation in results:
-        if rotation is not None:
-            rotations[idx_i, idx_j] = torch.from_numpy(rotation)
-            translations[idx_i, idx_j] = torch.from_numpy(translation)
-            # loss_initial[idx_i, idx_j] = loss_init
-            # loss_final[idx_i, idx_j] = loss_fin
+        if rotation is None:
+            rotation = torch.nan * torch.empty(3, 3)
+            translation = torch.nan * torch.empty(3)
+        rotations[idx_i, idx_j] = torch.from_numpy(rotation)
+        translations[idx_i, idx_j] = torch.from_numpy(translation)
 
     return {
         "rotation": rotations,
         "translation": translations,
-        "loss_initial": loss_initial,
-        "loss_final": loss_final,
     }
 
 
 if __name__ == "__main__":
     args = parse_args()
-    results = mp_main(args)
+
+    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+    submission = torch.load(fname, weights_only=False)
+
+    torch_dtype = torch.float32
+    volumes = submission["volumes"].to(torch_dtype)
+
+    volumes_i = volumes[: args.n_i]
+    volumes_j = volumes[: args.n_j]
+
+    results = run_all_by_all_alignment_mp(volumes_i, volumes_j, args)
     torch.save(
         results,
         f"alignments_se3_ni{args.n_i}_nj{args.n_j}_ds{args.downsample_box_size}.pt",
