@@ -4,6 +4,8 @@ import argparse
 import time
 import multiprocessing as mp
 import logging
+import os
+from copy import deepcopy
 
 import pymanopt
 from pymanopt import Problem
@@ -11,6 +13,7 @@ from pymanopt.manifolds import SpecialOrthogonalGroup, Euclidean, Product
 from pymanopt.optimizers import SteepestDescent
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
+from cryo_challenge._map_to_map.map_to_map_distance import normalize
 
 
 def interpolate_volume(volume, rotation, translation, grid):
@@ -109,6 +112,12 @@ def parse_args():
         help="Box size to downsample volumes to",
     )
 
+    parser.add_argument(
+        "--do_normalize",
+        action="store_false",
+        help="Disable normalization of volumes (default: True)",
+    )
+
     return parser.parse_args()
 
 
@@ -160,8 +169,8 @@ def run_all_by_all_naive_loop(args):
             loss_final[idx_i, idx_j] = loss_l2(volume_i_aligned_to_j, volume_j)
 
     return {
-        "rotation": rotation,
-        "translation": translation,
+        "rotations": rotations,
+        "translations": translations,
         "loss_initial": loss_initial,
         "loss_final": loss_final,
     }
@@ -179,18 +188,12 @@ mp.set_start_method("spawn", force=True)
 def process_pair(idx_i, idx_j, volume_i, volume_j, box_size_ds):
     """Aligns two volumes and returns the results."""
     try:
-        # volume_i_ds = downsample_volume(volume_i, box_size_ds)
-        # volume_j_ds = downsample_volume(volume_j, box_size_ds)
         volume_i = volume_i.clone()
         volume_j = volume_j.clone()
         logging.info(f"Starting alignment for pair ({idx_i}, {idx_j})")
         result = align(volume_i, volume_j)
         logging.info(f"Finished alignment for pair ({idx_i}, {idx_j})")
         rotation, translation = result.point
-
-        # loss_init = loss_l2(volume_i, volume_j)
-        # volume_i_aligned_to_j = interpolate_volume(volume_i, rotation, translation).reshape(*volume_i.shape)
-        # loss_final = loss_l2(volume_i_aligned_to_j, volume_j)
 
         return idx_i, idx_j, rotation, translation
 
@@ -203,6 +206,13 @@ def run_all_by_all_alignment_mp(volumes_i, volumes_j, args):
     torch_dtype = volumes_i.dtype
     assert torch_dtype == volumes_j.dtype
     box_size_ds = args.downsample_box_size
+
+    volumes_i = deepcopy(volumes_i)
+    volumes_j = deepcopy(volumes_j)
+
+    if args.do_normalize:
+        volumes_i = normalize(volumes_i, "l2")
+        volumes_j = normalize(volumes_j, "l2")
 
     volumes_downsampled_i = torch.empty(
         (args.n_i, box_size_ds, box_size_ds, box_size_ds), dtype=torch_dtype
@@ -242,9 +252,36 @@ def run_all_by_all_alignment_mp(volumes_i, volumes_j, args):
         translations[idx_i, idx_j] = torch.from_numpy(translation)
 
     return {
-        "rotation": rotations,
-        "translation": translations,
+        "rotations": rotations,
+        "translations": translations,
     }
+
+
+def apply_alignments(volumes, rotations, translations, volumes_j=None):
+    _I, J = rotations.shape[:2]
+    assert len(volumes) == _I == translations.shape[0]
+    n_pix = volumes.shape[-1]
+    torch_dtype = volumes.dtype
+    grid = prepare_grid(n_pix, torch_dtype)
+    interpolated_volumes_i_to_j = torch.empty(_I, J, n_pix, n_pix, n_pix)
+    loss_initial = torch.empty(_I, J)
+    loss_final = torch.empty(_I, J)
+    for idx_i, volume_i in enumerate(volumes):
+        for idx_j in range(J):
+            rotation_ij = rotations[idx_i, idx_j]
+            translation_ij = translations[idx_i, idx_j]
+            interpolated_volume_i_to_j = interpolate_volume(
+                volume_i, rotation_ij, translation_ij, grid
+            ).reshape(*volume_i.shape)
+
+            if volumes_j is not None:
+                volume_j = volumes_j[idx_j]
+                loss_initial[idx_i, idx_j] = loss_l2(volume_i, volume_j)
+                loss_final[idx_i, idx_j] = loss_l2(interpolated_volume_i_to_j, volume_j)
+
+            interpolated_volumes_i_to_j[idx_i, idx_j] = interpolated_volume_i_to_j
+
+    return interpolated_volumes_i_to_j, loss_initial, loss_final
 
 
 if __name__ == "__main__":
@@ -260,7 +297,19 @@ if __name__ == "__main__":
     volumes_j = volumes[: args.n_j]
 
     results = run_all_by_all_alignment_mp(volumes_i, volumes_j, args)
+    rotations = results["rotations"]  # torch.eye(3).repeat(args.n_i, args.n_j, 1, 1)
+    translations = results["translations"]  # torch.zeros(args.n_i, args.n_j, 3)
+    (
+        results["interpolated_volumes_i_to_j"],
+        results["loss_initial"],
+        results["loss_final"],
+    ) = apply_alignments(volumes_i, rotations, translations, volumes_j)
+
+    odir = "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/alignment/"
     torch.save(
         results,
-        f"alignments_se3_ni{args.n_i}_nj{args.n_j}_ds{args.downsample_box_size}.pt",
+        os.path.join(
+            odir,
+            f"alignments_se3_ni{args.n_i}_nj{args.n_j}_ds{args.downsample_box_size}.pt",
+        ),
     )
