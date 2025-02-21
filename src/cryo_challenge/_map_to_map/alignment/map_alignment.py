@@ -1,7 +1,9 @@
 import torch
 import torch.nn.functional as F
-import numpy as np
 import argparse
+import time
+import multiprocessing as mp
+import logging
 
 import pymanopt
 from pymanopt import Problem
@@ -11,7 +13,7 @@ from pymanopt.optimizers import SteepestDescent
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 
 
-def voxelized_f1(volume, rotaiton, translation, grid):
+def interpolate_volume(volume, rotation, translation, grid):
     """
 
     Notes:
@@ -19,7 +21,7 @@ def voxelized_f1(volume, rotaiton, translation, grid):
     translation is normalized coordinates, since grid is from [-1,+1]. Invariant to n_pix (from downsampling volume)
     """
     n_pix = len(volume)
-    grid = grid @ rotaiton.T + translation
+    grid = grid @ rotation.T + translation
     # Interpolate the 3D array at the grid points
     interpolated_volume = F.grid_sample(
         volume.reshape(1, 1, n_pix, n_pix, n_pix),
@@ -49,7 +51,7 @@ def align(volume_i, volume_j):
     assert volume_i.ndim == 3
 
     # Generate grid points
-    torch_dtype = torch.float64
+    torch_dtype = torch.float32
     n_pix = len(volume_i)
     grid = prepare_grid(n_pix, torch_dtype)
 
@@ -59,8 +61,12 @@ def align(volume_i, volume_j):
 
     @pymanopt.function.pytorch(SE3)
     def loss(rotation, translation):
-        # Apply the rotation R to the volume
-        interpolated_volume = voxelized_f1(volume_i, rotation, translation, grid)
+        """Objective function.
+
+        Takes rotation then translation (in that order) because of the product manifold is SO(3) x E(3).
+        """
+        # Apply the rotation and tralsation to the volume
+        interpolated_volume = interpolate_volume(volume_i, rotation, translation, grid)
         # Compute the L2 loss between the two functions
         return loss_l2(interpolated_volume, volume_j)
 
@@ -72,7 +78,10 @@ def align(volume_i, volume_j):
         max_iterations=100,
     )
 
-    initial_point = np.eye(3), np.zeros(3)
+    initial_point = (
+        torch.eye(3).to(torch_dtype).numpy(),
+        torch.zeros(3).to(torch_dtype).numpy(),
+    )
     result = optimizer.run(problem, initial_point=initial_point)
 
     return result
@@ -87,7 +96,7 @@ def parse_args():
         "--n_j", type=int, default=80, help="Number of volumes in set j"
     )
     parser.add_argument(
-        "--downsample_box_size_ds",
+        "--downsample_box_size",
         type=int,
         default=32,
         help="Box size to downsample volumes to",
@@ -96,11 +105,11 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args):
+def run_all_by_all_naive_loop(args):
     fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
     submission = torch.load(fname, weights_only=False)
 
-    torch_dtype = torch.float64
+    torch_dtype = torch.float32
     volumes = submission["volumes"].to(torch_dtype)
     volumes_i = volumes[: args.n_i]
     volumes_j = volumes[: args.n_j]
@@ -122,8 +131,8 @@ def main(args):
         )
         + size_of_translation_vector
     )
-    loss_initial = torch.empty(args.n_i, args.n_j, 1)
-    loss_final = torch.empty(args.n_i, args.n_j, 1)
+    loss_initial = torch.empty(args.n_i, args.n_j)
+    loss_final = torch.empty(args.n_i, args.n_j)
 
     n_pix = len(volumes_i[0])
     grid = prepare_grid(n_pix, torch_dtype)
@@ -137,7 +146,7 @@ def main(args):
             rotation, translation = result.point
             rotations[idx_i, idx_j] = torch.from_numpy(rotation)
             translations[idx_i, idx_j] = torch.from_numpy(translation)
-            volume_i_aligned_to_j = voxelized_f1(
+            volume_i_aligned_to_j = interpolate_volume(
                 volume_i, rotation, translation, grid
             ).reshape(n_pix, n_pix, n_pix)
             loss_initial[idx_i, idx_j] = loss_l2(volume_i, volume_j)
@@ -151,10 +160,102 @@ def main(args):
     }
 
 
+# Enable logging to debug errors
+# logging.basicConfig(level=logging.ERROR)
+logging.getLogger("pymanopt").setLevel(logging.ERROR)
+
+
+# Ensure the multiprocessing context uses 'spawn'
+mp.set_start_method("spawn", force=True)
+
+
+def process_pair(idx_i, idx_j, volume_i, volume_j, box_size_ds):
+    """Aligns two volumes and returns the results."""
+    try:
+        # volume_i_ds = downsample_volume(volume_i, box_size_ds)
+        # volume_j_ds = downsample_volume(volume_j, box_size_ds)
+        volume_i = volume_i.clone()
+        volume_j = volume_j.clone()
+        logging.info(f"Starting alignment for pair ({idx_i}, {idx_j})")
+        logging.info(f"({idx_i}, {idx_j}) is shared memory? {volume_i.is_shared()}")
+        result = align(volume_i, volume_j)
+        rotation, translation = result.point
+
+        # loss_init = loss_l2(volume_i, volume_j)
+        # volume_i_aligned_to_j = interpolate_volume(volume_i, rotation, translation).reshape(*volume_i.shape)
+        # loss_final = loss_l2(volume_i_aligned_to_j, volume_j)
+
+        return idx_i, idx_j, rotation, translation
+
+    except Exception as e:
+        logging.error(f"Error in alignment for pair ({idx_i}, {idx_j}): {e}")
+        return idx_i, idx_j, None, None, None, None
+
+
+def mp_main(args):
+    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+    submission = torch.load(fname, weights_only=False)
+
+    torch_dtype = torch.float32  # Use float32 to reduce memory usage
+    volumes = submission["volumes"].to(torch_dtype)
+
+    _volumes_i = volumes[: args.n_i]
+    _volumes_j = volumes[: args.n_j]
+    box_size_ds = args.downsample_box_size_ds
+
+    volumes_i = torch.empty(
+        (args.n_i, box_size_ds, box_size_ds, box_size_ds), dtype=torch_dtype
+    )
+    volumes_j = torch.empty(
+        (args.n_j, box_size_ds, box_size_ds, box_size_ds), dtype=torch_dtype
+    )
+    for i, v in enumerate(_volumes_i):
+        volumes_i[i] = downsample_volume(v, box_size_ds)
+    for j, v in enumerate(_volumes_j):
+        volumes_j[j] = downsample_volume(v, box_size_ds)
+
+    box_size_ds = args.downsample_box_size_ds
+
+    rotations = torch.empty((args.n_i, args.n_j, 3, 3))
+    translations = torch.empty((args.n_i, args.n_j, 3))
+    loss_initial = torch.empty((args.n_i, args.n_j, 1))
+    loss_final = torch.empty((args.n_i, args.n_j, 1))
+
+    # Prepare arguments for starmap
+    tasks = []
+    for idx_i, volume_i in enumerate(volumes_i):
+        for idx_j, volume_j in enumerate(volumes_j):
+            tasks.append(
+                (idx_i, idx_j, volume_i.clone(), volume_j.clone(), box_size_ds)
+            )
+
+    # Use multiprocessing with starmap
+    s = time.time()
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        results = pool.starmap(process_pair, tasks)
+    e = time.time()
+    logging.info(f"Time taken: {e-s:.2f}s")
+
+    # Store results
+    for idx_i, idx_j, rotation, translation in results:
+        if rotation is not None:
+            rotations[idx_i, idx_j] = torch.from_numpy(rotation)
+            translations[idx_i, idx_j] = torch.from_numpy(translation)
+            # loss_initial[idx_i, idx_j] = loss_init
+            # loss_final[idx_i, idx_j] = loss_fin
+
+    return {
+        "rotation": rotations,
+        "translation": translations,
+        "loss_initial": loss_initial,
+        "loss_final": loss_final,
+    }
+
+
 if __name__ == "__main__":
     args = parse_args()
-    results = main(args)
+    results = mp_main(args)
     torch.save(
         results,
-        f"alignments_ni{args.n_i}_nj{args.n_j}_ds{args.downsample_box_size_ds}.pt",
+        f"alignments_se3_ni{args.n_i}_nj{args.n_j}_ds{args.downsample_box_size}.pt",
     )
