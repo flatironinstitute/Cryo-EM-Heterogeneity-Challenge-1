@@ -4,6 +4,7 @@ import time
 import logging
 from omegaconf import DictConfig
 import hydra
+from time import sleep
 
 # Set up logging
 logging.basicConfig(
@@ -11,11 +12,17 @@ logging.basicConfig(
 )
 
 
+def align_and_distance(a, b, rotation):
+    sleep(0.1)  # 0.1 s for alignment
+    return torch.norm(a - b)
+
+
 def pairwise_norm(a_block, b):
     """Compute pairwise norm between a_block (nn, k) and b (m, k) with a naive for loop over rows of a_block."""
     results = []
     for a_row in a_block:  # Explicit naive loop over rows
         b_row = b + torch.rand_like(b)
+        # sleep(1) # 1 s for alignment
         results.append(torch.norm(a_row - b_row, dim=-1))  # Broadcasting over m (vmap)
     return torch.stack(results)  # Returns (nn, m)
 
@@ -63,7 +70,7 @@ def main(cfg: DictConfig):
     logging.info(f"Random data generated in {time.time() - start_time:.4f} seconds")
 
     result = compute_pairwise_distances(a, b, nn=cfg.nn, num_workers=cfg.num_workers)
-    print(result.shape)  # Should be (n, m)
+    return result
 
 
 if __name__ == "__main__":
