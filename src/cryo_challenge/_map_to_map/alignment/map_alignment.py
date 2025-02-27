@@ -42,7 +42,7 @@ def loss_l2(volume_i, volume_j):
 
 def prepare_grid(n_pix, torch_dtype):
     x = y = z = torch.linspace(-1, 1, n_pix).to(torch_dtype)
-    xx, yy, zz = torch.meshgrid(x, y, z)
+    xx, yy, zz = torch.meshgrid(x, y, z, indexing="ij")
     grid = torch.stack([xx, yy, zz], dim=-1)  # Shape: (D, H, W, 3)
     # Reshape grid to match the expected input shape for grid_sample
     grid = grid.unsqueeze(0)  # Add batch dimension, shape: (1, D, H, W, 3)
@@ -298,13 +298,16 @@ if __name__ == "__main__":
 
     torch_dtype = torch.float32
     volumes = submission["volumes"].to(torch_dtype)
-
     volumes_i = volumes[: args.n_i]
+
+    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_26.pt"
+    submission = torch.load(fname, weights_only=False)
+    volumes = submission["volumes"].to(torch_dtype)
     volumes_j = volumes[: args.n_j]
 
     results = run_all_by_all_alignment_mp(volumes_i, volumes_j, args)
-    rotations = results["rotations"]  # torch.eye(3).repeat(args.n_i, args.n_j, 1, 1)
-    translations = results["translations"]  # torch.zeros(args.n_i, args.n_j, 3)
+    rotations = results["rotations"]
+    translations = results["translations"]
 
     if args.apply_alignments:
         (

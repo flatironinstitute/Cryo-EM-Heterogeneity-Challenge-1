@@ -4,7 +4,10 @@ import time
 import logging
 from omegaconf import DictConfig
 import hydra
-from time import sleep
+from cryo_challenge._map_to_map.alignment.map_alignment import (
+    prepare_grid,
+    interpolate_volume,
+)
 
 # Set up logging
 logging.basicConfig(
@@ -12,36 +15,46 @@ logging.basicConfig(
 )
 
 
-def align_and_distance(a, b, rotation):
-    b = b + rotation.max()
-    sleep(1)  # for alignment, and perhaps more expensive distance computation
-    return torch.norm(a - b)
+def align_and_distance(a, b, rotation, translation, grid):
+    n_pix = grid.shape[-2]  # 1, n_pix, n_pix, n_pix, 3
+    b_aligned = interpolate_volume(
+        b.reshape(n_pix, n_pix, n_pix), rotation, translation, grid
+    ).reshape(-1)
+
+    return torch.norm(a - b_aligned)
 
 
-def pairwise_norm(a_block, b, rotations_block):
+def pairwise_norm(a_block, b, rotations_block, translations_block):
     """Compute pairwise norm between a_block (nn, k) and b (m, k) with a naive for loop over rows of a_block."""
     results = []
     for idx in range(len(a_block)):  # Explicit naive loop over rows
         a_row = a_block[idx]  # Shape: (k,)
         rotations_row = rotations_block[idx]  # Shape: (m, 3, 3)
+        translations_row = translations_block[idx]  # Shape: (m, 3)
         # Vectorize the custom distance function using torch.vmap
-        batched_custom_distance = torch.vmap(align_and_distance, in_dims=(None, 0, 0))
+        batched_custom_distance = torch.vmap(
+            align_and_distance, in_dims=(None, 0, 0, 0, None)
+        )
         # Compute the pairwise distances using the vectorized custom distance function
-        row_of_results = batched_custom_distance(a_row, b, rotations_row)  # Shape: (n,)
+        n_pix = round(a_row.numel() ** (1 / 3))
+        grid = prepare_grid(n_pix, a_row.dtype)
+        row_of_results = batched_custom_distance(
+            a_row, b, rotations_row, translations_row, grid
+        )  # Shape: (n,)
         results.append(row_of_results)
     return torch.stack(results)  # Returns (nn, m)
 
 
 def process_batch(args):
     """Process a batch of size nn starting at batch_idx."""
-    batch_idx, a_block, b, rotations_block = args
+    batch_idx, a_block, b, rotations_block, translations_block = args
     # start_time = time.time()
-    result = pairwise_norm(a_block, b, rotations_block)
+    result = pairwise_norm(a_block, b, rotations_block, translations_block)
     # logging.info(f"Processed batch starting at index {batch_idx} in {time.time() - start_time:.4f} seconds")
     return result
 
 
-def compute_pairwise_distances(a, b, rotations, nn=10, num_workers=4):
+def compute_pairwise_distances(a, b, rotations, translations, nn=10, num_workers=4):
     """Compute pairwise distances between matrices a and b using multiprocessing."""
     n = a.shape[0]
     mp.set_start_method("spawn", force=True)  # Ensures compatibility
@@ -54,7 +67,13 @@ def compute_pairwise_distances(a, b, rotations, nn=10, num_workers=4):
         pool.imap_unordered(
             process_batch,
             [
-                (idx, a[idx : min(n, idx + nn)], b, rotations[idx : min(n, idx + nn)])
+                (
+                    idx,
+                    a[idx : min(n, idx + nn)],
+                    b,
+                    rotations[idx : min(n, idx + nn)],
+                    translations[idx : min(n, idx + nn)],
+                )
                 for idx in batch_indices
             ],
         )
@@ -74,14 +93,15 @@ def main(cfg: DictConfig):
     logging.info(f"torch.get_num_threads()={torch.get_num_threads()}")
     logging.info("Generating random data...")
     start_time = time.time()
-    n, m, k = 3600, 80, cfg.n_pix**3
+    n, m, k = 640, 80, cfg.n_pix**3
     a = torch.randn(n, k)
     b = torch.randn(m, k)
     rotations = torch.randn(n, m, 3, 3)
+    translations = torch.randn(n, m, 3)
     logging.info(f"Random data generated in {time.time() - start_time:.4f} seconds")
 
     result = compute_pairwise_distances(
-        a, b, rotations, nn=cfg.nn, num_workers=cfg.num_workers
+        a, b, rotations, translations, nn=cfg.nn, num_workers=cfg.num_workers
     )
     return result
 
