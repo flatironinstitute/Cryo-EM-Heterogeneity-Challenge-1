@@ -1,0 +1,80 @@
+import torch
+import os
+import pickle
+from dataclasses import dataclass
+from glob import glob
+import pandas as pd
+from tqdm import tqdm
+
+from cryo_challenge._metric_comparison.information_imbalance import (
+    return_information_imbalace,
+)
+
+
+@dataclass
+class Config:
+    submission_fnames: list
+    metrics: list
+    output: str
+
+
+def run(config):
+    metrics = config.metrics
+
+    submissions_data = {}
+    for fname in config.submission_fnames:
+        with open(fname, "rb") as f:
+            data = pickle.load(f)
+            assert os.path.basename(fname) not in data, f"{fname}: {data.keys()}"
+            submissions_data[os.path.basename(fname)] = data
+
+    output = []
+
+    for submission_basename, data in tqdm(submissions_data.items()):
+        for metric in metrics:
+            if metric not in data:
+                raise ValueError(f"Metric {metric} not found in data")
+
+        for idx_i, distance_method_i in enumerate(metrics):
+            distance_matrix_i = torch.from_numpy(
+                data[distance_method_i]["cost_matrix"].values
+            )
+            if distance_matrix_i == "corr":
+                distance_matrix_i *= -1
+
+            for idx_j, distance_method_j in enumerate(metrics):
+                if idx_i <= idx_j:
+                    continue
+                distance_matrix_j = torch.from_numpy(
+                    data[distance_method_j]["cost_matrix"].values
+                )
+                if distance_matrix_j == "corr":
+                    distance_matrix_j *= -1
+
+                ii = return_information_imbalace(
+                    distance_matrix_i, distance_matrix_j, k=1
+                )
+
+                output.append(
+                    {
+                        "submission": submission_basename,
+                        "distance_method_i": distance_method_i,
+                        "distance_method_j": distance_method_j,
+                        "ii_ij": ii[0].item(),
+                        "ii_ji": ii[1].item(),
+                    }
+                )
+
+    return output
+
+
+if __name__ == "__main__":
+    config = Config(
+        submission_fnames=glob(
+            "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/map_to_map/map_to_map_??.pkl"
+        ),
+        metrics=["fsc", "l2", "corr", "bioem", "res"],
+        output="/mnt/home/smbp/ceph/smbpchallenge/round2/set2/metric_comparison/information_imbalance.csv",
+    )
+
+    pd.DataFrame(run(config)).to_csv(config.output, index=False)
