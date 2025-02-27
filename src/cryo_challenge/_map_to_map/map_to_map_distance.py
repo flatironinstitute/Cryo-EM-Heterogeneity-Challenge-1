@@ -16,6 +16,8 @@ def normalize(maps, method):
     if method == "median_zscore":
         maps -= maps.median(dim=1, keepdim=True).values
         maps /= maps.std(dim=1, keepdim=True)
+    elif method == "l2":
+        maps /= torch.norm(maps, dim=1, keepdim=True)
     else:
         raise NotImplementedError(f"Normalization method {method} not implemented.")
     return maps
@@ -331,6 +333,7 @@ class FSCDistance(MapToMapDistance):
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         """Compute the distance matrix between two sets of maps."""
         if self.config["data"]["mask"]["do"]:
+            print("shapes", maps2.shape, self.mask.shape)
             maps2 = maps2[:, self.mask]
         else:
             maps2 = maps2.reshape(len(maps2), -1)
