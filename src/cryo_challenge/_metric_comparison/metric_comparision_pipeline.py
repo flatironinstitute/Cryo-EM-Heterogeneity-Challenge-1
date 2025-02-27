@@ -35,6 +35,7 @@ def run(config):
         with open(fname, "rb") as f:
             data = pickle.load(f)
             assert os.path.basename(fname) not in data, f"{fname}: {data.keys()}"
+            data["corr"]["cost_matrix"] *= -1
             submissions_data[os.path.basename(fname)] = data
 
     output = []
@@ -48,8 +49,6 @@ def run(config):
             distance_matrix_i = torch.from_numpy(
                 data[distance_method_i]["cost_matrix"].values
             )
-            if distance_matrix_i == "corr":
-                distance_matrix_i *= -1
 
             for idx_j, distance_method_j in enumerate(metrics):
                 if idx_i <= idx_j:
@@ -57,8 +56,6 @@ def run(config):
                 distance_matrix_j = torch.from_numpy(
                     data[distance_method_j]["cost_matrix"].values
                 )
-                if distance_matrix_j == "corr":
-                    distance_matrix_j *= -1
 
                 ii = return_information_imbalace(
                     distance_matrix_i,
@@ -82,7 +79,7 @@ def run(config):
 
 
 if __name__ == "__main__":
-    number_of_nearest_neighbors = 1
+    number_of_nearest_neighbors = 5
     config = Config(
         submission_fnames=glob(
             "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/map_to_map/map_to_map_??.pkl"
