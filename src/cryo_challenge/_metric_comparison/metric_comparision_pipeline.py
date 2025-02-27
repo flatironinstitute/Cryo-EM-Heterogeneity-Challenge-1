@@ -16,6 +16,15 @@ class Config:
     submission_fnames: list
     metrics: list
     output: str
+    number_of_nearest_neighbors: int
+
+
+def pearson_correlation(distance_matrix_i, distance_matrix_j):
+    flattened_i = distance_matrix_i.flatten()
+    flattened_j = distance_matrix_j.flatten()
+    correlation_matrix = torch.corrcoef(torch.stack([flattened_i, flattened_j]))
+    pearson_r = correlation_matrix[0, 1].item()
+    return pearson_r
 
 
 def run(config):
@@ -52,8 +61,11 @@ def run(config):
                     distance_matrix_j *= -1
 
                 ii = return_information_imbalace(
-                    distance_matrix_i, distance_matrix_j, k=1
+                    distance_matrix_i,
+                    distance_matrix_j,
+                    config.number_of_nearest_neighbors,
                 )
+                pearson_r = pearson_correlation(distance_matrix_i, distance_matrix_j)
 
                 output.append(
                     {
@@ -62,6 +74,7 @@ def run(config):
                         "distance_method_j": distance_method_j,
                         "ii_ij": ii[0].item(),
                         "ii_ji": ii[1].item(),
+                        "pearson_r": pearson_r,
                     }
                 )
 
@@ -69,12 +82,14 @@ def run(config):
 
 
 if __name__ == "__main__":
+    number_of_nearest_neighbors = 1
     config = Config(
         submission_fnames=glob(
             "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/map_to_map/map_to_map_??.pkl"
         ),
         metrics=["fsc", "l2", "corr", "bioem", "res"],
-        output="/mnt/home/smbp/ceph/smbpchallenge/round2/set2/metric_comparison/information_imbalance.csv",
+        output=f"/mnt/home/smbp/ceph/smbpchallenge/round2/set2/metric_comparison/information_imbalance_k={number_of_nearest_neighbors}.csv",
+        number_of_nearest_neighbors=number_of_nearest_neighbors,
     )
 
     pd.DataFrame(run(config)).to_csv(config.output, index=False)

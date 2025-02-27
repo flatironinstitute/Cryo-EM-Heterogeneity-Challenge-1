@@ -3,7 +3,7 @@
 import torch
 
 
-def _return_ranks(dist_indices_1, dist_indices_2, k=1):
+def _return_ranks(dist_indices_1, dist_indices_2, number_of_nearest_neighbors):
     """Finds all the ranks according to distance 2 of the neighbours according to distance 1.
        Neighbours in distance 1 are considered up to order k.
 
@@ -20,35 +20,45 @@ def _return_ranks(dist_indices_1, dist_indices_2, k=1):
 
     N = dist_indices_1.shape[0]
 
-    conditional_ranks = torch.zeros(N, k)
+    conditional_ranks = torch.zeros(N, number_of_nearest_neighbors)
 
     for i in range(N):
-        idx_k_d1 = dist_indices_1[i, 1 : k + 1]
+        idx_k_d1 = dist_indices_1[i, 1 : number_of_nearest_neighbors + 1]
 
         wr = [
             torch.where(idx_k_d1[k_neighbor] == dist_indices_2[i])[0]
-            for k_neighbor in range(k)
+            for k_neighbor in range(number_of_nearest_neighbors)
         ]
 
-        for k_neighbor in range(k):
+        for k_neighbor in range(number_of_nearest_neighbors):
             conditional_ranks[i, k_neighbor] = wr[k_neighbor][0]
 
     return conditional_ranks
 
 
-def _return_imbal(nearest_neighbors_i, nearest_neighbors_j, k):
+def _return_imbal(
+    nearest_neighbors_i, nearest_neighbors_j, number_of_nearest_neighbors
+):
     N = len(nearest_neighbors_i)
-    ranks = _return_ranks(nearest_neighbors_i, nearest_neighbors_j, k=k)
+    ranks = _return_ranks(
+        nearest_neighbors_i, nearest_neighbors_j, number_of_nearest_neighbors
+    )
     return 2 * ranks.mean() / N
 
 
-def return_information_imbalace(self_distance_matrix_i, self_distance_matrix_j, k):
+def return_information_imbalace(
+    self_distance_matrix_i, self_distance_matrix_j, number_of_nearest_neighbors
+):
     nearest_neighbors_i = torch.sort(self_distance_matrix_i, dim=1).indices
 
     nearest_neighbors_j = torch.sort(self_distance_matrix_j, dim=1).indices
 
-    ii_ij = _return_imbal(nearest_neighbors_i, nearest_neighbors_j, k)
-    ii_ji = _return_imbal(nearest_neighbors_j, nearest_neighbors_i, k)
+    ii_ij = _return_imbal(
+        nearest_neighbors_i, nearest_neighbors_j, number_of_nearest_neighbors
+    )
+    ii_ji = _return_imbal(
+        nearest_neighbors_j, nearest_neighbors_i, number_of_nearest_neighbors
+    )
 
     return ii_ij, ii_ji
 
@@ -73,7 +83,7 @@ def main():
     self_distance_matrix_j = torch.cdist(perturbed_points, perturbed_points, p=2)
     number_of_nearest_neighbors = 1
     return return_information_imbalace(
-        self_distance_matrix_i, self_distance_matrix_j, k=number_of_nearest_neighbors
+        self_distance_matrix_i, self_distance_matrix_j, number_of_nearest_neighbors
     )
 
 
