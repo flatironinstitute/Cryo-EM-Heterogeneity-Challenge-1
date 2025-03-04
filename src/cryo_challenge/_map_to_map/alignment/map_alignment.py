@@ -10,7 +10,7 @@ from copy import deepcopy
 import pymanopt
 from pymanopt import Problem
 from pymanopt.manifolds import SpecialOrthogonalGroup, Euclidean, Product
-from pymanopt.optimizers import SteepestDescent
+from pymanopt.optimizers.conjugate_gradient import ConjugateGradient
 
 from cryo_challenge._preprocessing.fourier_utils import downsample_volume
 from cryo_challenge._map_to_map.map_to_map_distance import normalize
@@ -77,7 +77,7 @@ def align(volume_i, volume_j):
     problem = Problem(manifold=SE3, cost=loss)
 
     # Solve the problem with the custom solver
-    optimizer = SteepestDescent(
+    optimizer = ConjugateGradient(
         max_iterations=100,
     )
 
@@ -92,6 +92,12 @@ def align(volume_i, volume_j):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Process some integers.")
+    parser.add_argument(
+        "--fname_i", type=str, default=None, help="Input volume set i (submission file)"
+    )
+    parser.add_argument(
+        "--fname_j", type=str, default=None, help="Input volume set j (submission file)"
+    )
     parser.add_argument(
         "--n_i", type=int, default=80, help="Number of volumes in set i"
     )
@@ -127,15 +133,21 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_all_by_all_naive_loop(args):
-    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-    submission = torch.load(fname, weights_only=False)
+def run_all_by_all_alignment_naive_loop(volumes_i, volumes_j, args):
+    # fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+    # submission = torch.load(fname, weights_only=False)
 
-    torch_dtype = torch.float32
-    volumes = submission["volumes"].to(torch_dtype)
-    volumes_i = volumes[: args.n_i]
-    volumes_j = volumes[: args.n_j]
+    # torch_dtype = torch.float32
+    # volumes = submission["volumes"].to(torch_dtype)
+    # volumes_i = volumes[: args.n_i]
+    # volumes_j = volumes[: args.n_j]
+    if args.no_normalize:  # if use flag, no_normalize = False and do not normalize
+        volumes_i = normalize(volumes_i, "l2")
+        volumes_j = normalize(volumes_j, "l2")
+
     box_size_ds = args.downsample_box_size
+
+    torch_dtype = volumes_i.dtype
 
     size_of_rotation_matrix = (3, 3)
     size_of_translation_vector = (3,)
@@ -293,15 +305,15 @@ def apply_alignments(volumes, rotations, translations, volumes_j=None):
 if __name__ == "__main__":
     args = parse_args()
 
-    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-    submission = torch.load(fname, weights_only=False)
+    fname_i = args.fname_i  # "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+    submission = torch.load(fname_i, weights_only=False)
 
     torch_dtype = torch.float32
     volumes = submission["volumes"].to(torch_dtype)
     volumes_i = volumes[: args.n_i]
 
-    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_26.pt"
-    submission = torch.load(fname, weights_only=False)
+    fname_j = args.fname_j  # "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+    submission = torch.load(fname_j, weights_only=False)
     volumes = submission["volumes"].to(torch_dtype)
     volumes_j = volumes[: args.n_j]
 
@@ -317,10 +329,13 @@ if __name__ == "__main__":
         ) = apply_alignments(volumes_i, rotations, translations, volumes_j)
 
     odir = "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/alignment/"
+    basename_without_extension_i = os.path.splitext(os.path.basename(fname_i))[0]
+    basename_without_extension_j = os.path.splitext(os.path.basename(fname_j))[0]
+
     torch.save(
         results,
         os.path.join(
             odir,
-            f"alignments_se3_ni{args.n_i}_nj{args.n_j}_ds{args.downsample_box_size}.pt",
+            f"alignments_se3_ni{args.n_i}_nj{args.n_j}_ds{args.downsample_box_size}_ConjugateGradient_{basename_without_extension_i}-vs-{basename_without_extension_j}.pt",
         ),
     )
