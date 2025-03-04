@@ -79,7 +79,7 @@ def run(config):
 
 
 if __name__ == "__main__":
-    number_of_nearest_neighbors = 5
+    number_of_nearest_neighbors = 10
     config = Config(
         submission_fnames=glob(
             "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/map_to_map/map_to_map_??.pkl"
