@@ -73,7 +73,7 @@ def run(config):
 
     # user_submitted_populations = np.ones(80)/80
     user_submitted_populations = data["user_submitted_populations"]  # .numpy()
-    id = torch.load(data["config"]["data"]["submission"]["fname"])["id"]
+    id = torch.load(data["config"]["data"]["submission"]["fname"], weights_only=False)["id"]
 
     results_dict = {}
     results_dict["config"] = config
