@@ -31,7 +31,7 @@ def return_top_k_voxel_idxs(volume, top_k):
 def make_sparse_cost(idx_above_thresh, dtype):
     n_downsample_pix = len(idx_above_thresh)
     one_dim = torch.arange(n_downsample_pix, dtype=dtype)
-    coordinates = torch.meshgrid(one_dim, one_dim, one_dim)
+    coordinates = torch.meshgrid(one_dim, one_dim, one_dim, indexing="ij")
     coordinates = torch.stack(coordinates, dim=-1)
     coordinates = coordinates.reshape(-1, 3)
     sparse_coordiantes = coordinates[idx_above_thresh.flatten()]
