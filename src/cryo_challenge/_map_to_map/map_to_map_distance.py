@@ -501,7 +501,10 @@ class ProcrustesWassersteinDistance(MapToMapDistance):
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         extra_params = self.config["analysis"]["procrustes_wasserstein_extra_params"]
 
-        maps2 = maps2.reshape((len(maps2),) + maps1.shape[1:])
+        n_pix = self.config["data"]["n_pix"]
+        maps1 = maps1.reshape((len(maps1), n_pix, n_pix, n_pix))
+        maps2 = maps2.reshape((len(maps2), n_pix, n_pix, n_pix))
+
         (
             _,
             _,
@@ -553,8 +556,9 @@ class GromovWassersteinDistance(MapToMapDistance):
     @override
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         extra_params = self.config["analysis"]["gromov_wasserstein_extra_params"]
-
-        maps2 = maps2.reshape((len(maps2),) + maps1.shape[1:])
+        n_pix = self.config["data"]["n_pix"]
+        maps1 = maps1.reshape((len(maps1), n_pix, n_pix, n_pix))
+        maps2 = maps2.reshape((len(maps2), n_pix, n_pix, n_pix))
 
         if extra_params["slurm"]:
             job_id = os.environ["SLURM_JOB_ID"]

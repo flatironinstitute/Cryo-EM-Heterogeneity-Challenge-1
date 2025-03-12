@@ -25,6 +25,7 @@ elif precision == 128:
 def return_top_k_voxel_idxs(volume, top_k):
     thresh = np.sort(volume.flatten())[-top_k - 1]
     idx_above_thresh = volume > thresh
+    assert idx_above_thresh.sum() == top_k
     return idx_above_thresh
 
 
@@ -383,7 +384,6 @@ def setup_volume_and_distance(
     pairwise_distances_i = np.empty((len(volumes_i), top_k, top_k))
     pairwise_distances_j = np.empty((len(volumes_j), top_k, top_k))
 
-    print("Preparing volumes and distances")
     for i in range(len(volumes_i)):
         (
             downsampled_volume_i,
