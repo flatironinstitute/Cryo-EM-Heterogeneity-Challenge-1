@@ -10,6 +10,12 @@ from dask.distributed import Client
 from dask_jobqueue.slurm import SLURMRunner
 
 from .gromov_wasserstein.gw_weighted_voxels import get_distance_matrix_dask_gw
+from cryo_challenge._map_to_map.gromov_wasserstein.gw_weighted_voxels import (
+    setup_volume_and_distance,
+)
+from cryo_challenge._map_to_map.procrustes_wasserstein.procrustes_wasserstein import (
+    procrustes_wasserstein,
+)
 
 
 def normalize(maps, method):
@@ -486,6 +492,58 @@ class Zernike3DDistance(MapToMapDistance):
         return self.stored_computed_assets  # must run get_distance_matrix first
 
 
+class ProcrustesWassersteinDistance(MapToMapDistance):
+    """Procrustes-Wasserstein
+
+    Procrustes-Wasserstein distance is invariant to SE(3) map alignment, because it maximizes the transport plan and rototranslation.
+    """
+
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        extra_params = self.config["analysis"]["procrustes_wasserstein_extra_params"]
+
+        maps2 = maps2.reshape((len(maps2),) + maps1.shape[1:])
+        (
+            _,
+            _,
+            marginals_i,
+            marginals_j,
+            sparse_coordinates_sets_i,
+            sparse_coordinates_sets_j,
+            pairwise_distances_i,
+            pairwise_distances_j,
+            volumes_i,
+            volumes_j,
+        ) = setup_volume_and_distance(
+            maps1,
+            maps2,
+            extra_params["n_downsample_pix"],
+            extra_params["top_k"],
+            exponent=1,
+            cost_scale_factor=1,
+            normalize=False,
+        )
+
+        dists = torch.zeros(len(maps1), len(maps2))
+        for idx_i in range(len(maps1)):
+            for idx_j in range(len(maps2)):
+                if idx_i == idx_j:
+                    continue
+                print(f"Computing distance between {idx_i} and {idx_j}")
+                _, _, logs = procrustes_wasserstein(
+                    torch.from_numpy(sparse_coordinates_sets_i[idx_i]),
+                    torch.from_numpy(sparse_coordinates_sets_j[idx_j]),
+                    torch.from_numpy(marginals_i[idx_i]),
+                    torch.from_numpy(marginals_j[idx_j]),
+                    max_iter=extra_params["max_iter"],
+                    tol=extra_params["tol"],
+                )
+                dists[idx_i, idx_j] = logs[-1]["cost"]
+                global_store_of_running_results["procrustes_wasserstein"] = {
+                    (idx_i, idx_j): logs
+                }
+        return dists
+
+
 class GromovWassersteinDistance(MapToMapDistance):
     """Gromov-Wasserstein distance.
 
@@ -509,8 +567,8 @@ class GromovWassersteinDistance(MapToMapDistance):
                 # The runner object contains the scheduler address and can be passed directly to a client
                 with Client(runner) as client:
                     distance_matrix_dask_gw = get_distance_matrix_dask_gw(
-                        volumes_i=maps1,
-                        volumes_j=maps2,
+                        marginals_i=maps1,
+                        marginals_j=maps2,
                         top_k=extra_params["top_k"],
                         n_downsample_pix=extra_params["n_downsample_pix"],
                         exponent=extra_params["exponent"],
@@ -523,8 +581,8 @@ class GromovWassersteinDistance(MapToMapDistance):
             local_directory = extra_params["local_directory"]
             with Client(local_directory=local_directory) as client:
                 distance_matrix_dask_gw = get_distance_matrix_dask_gw(
-                    volumes_i=maps1,
-                    volumes_j=maps2,
+                    marginals_i=maps1,
+                    marginals_j=maps2,
                     top_k=extra_params["top_k"],
                     n_downsample_pix=extra_params["n_downsample_pix"],
                     exponent=extra_params["exponent"],

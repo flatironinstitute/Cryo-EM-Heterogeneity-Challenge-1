@@ -49,9 +49,11 @@ def normalize_mass_to_one(p):
 def prepare_volume_and_distance(
     volume, top_k, n_downsample_pix, exponent, cost_scale_factor, normalize
 ):
-    volume = downsample_volume(volume, n_downsample_pix).numpy().astype(numpy_dtype)
+    downsampled_volume = (
+        downsample_volume(volume, n_downsample_pix).numpy().astype(numpy_dtype)
+    )
     idx_above_thresh = return_top_k_voxel_idxs(volume, top_k)
-    marginal = normalize_mass_to_one(volume[idx_above_thresh].flatten())
+    marginal_volume = normalize_mass_to_one(volume[idx_above_thresh].flatten())
     pairwise_distance, sparse_coordiantes = [
         x.numpy().astype(numpy_dtype)
         for x in make_sparse_cost(idx_above_thresh, dtype=torch_dtype)
@@ -60,7 +62,7 @@ def prepare_volume_and_distance(
     if normalize:
         pairwise_distance /= pairwise_distance.max()
     pairwise_distance = (cost_scale_factor * pairwise_distance) ** exponent
-    return marginal, sparse_coordiantes, pairwise_distance
+    return downsampled_volume, marginal_volume, sparse_coordiantes, pairwise_distance
 
 
 def gw_distance_wrapper_element_wise(
@@ -360,52 +362,68 @@ def get_distance_matrix_dask_gw(
 
 
 def setup_volume_and_distance(
-    n_i, n_j, n_downsample_pix, top_k, exponent, cost_scale_factor, normalize
+    volumes_i,
+    volumes_j,
+    n_downsample_pix,
+    top_k,
+    exponent,
+    cost_scale_factor,
+    normalize,
 ):
-    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-    submission = torch.load(fname, weights_only=False)
-    volumes = submission["volumes"].to(torch_dtype)
-
-    volumes_i = volumes[:n_i]
-    volumes_j = volumes[:n_j]
-
+    downsampled_volumes_i = np.empty(
+        (len(volumes_i), n_downsample_pix, n_downsample_pix, n_downsample_pix)
+    )
+    downsampled_volumes_j = np.empty(
+        (len(volumes_j), n_downsample_pix, n_downsample_pix, n_downsample_pix)
+    )
     marginals_i = np.empty((len(volumes_i), top_k))
     marginals_j = np.empty((len(volumes_j), top_k))
-    sparse_coordinates_sets_i = np.empty((len(volumes_j), top_k, 3))
+    sparse_coordinates_sets_i = np.empty((len(volumes_i), top_k, 3))
     sparse_coordinates_sets_j = np.empty((len(volumes_j), top_k, 3))
     pairwise_distances_i = np.empty((len(volumes_i), top_k, top_k))
     pairwise_distances_j = np.empty((len(volumes_j), top_k, top_k))
 
+    print("Preparing volumes and distances")
     for i in range(len(volumes_i)):
-        volume_i, sparse_coordinates_i, pairwise_distance_i = (
-            prepare_volume_and_distance(
-                volumes_i[i],
-                top_k,
-                n_downsample_pix,
-                exponent,
-                cost_scale_factor,
-                normalize,
-            )
+        (
+            downsampled_volume_i,
+            marginal_volume_i,
+            sparse_coordinates_i,
+            pairwise_distance_i,
+        ) = prepare_volume_and_distance(
+            volumes_i[i],
+            top_k,
+            n_downsample_pix,
+            exponent,
+            cost_scale_factor,
+            normalize,
         )
-        marginals_i[i] = volume_i
+        downsampled_volumes_i[i] = downsampled_volume_i
+        marginals_i[i] = marginal_volume_i
         sparse_coordinates_sets_i[i] = sparse_coordinates_i
         pairwise_distances_i[i] = pairwise_distance_i
     for j in range(len(volumes_j)):
-        volume_j, sparse_coordinates_j, pairwise_distance_j = (
-            prepare_volume_and_distance(
-                volumes_j[j],
-                top_k,
-                n_downsample_pix,
-                exponent,
-                cost_scale_factor,
-                normalize,
-            )
+        (
+            downsampled_volume_j,
+            marginal_volume_j,
+            sparse_coordinates_j,
+            pairwise_distance_j,
+        ) = prepare_volume_and_distance(
+            volumes_j[j],
+            top_k,
+            n_downsample_pix,
+            exponent,
+            cost_scale_factor,
+            normalize,
         )
-        marginals_j[j] = volume_j
+        downsampled_volumes_j[j] = downsampled_volume_j
+        marginals_j[j] = marginal_volume_j
         sparse_coordinates_sets_j[j] = sparse_coordinates_j
         pairwise_distances_j[j] = pairwise_distance_j
 
     return (
+        downsampled_volumes_i,
+        downsampled_volumes_j,
         marginals_i,
         marginals_j,
         sparse_coordinates_sets_i,
@@ -426,7 +444,13 @@ def main(args):
     cost_scale_factor = args.cost_scale_factor
     normalize = not args.skip_normalize
 
+    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+    submission = torch.load(fname, weights_only=False)
+    volumes = submission["volumes"].to(torch_dtype)
+
     (
+        _,
+        _,
         marginals_i,
         marginals_j,
         _,
@@ -436,7 +460,15 @@ def main(args):
         volumes_i,
         volumes_j,
     ) = setup_volume_and_distance(
-        n_i, n_j, n_downsample_pix, top_k, exponent, cost_scale_factor, normalize
+        volumes,
+        volumes,
+        n_i,
+        n_j,
+        n_downsample_pix,
+        top_k,
+        exponent,
+        cost_scale_factor,
+        normalize,
     )
 
     gw_distance_function_key = "gromov_wasserstein2"

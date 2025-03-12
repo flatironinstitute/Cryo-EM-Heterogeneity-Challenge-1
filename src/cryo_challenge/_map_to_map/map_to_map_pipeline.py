@@ -11,6 +11,7 @@ from .._map_to_map.map_to_map_distance import (
     FSCResDistance,
     Zernike3DDistance,
     GromovWassersteinDistance,
+    ProcrustesWassersteinDistance,
 )
 
 
@@ -22,6 +23,7 @@ AVAILABLE_MAP2MAP_DISTANCES = {
     "res": FSCResDistance,
     "zernike3d": Zernike3DDistance,
     "gromov_wasserstein": GromovWassersteinDistance,
+    "procrustes_wasserstein": ProcrustesWassersteinDistance,
 }
 
 
