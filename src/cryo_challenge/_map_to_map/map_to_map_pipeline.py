@@ -40,7 +40,7 @@ def run(config):
 
     do_low_memory_mode = config["analysis"]["low_memory"]["do"]
 
-    submission = torch.load(config["data"]["submission"]["fname"])
+    submission = torch.load(config["data"]["submission"]["fname"], weights_only=False)
     submission_volume_key = config["data"]["submission"]["volume_key"]
     submission_metadata_key = config["data"]["submission"]["metadata_key"]
     label_key = config["data"]["submission"]["label_key"]
@@ -59,7 +59,9 @@ def run(config):
     )
 
     maps_gt_flat = torch.load(
-        config["data"]["ground_truth"]["volumes"], mmap=do_low_memory_mode
+        config["data"]["ground_truth"]["volumes"],
+        mmap=do_low_memory_mode,
+        weights_only=False,
     )
 
     computed_assets = {}
