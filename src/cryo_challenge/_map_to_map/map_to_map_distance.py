@@ -21,6 +21,10 @@ def vectorized_simplex_projection(Y: torch.Tensor) -> torch.Tensor:
 
     Returns:
         torch.Tensor: Projected tensor onto the probability simplex
+
+    Notes:
+    ------
+    From Wang, W., & Carreira-Perpiñán, M. Á. (2013). Projection onto the probability simplex: An efficient algorithm with a simple proof, and an application, (2008), 1–5.
     """
     N, D = Y.shape
     X = torch.sort(Y, dim=1, descending=True).values
