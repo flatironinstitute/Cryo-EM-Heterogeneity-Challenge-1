@@ -12,10 +12,42 @@ from dask_jobqueue.slurm import SLURMRunner
 from .gromov_wasserstein.gw_weighted_voxels import get_distance_matrix_dask_gw
 
 
+def vectorized_simplex_projection(Y: torch.Tensor) -> torch.Tensor:
+    """
+    Projects each row of Y onto the probability simplex.
+
+    Args:
+        Y (torch.Tensor): Input tensor of shape (N, D)
+
+    Returns:
+        torch.Tensor: Projected tensor onto the probability simplex
+    """
+    N, D = Y.shape
+    X = torch.sort(Y, dim=1, descending=True).values
+    cumsum_X = torch.cumsum(X, dim=1)
+    rho = (X > (cumsum_X - 1) / torch.arange(1, D + 1, device=Y.device)).sum(dim=1) - 1
+    lambda_ = (cumsum_X[torch.arange(N), rho] - 1) / (rho + 1)
+
+    return torch.maximum(Y - lambda_.unsqueeze(1), torch.tensor(0.0, device=Y.device))
+
+
+def scale_and_sum_normalization(v):
+    v_normed = v - v.min()
+    v_normed /= v_normed.max()
+    return v_normed
+
+
 def normalize(maps, method):
     if method == "median_zscore":
         maps -= maps.median(dim=1, keepdim=True).values
         maps /= maps.std(dim=1, keepdim=True)
+    elif method == "scale_and_sum":
+        maps -= maps.min(dim=1, keepdim=True)
+        maps /= maps.sum(dim=1, keepdim=True)
+    elif method == "simplex_projection":
+        flat_maps = maps.reshape(len(maps), -1)
+        flat_maps_normed = vectorized_simplex_projection(flat_maps)
+        maps = flat_maps_normed.reshape(maps.shape)
     else:
         raise NotImplementedError(f"Normalization method {method} not implemented.")
     return maps
