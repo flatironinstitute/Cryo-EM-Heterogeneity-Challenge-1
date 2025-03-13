@@ -37,7 +37,7 @@ def vectorized_simplex_projection(Y: torch.Tensor) -> torch.Tensor:
 
 def scale_and_sum_normalization(v):
     v_normed = v - v.min()
-    v_normed /= v_normed.max()
+    v_normed /= v_normed.sum()
     return v_normed
 
 
@@ -46,7 +46,7 @@ def normalize(maps, method):
         maps -= maps.median(dim=1, keepdim=True).values
         maps /= maps.std(dim=1, keepdim=True)
     elif method == "scale_and_sum":
-        maps -= maps.min(dim=1, keepdim=True)
+        maps -= maps.min(dim=1, keepdim=True).values
         maps /= maps.sum(dim=1, keepdim=True)
     elif method == "simplex_projection":
         flat_maps = maps.reshape(len(maps), -1)
