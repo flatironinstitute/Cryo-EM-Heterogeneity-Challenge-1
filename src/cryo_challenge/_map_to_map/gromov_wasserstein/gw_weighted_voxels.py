@@ -23,10 +23,12 @@ elif precision == 128:
 
 
 def return_top_k_voxel_idxs(volume, top_k):
-    thresh = np.sort(volume.flatten())[-top_k - 1]
-    idx_above_thresh = volume > thresh
-    assert idx_above_thresh.sum() == top_k
-    return idx_above_thresh
+    flat_volume = volume.flatten()
+    sorted_indices = np.argsort(flat_volume)[-top_k:]
+    mask = np.zeros_like(flat_volume, dtype=bool)
+    mask[sorted_indices] = True
+    assert mask.sum() == top_k
+    return mask.reshape(volume.shape)
 
 
 def make_sparse_cost(idx_above_thresh, dtype):

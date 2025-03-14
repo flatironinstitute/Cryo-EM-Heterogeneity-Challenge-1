@@ -32,6 +32,7 @@ def run(config):
     Compare a submission to ground truth.
     """
 
+    print("Running map-to-map analysis")
     map_to_map_distances = {
         distance_label: distance_class(config)
         for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
