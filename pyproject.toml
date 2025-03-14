@@ -61,7 +61,6 @@ dependencies = [
   "dask",
   "dask[distributed]",
   "dask-jobqueue",
-  "gurobipy",
 ]
 
 
