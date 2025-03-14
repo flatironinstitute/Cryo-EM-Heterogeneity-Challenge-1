@@ -19,7 +19,6 @@ from cryo_challenge._map_to_map.procrustes_wasserstein.procrustes_wasserstein im
     procrustes_wasserstein,
 )
 
-mp.set_start_method("spawn", force=True)
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -533,6 +532,8 @@ class ProcrustesWassersteinDistance(MapToMapDistance):
     Procrustes-Wasserstein distance is invariant to SE(3) map alignment, because it maximizes the transport plan and rototranslation.
     """
 
+    mp.set_start_method("spawn", force=True)
+
     @override
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         logger.info("Computing Procrustes-Wasserstein distance")
@@ -567,65 +568,6 @@ class ProcrustesWassersteinDistance(MapToMapDistance):
 
         dists = torch.zeros(len(maps1), len(maps2))
         self.stored_computed_assets = {"procrustes_wasserstein": {}}
-
-        if False:
-            for idx_i in range(len(maps1)):
-                for idx_j in range(len(maps2)):
-                    if idx_i == idx_j:
-                        continue
-                    logger.info(f"Computing distance between {idx_i} and {idx_j}")
-                    _, _, logs = procrustes_wasserstein(
-                        torch.from_numpy(sparse_coordinates_sets_i[idx_i]),
-                        torch.from_numpy(sparse_coordinates_sets_j[idx_j]),
-                        torch.from_numpy(marginals_i[idx_i]),
-                        torch.from_numpy(marginals_j[idx_j]),
-                        max_iter=extra_params["max_iter"],
-                        tol=extra_params["tol"],
-                    )
-                    dists[idx_i, idx_j] = logs[-1]["cost"]
-                    self.stored_computed_assets["procrustes_wasserstein"][
-                        (idx_i, idx_j)
-                    ] = logs
-            return dists
-
-        # def parallel_compute_distances(
-        #     maps1,
-        #     maps2,
-        #     sparse_coordinates_sets_i,
-        #     sparse_coordinates_sets_j,
-        #     marginals_i,
-        #     marginals_j,
-        #     extra_params,
-        # ):
-        #     dists = torch.zeros(len(maps1), len(maps2))
-        #     self.stored_computed_assets = {"procrustes_wasserstein": {}}
-
-        #     with mp.Pool(processes=mp.cpu_count()) as pool:
-        #         args_list = [
-        #             (
-        #                 idx_i,
-        #                 idx_j,
-        #                 sparse_coordinates_sets_i,
-        #                 sparse_coordinates_sets_j,
-        #                 marginals_i,
-        #                 marginals_j,
-        #                 extra_params,
-        #             )
-        #             for idx_i in range(len(maps1))
-        #             for idx_j in range(len(maps2))
-        #             if idx_i != idx_j
-        #         ]
-
-        #         results = pool.map(compute_distance, args_list)
-
-        #     for idx_i, idx_j, cost, logs in results:
-        #         if cost is not None:
-        #             dists[idx_i, idx_j] = cost
-        #             self.stored_computed_assets["procrustes_wasserstein"][
-        #                 (idx_i, idx_j)
-        #             ] = logs
-
-        #     return dists
 
         def parallel_compute_distances(
             maps1,
