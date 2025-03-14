@@ -21,30 +21,30 @@ def procrustes_wasserstein(X, Y, p, q, max_iter=10, tol=1e-10):
     n, d = X.shape
     m, _ = Y.shape
 
-    P = torch.eye(d).to(X.dtype)
+    rotation = torch.eye(d).to(X.dtype)
 
     logs = []
     for idx in range(max_iter):
-        YP = Y @ P
-        C = torch.cdist(X, YP, p=2) ** 2
+        YR = Y @ rotation
+        C = torch.cdist(X, YR, p=2) ** 2
 
         # Solve optimal transport problem using EMD
-        Gamma, log = ot.emd(p.numpy(), q.numpy(), C.numpy(), log=True)
-        log["Gamma"] = Gamma
-        log["P"] = P
-        log["YP"] = YP
+        transport_plan, log = ot.emd(p.numpy(), q.numpy(), C.numpy(), log=True)
+        log["transport_plan"] = transport_plan
+        log["R"] = rotation
+        log["YR"] = YR
         logs.append(log)
 
         # Update P using SVD
-        U, _, Vt = torch.svd(Y.T @ Gamma.T @ X)
+        U, _, V = torch.svd(Y.T @ transport_plan.T @ X)
         ensure_determinant_one = torch.ones(d).to(X.dtype)
-        ensure_determinant_one[-1] = torch.det(U @ Vt.T)  # ensure no flipping. see
-        P_new = U @ torch.diag(ensure_determinant_one) @ Vt.T
+        ensure_determinant_one[-1] = torch.det(U @ V.T)  # ensure no flipping. see
+        rotation_new = U @ torch.diag(ensure_determinant_one) @ V.T
 
         if len(logs) > 1:
             if np.linalg.norm(log["cost"] - logs[-2]["cost"]) < tol:
                 break
 
-        P = P_new
+        rotation = rotation_new
 
-    return Gamma, P, logs
+    return transport_plan, rotation, logs

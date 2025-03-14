@@ -462,10 +462,8 @@ def main(args):
         volumes_i,
         volumes_j,
     ) = setup_volume_and_distance(
-        volumes,
-        volumes,
-        n_i,
-        n_j,
+        volumes[:n_i],
+        volumes[:n_j],
         n_downsample_pix,
         top_k,
         exponent,

@@ -638,39 +638,59 @@ class GromovWassersteinDistance(MapToMapDistance):
         maps1 = maps1.reshape((len(maps1), n_pix, n_pix, n_pix))
         maps2 = maps2.reshape((len(maps2), n_pix, n_pix, n_pix))
 
+        (
+            _,
+            _,
+            marginals_i,
+            marginals_j,
+            _,
+            _,
+            pairwise_distances_i,
+            pairwise_distances_j,
+            _,
+            _,
+        ) = setup_volume_and_distance(
+            maps1,
+            maps2,
+            extra_params["n_downsample_pix"],
+            extra_params["top_k"],
+            extra_params["exponent"],
+            extra_params["cost_scale_factor"],
+            normalize=False,
+        )
+
         if extra_params["slurm"]:
             job_id = os.environ["SLURM_JOB_ID"]
             scheduler_file = os.path.join(
                 extra_params["scheduler_file_dir"], f"scheduler-{job_id}.json"
             )
+
             with SLURMRunner(
                 scheduler_file=scheduler_file,
             ) as runner:
                 # The runner object contains the scheduler address and can be passed directly to a client
                 with Client(runner) as client:
                     distance_matrix_dask_gw = get_distance_matrix_dask_gw(
-                        marginals_i=maps1,
-                        marginals_j=maps2,
-                        top_k=extra_params["top_k"],
-                        n_downsample_pix=extra_params["n_downsample_pix"],
-                        exponent=extra_params["exponent"],
-                        cost_scale_factor=extra_params["cost_scale_factor"],
+                        marginals_i=marginals_i,
+                        marginals_j=marginals_j,
+                        pairwise_distances_i=pairwise_distances_i,
+                        pairwise_distances_j=pairwise_distances_j,
                         scheduler=extra_params["scheduler"],
                         element_wise=extra_params["element_wise"],
+                        gw_distance_function_key="gromov_wasserstein2",
                     )
 
         else:
             local_directory = extra_params["local_directory"]
             with Client(local_directory=local_directory) as client:
                 distance_matrix_dask_gw = get_distance_matrix_dask_gw(
-                    marginals_i=maps1,
-                    marginals_j=maps2,
-                    top_k=extra_params["top_k"],
-                    n_downsample_pix=extra_params["n_downsample_pix"],
-                    exponent=extra_params["exponent"],
-                    cost_scale_factor=extra_params["cost_scale_factor"],
+                    marginals_i=marginals_i,
+                    marginals_j=marginals_j,
+                    pairwise_distances_i=pairwise_distances_i,
+                    pairwise_distances_j=pairwise_distances_j,
                     scheduler=extra_params["scheduler"],
                     element_wise=extra_params["element_wise"],
+                    gw_distance_function_key="gromov_wasserstein2",
                 )
         assert isinstance(client, type(client))
 
