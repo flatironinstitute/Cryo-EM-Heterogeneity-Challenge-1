@@ -26,7 +26,6 @@ def return_top_k_voxel_idxs(volume, top_k):
     flat_volume = volume.flatten()
     idx = torch.zeros(len(flat_volume), dtype=torch.bool)
     idx[torch.topk(flat_volume, top_k).indices] = True
-    assert idx.sum() == top_k
     return idx.reshape(volume.shape)
 
 
