@@ -23,12 +23,11 @@ elif precision == 128:
 
 
 def return_top_k_voxel_idxs(volume, top_k):
-    flat_volume = volume.flatten()
-    sorted_indices = np.argsort(flat_volume)[-top_k:]
-    mask = np.zeros_like(flat_volume, dtype=bool)
-    mask[sorted_indices] = True
-    assert mask.sum() == top_k
-    return mask.reshape(volume.shape)
+    flat_volume = torch.from_numpy(volume).flatten()
+    idx = torch.zeros(len(volume), dtype=torch.bool)
+    idx[torch.topk(flat_volume, top_k).indices] = True
+    assert idx.sum() == top_k
+    return idx.reshape(volume.shape).numpy()
 
 
 def make_sparse_cost(idx_above_thresh, dtype):
@@ -312,6 +311,11 @@ def parse_args():
         default=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json",
         help="Dask scheduler file (output file name)",
     )
+    parser.add_argument(
+        "--fname",
+        type=str,
+        help="Path to submission file",
+    )
 
     return parser.parse_args()
 
@@ -446,7 +450,7 @@ def main(args):
     cost_scale_factor = args.cost_scale_factor
     normalize = not args.skip_normalize
 
-    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
+    fname = args.fname  # e.g. /path/to/submission_23.pt
     submission = torch.load(fname, weights_only=False)
     volumes = submission["volumes"].to(torch_dtype)
 
