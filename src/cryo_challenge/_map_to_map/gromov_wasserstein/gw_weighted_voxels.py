@@ -23,11 +23,11 @@ elif precision == 128:
 
 
 def return_top_k_voxel_idxs(volume, top_k):
-    flat_volume = torch.from_numpy(volume).flatten()
-    idx = torch.zeros(len(volume), dtype=torch.bool)
+    flat_volume = volume.flatten()
+    idx = torch.zeros(len(flat_volume), dtype=torch.bool)
     idx[torch.topk(flat_volume, top_k).indices] = True
     assert idx.sum() == top_k
-    return idx.reshape(volume.shape).numpy()
+    return idx.reshape(volume.shape)
 
 
 def make_sparse_cost(idx_above_thresh, dtype):
