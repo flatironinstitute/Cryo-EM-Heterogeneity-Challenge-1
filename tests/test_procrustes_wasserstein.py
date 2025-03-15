@@ -18,6 +18,7 @@ def generate_data(
     X_close_to_Y=True,
     p_close_to_q=True,
 ):
+    """Helper function to generate data for testing procrustes_wasserstein"""
     X = torch.rand(n, d)
 
     if X_close_to_Y or p_close_to_q:
@@ -51,6 +52,7 @@ def generate_data(
 
 
 def test_procrustes_wasserstein_recovers():
+    """Test that point cloud is recovered when it is slighgly preterbed and rotated 45 degrees"""
     for d in [2, 3]:
         n = m = 40
         point_noise_level = 0.01
@@ -81,15 +83,14 @@ def test_procrustes_wasserstein_recovers():
 
 
 def test_procrustes_wasserstein_nonsquare():
+    """Test that procrustes_wasserstein works with non-square matrices"""
     d = 3
     n = 40
     m = 50
-    point_noise_level = 0.01
-    marginal_noise_level = 0.01 / n
-    marginal_diff_level = 0.01 / n
+    point_noise_level = marginal_noise_level = marginal_diff_level = None  # not used
     torch.manual_seed(0)
-    angle_deg = 45
-    X, Y, p, q, rotation_gt = generate_data(
+    angle_deg = 1
+    X, Y, p, q, _ = generate_data(
         n,
         m,
         d,
