@@ -58,18 +58,18 @@ def procrustes_wasserstein(
         YR = Y @ rotation
         C = torch.cdist(X, YR, p=2) ** 2
 
-        # Solve optimal transport problem using EMD
+        # Solve optimal transport problem using EMD to get point correspondence
         transport_plan, log = ot.emd(p.numpy(), q.numpy(), C.numpy(), log=True)
-        log["R"] = rotation
-        log["YR"] = YR
         if verbose_log:
             log["transport_plan"] = transport_plan
+            log["R"] = rotation
+            log["YR"] = YR
         else:
             del log["u"]  # free up space
             del log["v"]
         logs.append(log)
 
-        # Update P using SVD
+        # Update rotation using SVD
         U, _, Vh = torch.linalg.svd(Y.T @ transport_plan.T @ X, full_matrices=True)
         ensure_determinant_one = torch.ones(d).to(X.dtype)
         ensure_determinant_one[-1] = torch.det(U @ Vh)  # ensure no flipping. see
