@@ -38,6 +38,22 @@ def save_submission(volumes, populations, submission_id, submission_index, confi
     return submission_dict
 
 
+def update_hash_table(hash_table_path, hash_table):
+    if os.path.exists(hash_table_path):
+        with open(hash_table_path, "r") as f:
+            hash_table_old = json.load(f)
+        hash_table_old.update(hash_table)
+
+        with open(hash_table_path, "w") as f:
+            json.dump(hash_table_old, f, indent=4)
+
+    else:
+        with open(hash_table_path, "w") as f:
+            json.dump(hash_table, f, indent=4)
+
+    return
+
+
 def preprocess_submissions(submission_dataset, config):
     hash_table = {}
     box_size_gt = submission_dataset.submission_config["gt"]["box_size"]
@@ -79,7 +95,7 @@ def preprocess_submissions(submission_dataset, config):
         volumes = threshold_submissions(volumes, config["thresh_percentile"])
 
         # center submission
-        print("    Centering submission")
+        # print("    Centering submission")
         # volumes = center_submission(volumes, pixel_size=pixel_size_gt)
 
         # flip handedness
@@ -121,7 +137,7 @@ def preprocess_submissions(submission_dataset, config):
     hash_table_path = os.path.join(
         config["output_path"], "submission_to_icecream_table.json"
     )
-    with open(hash_table_path, "w") as f:
-        json.dump(hash_table, f, indent=4)
+
+    update_hash_table(hash_table_path, hash_table)
 
     return

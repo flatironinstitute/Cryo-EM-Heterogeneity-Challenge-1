@@ -1,3 +1,7 @@
+# output in gw
+src/cryo_challenge/_map_to_map/gromov_wasserstein/*npy
+src/cryo_challenge/_map_to_map/gromov_wasserstein/*mp4
+
 # downloaded data
 data/dataset_2_submissions
 data/dataset_1_submissions

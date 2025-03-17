@@ -1,130 +1,203 @@
 import torch
+import numpy as np
 from typing import Tuple
+import os
+from natsort import natsorted
+import mrcfile
 
-from ..._preprocessing.fourier_utils import downsample_volume
+from ..._preprocessing.fourier_utils import downsample_volume, downsample_submission
+from ..._preprocessing.bfactor_normalize import bfactor_normalize_volumes
 
 
-def load_volumes(
-    box_size_ds: float,
-    submission_list: list,
-    path_to_submissions: str,
-    dtype=torch.float32,
+def load_submissions_svd(
+    config: dict,
 ) -> Tuple[torch.tensor, dict]:
     """
     Load the volumes and populations from the submissions specified in submission_list. Volumes are first downsampled, then normalized so that they sum to 1, and finally the mean volume is removed from each submission.
 
     Parameters
     ----------
-    box_size_ds: float
-        Size of the downsampled box.
-    submission_list: list
-        List of submission indices to load.
-    path_to_submissions: str
-        Path to the directory containing the submissions.
-    dtype: torch.dtype
-        Data type of the volumes.
-
+    config: dict
+        Dictionary containing the configuration parameters.
     Returns
     -------
-    volumes: torch.tensor
-        Tensor of shape (n_volumes, n_x, n_y, n_z) containing the volumes.
-    populations: dict
-        Dictionary containing the populations of each submission.
-    vols_per_submission: dict
-        Dictionary containing the number of volumes per submission.
-
-    Examples
-    --------
-    >>> box_size_ds = 64
-    >>> submission_list = [0, 1, 2, 3, 4] # submission 5 is ignored
-    >>> path_to_submissions = "/path/to/submissions" # under this folder submissions should be name submission_i.pt
-    >>> volumes, populations = load_volumes(box_size_ds, submission_list, path_to_submissions)
+    submissions_data: dict
+        Dictionary containing the populations, left singular vectors, singular values, and right singular vectors of each submission.
     """  # noqa: E501
 
-    metadata = {}
-    volumes = torch.empty((0, box_size_ds, box_size_ds, box_size_ds), dtype=dtype)
-    mean_volumes = torch.empty(
-        (len(submission_list), box_size_ds, box_size_ds, box_size_ds), dtype=dtype
-    )
-    counter = 0
+    path_to_submissions = config["path_to_submissions"]
+    excluded_submissions = config["excluded_submissions"]
 
-    for i, idx in enumerate(submission_list):
-        submission = torch.load(f"{path_to_submissions}/submission_{idx}.pt")
-        vols = submission["volumes"]
-        pops = submission["populations"]
+    submissions_data = {}
 
-        vols_tmp = torch.empty(
-            (vols.shape[0], box_size_ds, box_size_ds, box_size_ds), dtype=dtype
+    submission_files = []
+    for file in os.listdir(path_to_submissions):
+        if file.endswith(".pt") and "submission" in file:
+            if file in excluded_submissions:
+                continue
+            submission_files.append(file)
+    submission_files = natsorted(submission_files)
+
+    vols = torch.load(os.path.join(path_to_submissions, submission_files[0]), weights_only=False)["volumes"]
+    box_size = vols.shape[-1]
+
+    if config["normalize_params"]["mask_path"] is not None:
+        mask = torch.tensor(
+            mrcfile.open(config["normalize_params"]["mask_path"], mode="r").data.copy()
         )
-        counter_start = counter
-        for j in range(vols.shape[0]):
-            vol_ds = downsample_volume(vols[j], box_size_ds)
-            vols_tmp[j] = vol_ds / vol_ds.sum()
-            counter += 1
+        try:
+            mask = mask.reshape(1, box_size, box_size, box_size)
+        except RuntimeError:
+            raise ValueError(
+                "Mask shape does not match the box size of the volumes in the submissions."
+            )
 
-        metadata[submission["id"]] = {
-            "n_vols": vols.shape[0],
-            "populations": pops / pops.sum(),
-            "indices": (counter_start, counter),
+    for file in submission_files:
+        sub_path = os.path.join(path_to_submissions, file)
+        submission = torch.load(sub_path, weights_only=False)
+
+        label = submission["id"]
+        populations = submission["populations"]
+
+        if not isinstance(populations, torch.Tensor):
+            populations = torch.tensor(populations)
+
+        volumes = submission["volumes"]
+        if config["normalize_params"]["mask_path"] is not None:
+            volumes = volumes * mask
+
+        if config["normalize_params"]["bfactor"] is not None:
+            voxel_size = config["voxel_size"]
+            volumes = bfactor_normalize_volumes(
+                volumes,
+                config["normalize_params"]["bfactor"],
+                voxel_size,
+                in_place=True,
+            )
+
+        if config["normalize_params"]["box_size_ds"] is not None:
+            volumes = downsample_submission(
+                volumes, box_size_ds=config["normalize_params"]["box_size_ds"]
+            )
+            box_size = config["normalize_params"]["box_size_ds"]
+        else:
+            box_size = volumes.shape[-1]
+
+        volumes = volumes.reshape(-1, box_size * box_size * box_size)
+
+        if config["dtype"] == "float32":
+            volumes = volumes.float()
+        elif config["dtype"] == "float64":
+            volumes = volumes.double()
+
+        volumes /= torch.norm(volumes, dim=1, keepdim=True)
+
+        if config["svd_max_rank"] is None:
+            u_matrices, singular_values, eigenvectors = torch.linalg.svd(
+                volumes - volumes.mean(0, keepdim=True), full_matrices=False
+            )
+            eigenvectors = eigenvectors.T
+
+        else:
+            u_matrices, singular_values, eigenvectors = torch.svd_lowrank(
+                volumes - volumes.mean(0, keepdim=True), q=config["svd_max_rank"]
+            )
+
+        submissions_data[label] = {
+            "populations": populations / populations.sum(),
+            "u_matrices": u_matrices.clone(),
+            "singular_values": singular_values.clone(),
+            "eigenvectors": eigenvectors.clone(),
         }
 
-        mean_volumes[i] = vols_tmp.mean(dim=0)
-        vols_tmp = vols_tmp - mean_volumes[i][None, :, :, :]
-        volumes = torch.cat((volumes, vols_tmp), dim=0)
-
-    return volumes, mean_volumes, metadata
+    return submissions_data
 
 
-def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
+def load_gt_svd(config: dict) -> dict:
     """
-    Load the reference volumes, downsample them, normalize them, and remove the mean volume.
+    Load the ground truth volumes, downsample them, normalize them, and remove the mean volume. Then compute the SVD of the volumes.
 
     Parameters
     ----------
-    box_size_ds: int
-        Size of the downsampled box.
-    path_to_volumes: str
-        Path to the file containing the reference volumes. Must be in PyTorch format.
-    dtype: torch.dtype
-        Data type of the volumes.
+    config: dict
+        Dictionary containing the configuration parameters.
 
     Returns
     -------
-    volumes_ds: torch.tensor
-        Tensor of shape (n_volumes, n_x, n_y, n_z) containing the downsampled, normalized, and mean-removed reference volumes.
+    gt_data: dict
+        Dictionary containing the left singular vectors, singular values, and right singular vectors of the ground truth volumes.
+    """
 
-    Examples
-    --------
-    >>> box_size_ds = 64
-    >>> path_to_volumes = "/path/to/volumes.pt"
-    >>> volumes_ds = load_ref_vols(box_size_ds, path_to_volumes)
-    """  # noqa: E501
-    try:
-        volumes = torch.load(path_to_volumes)
-    except (FileNotFoundError, EOFError):
-        raise ValueError("Volumes not found or not in PyTorch format.")
+    vols_gt = np.load(config["gt_params"]["gt_vols_file"], mmap_mode="r")
 
-    # Reshape volumes to correct size
-    if volumes.dim() == 2:
-        box_size = int(round((float(volumes.shape[-1]) ** (1.0 / 3.0))))
-        volumes = torch.reshape(volumes, (-1, box_size, box_size, box_size))
-    elif volumes.dim() == 4:
-        pass
+    if len(vols_gt.shape) == 2:
+        box_size_gt = int(round((float(vols_gt.shape[-1]) ** (1.0 / 3.0))))
+
+    elif len(vols_gt.shape) == 4:
+        box_size_gt = vols_gt.shape[-1]
+
+    if config["normalize_params"]["box_size_ds"] is not None:
+        box_size = config["normalize_params"]["box_size_ds"]
     else:
-        raise ValueError(
-            f"The shape of the volumes stored in {path_to_volumes} have the unexpected shape "
-            f"{torch.shape}. Please, review the file and regenerate it so that volumes stored hasve the "
-            f"shape (num_vols, box_size ** 3) or (num_vols, box_size, box_size, box_size)."
+        box_size = box_size_gt
+
+    if config["normalize_params"]["mask_path"] is not None:
+        mask = torch.tensor(
+            mrcfile.open(config["normalize_params"]["mask_path"], mode="r").data.copy()
         )
 
-    volumes_ds = torch.empty(
-        (volumes.shape[0], box_size_ds, box_size_ds, box_size_ds), dtype=dtype
+        try:
+            mask = mask.reshape(box_size_gt, box_size_gt, box_size_gt)
+        except RuntimeError:
+            raise ValueError(
+                "Mask shape does not match the box size of the volumes in the submissions."
+            )
+
+    skip_vols = config["gt_params"]["skip_vols"]
+    n_vols = vols_gt.shape[0] // skip_vols
+
+    if config["dtype"] == "float32":
+        dtype = torch.float32
+
+    else:
+        dtype = torch.float64
+
+    volumes_gt = torch.zeros((n_vols, box_size * box_size * box_size), dtype=dtype)
+
+    for i in range(n_vols):
+        vol_tmp = torch.from_numpy(
+            vols_gt[i * skip_vols].copy().reshape(box_size_gt, box_size_gt, box_size_gt)
+        )
+
+        if dtype == torch.float32:
+            vol_tmp = vol_tmp.float()
+        else:
+            vol_tmp = vol_tmp.double()
+
+        if config["normalize_params"]["mask_path"] is not None:
+            vol_tmp *= mask
+
+        if config["normalize_params"]["bfactor"] is not None:
+            bfactor = config["normalize_params"]["bfactor"]
+            voxel_size = config["voxel_size"]
+            vol_tmp = bfactor_normalize_volumes(
+                vol_tmp, bfactor, voxel_size, in_place=True
+            )
+
+        if config["normalize_params"]["box_size_ds"] is not None:
+            vol_tmp = downsample_volume(vol_tmp, box_size_ds=box_size)
+
+        volumes_gt[i] = vol_tmp.reshape(-1)
+    volumes_gt /= torch.norm(volumes_gt, dim=1, keepdim=True)
+
+    U, S, V = torch.svd_lowrank(
+        volumes_gt - volumes_gt.mean(0, keepdim=True), q=config["svd_max_rank"]
     )
-    for i, vol in enumerate(volumes):
-        volumes_ds[i] = downsample_volume(vol, box_size_ds)
-        volumes_ds[i] = volumes_ds[i] / volumes_ds[i].sum()
 
-    mean_volume = volumes_ds.mean(dim=0)
-    volumes_ds = volumes_ds - mean_volume[None, :, :, :]
+    gt_data = {
+        "u_matrices": U.clone(),
+        "singular_values": S.clone(),
+        "eigenvectors": V.clone(),
+    }
 
-    return volumes_ds, mean_volume
+    return gt_data

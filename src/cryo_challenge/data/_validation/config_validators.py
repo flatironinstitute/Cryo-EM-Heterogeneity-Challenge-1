@@ -1,6 +1,9 @@
 from numbers import Number
+import numpy as np
 import pandas as pd
 import os
+from pydantic import BaseModel, field_validator, model_validator
+from typing import Optional, List
 
 
 def validate_generic_config(config: dict, reference: dict) -> None:
@@ -143,6 +146,44 @@ def validate_config_mtm_analysis_normalize(config_analysis_normalize: dict) -> N
     return
 
 
+class GromovWassersteinConfig(BaseModel):
+    """
+    Gromov-Wasserstein extra parameters config
+
+    Parameters
+    ----------
+    top_k : int
+        Number of voxels to use (ranked according to highest mass)
+    n_downsample_pix : int
+        Number of pixels to downsample to (in each dimension)
+    exponent : float
+        exponential weighting of GW cost. Base cost is Euclindean distance
+    cost_scale_factor : float
+        multiplicative scaling factor for the cost (before exponentiation)
+    element_wise : bool
+        dask parralelization: whether to call dask.compute on each map-to-map computation, or naively loop through each (80) submitted maps row-wise
+    slurm : bool
+        parallelization configuration: whether to use dask_hpc_runner.SlurmRunner as a runner for dask.Client(runner)
+    scheduler : Optional[str]
+        string argument to dask.compute
+    local_directory : Optional[str]
+        directory for dask.distributed.Client
+    """
+
+    top_k: int
+    n_downsample_pix: int
+    exponent: float
+    cost_scale_factor: float
+    element_wise: bool
+    slurm: bool
+    scheduler: Optional[str] = None
+    local_directory: Optional[str] = None
+
+
+def validate_config_mtm_analysis_gromov_wasserstein_extra_arams(config):
+    _ = GromovWassersteinConfig(**config).model_dump()
+
+
 def validate_config_mtm_analysis(config_analysis: dict) -> None:
     """
     Validate the analysis part of the config dictionary for the MapToMap config.
@@ -164,6 +205,14 @@ def validate_config_mtm_analysis(config_analysis: dict) -> None:
 
     validate_generic_config(config_analysis, keys_and_types)
     validate_config_mtm_analysis_normalize(config_analysis["normalize"])
+    if "gromov_wasserstein_extra_params" in config_analysis:
+        validate_config_mtm_analysis_gromov_wasserstein_extra_arams(
+            config_analysis["gromov_wasserstein_extra_params"]
+        )
+    else:
+        Warning(
+            "No Gromov-Wasserstein extra parameters found in config, so not validated."
+        )
     return
 
 
@@ -253,60 +302,122 @@ def validate_input_config_disttodist(config: dict) -> None:
 
 
 # SVD
-def validate_config_svd_output(config_output: dict) -> None:
-    """
-    Validate the output part of the config dictionary for the SVD pipeline.
-    """  # noqa: E501
-    keys_and_types = {
-        "output_path": str,
-        "save_volumes": bool,
-        "save_svd_matrices": bool,
-    }
-    validate_generic_config(config_output, keys_and_types)
-    return
+class SVDNormalizeParams(BaseModel):
+    mask_path: Optional[str] = None
+    bfactor: float = None
+    box_size_ds: Optional[int] = None
+
+    @field_validator("mask_path")
+    def check_mask_path_exists(cls, value):
+        if value is not None:
+            if not os.path.exists(value):
+                raise ValueError(f"Mask file {value} does not exist.")
+        return value
+
+    @field_validator("bfactor")
+    def check_bfactor(cls, value):
+        if value is not None:
+            if value < 0:
+                raise ValueError("B-factor must be non-negative.")
+        return value
+
+    @field_validator("box_size_ds")
+    def check_box_size_ds(cls, value):
+        if value is not None:
+            if value < 0:
+                raise ValueError("Downsampled box size must be non-negative.")
+        return value
 
 
-def validate_config_svd(config: dict) -> None:
-    """
-    Validate the config dictionary for the SVD pipeline.
-    """  # noqa: E501
-    keys_and_types = {
-        "path_to_volumes": str,
-        "box_size_ds": Number,
-        "submission_list": list,
-        "experiment_mode": str,
-        "dtype": str,
-        "output_options": dict,
-    }
+class SVDGtParams(BaseModel):
+    gt_vols_file: str
+    skip_vols: int = 1
 
-    validate_generic_config(config, keys_and_types)
-    validate_config_svd_output(config["output_options"])
+    @field_validator("gt_vols_file")
+    def check_mask_path_exists(cls, value):
+        if not os.path.exists(value):
+            raise ValueError(f"Could not find file {value}.")
 
-    if config["experiment_mode"] == "all_vs_ref":
-        if "path_to_reference" not in config.keys():
+        assert value.endswith(".npy"), "Ground truth volumes file must be a .npy file."
+
+        vols_gt = np.load(value, mmap_mode="r")
+
+        if len(vols_gt.shape) not in [2, 4]:
             raise ValueError(
-                "Reference path is required for experiment mode 'all_vs_ref'"
+                "Invalid number of dimensions for the ground truth volumes"
+            )
+        return value
+
+    @field_validator("skip_vols")
+    def check_skip_vols(cls, value):
+        if value is not None:
+            if value < 0:
+                raise ValueError("Number of volumes to skip must be non-negative.")
+        return value
+
+
+class SVDOutputParams(BaseModel):
+    output_file: str
+    save_svd_data: bool = False
+    generate_plots: bool = False
+
+
+class SVDConfig(BaseModel):
+    # Main configuration fields
+    path_to_submissions: str
+    voxel_size: float
+    excluded_submissions: List[str] = []
+    dtype: str = "float32"
+    svd_max_rank: Optional[int] = None
+
+    # Subdictionaries
+    normalize_params: SVDNormalizeParams = SVDNormalizeParams()
+    gt_params: Optional[SVDGtParams] = None
+    output_params: SVDOutputParams
+
+    @model_validator(mode="after")
+    def check_path_to_submissions(self):
+        path_to_submissions = self.path_to_submissions
+        excluded_submissions = self.excluded_submissions
+
+        if not os.path.exists(path_to_submissions):
+            raise ValueError(f"Could not find path {path_to_submissions}.")
+
+        submission_files = []
+        for file in os.listdir(path_to_submissions):
+            if file.endswith(".pt") and "submission" in file:
+                submission_files.append(file)
+        if len(submission_files) == 0:
+            raise ValueError(f"No submission files found in {path_to_submissions}.")
+
+        submission_files = []
+        for file in os.listdir(path_to_submissions):
+            if file.endswith(".pt") and "submission" in file:
+                if file in excluded_submissions:
+                    continue
+                submission_files.append(file)
+
+        if len(submission_files) == 0:
+            raise ValueError(
+                f"No submission files found after excluding {excluded_submissions}."
             )
 
-        else:
-            assert isinstance(config["path_to_reference"], str)
-            os.path.exists(config["path_to_reference"])
-            assert (
-                "pt" in config["path_to_reference"]
-            ), "Reference path point to a .pt file"
+        return self
 
-    os.path.exists(config["path_to_volumes"])
-    for submission in config["submission_list"]:
-        sub_path = os.path.join(
-            config["path_to_volumes"] + f"submission_{submission}.pt"
-        )
-        os.path.exists(sub_path)
+    @field_validator("dtype")
+    def check_dtype(cls, value):
+        if value not in ["float32", "float64"]:
+            raise ValueError(f"Invalid dtype {value}.")
+        return value
 
-    assert config["dtype"] in [
-        "float32",
-        "float64",
-    ], "dtype must be either 'float32' or 'float64'"
-    assert config["box_size_ds"] > 0, "box_size_ds must be greater than 0"
-    assert config["submission_list"] != [], "submission_list must not be empty"
+    @field_validator("svd_max_rank")
+    def check_svd_max_rank(cls, value):
+        if value < 1 and value is not None:
+            raise ValueError("Max rank must be at least 1.")
+        return value
 
-    return
+    @field_validator("voxel_size")
+    def check_voxel_size(cls, value):
+        if value <= 0:
+            raise ValueError("Voxel size must be positive.")
+        return value

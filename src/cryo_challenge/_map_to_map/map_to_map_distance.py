@@ -1,9 +1,27 @@
+import os
+import subprocess
 import math
 import torch
+import logging
 from typing import Optional, Sequence
 from typing_extensions import override
 import mrcfile
 import numpy as np
+from dask.distributed import Client
+from dask_jobqueue.slurm import SLURMRunner
+import torch.multiprocessing as mp
+
+from .gromov_wasserstein.gw_weighted_voxels import get_distance_matrix_dask_gw
+from cryo_challenge._map_to_map.gromov_wasserstein.gw_weighted_voxels import (
+    setup_volume_and_distance,
+)
+from cryo_challenge._map_to_map.procrustes_wasserstein.procrustes_wasserstein import (
+    procrustes_wasserstein,
+)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def normalize(maps, method):
@@ -55,6 +73,7 @@ class MapToMapDistance:
         """Compute the distance matrix between two sets of maps."""
         if self.config["data"]["mask"]["do"]:
             maps2 = maps2[:, self.mask]
+
         else:
             maps2 = maps2.reshape(len(maps2), -1)
 
@@ -87,6 +106,8 @@ class MapToMapDistance:
 
         else:
             maps1 = maps1.reshape(len(maps1), -1)
+            if self.config["data"]["mask"]["do"]:
+                maps1 = maps1.reshape(len(maps1), -1)[:, self.mask]
             maps2 = maps2.reshape(len(maps2), -1)
             distance_matrix = torch.vmap(
                 lambda maps1: torch.vmap(
@@ -398,3 +419,284 @@ class FSCResDistance(MapToMapDistance):
         res_fsc_half, fraction_nyquist = res_at_fsc_threshold(fsc_matrix)
         self.stored_computed_assets = {"fraction_nyquist": fraction_nyquist}
         return units_Angstroms[res_fsc_half]
+
+
+class Zernike3DDistance(MapToMapDistance):
+    """Zernike3D based distance.
+
+    Zernike3D distance relies on the estimation of the non-linear transformation needed to align two different maps.
+    The RMSD of the associated non-linear alignment represented as a deformation field is then used as the distance
+    between two maps
+    """
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        gpuID = self.config["analysis"]["zernike3d_extra_params"]["gpuID"]
+        outputPath = self.config["analysis"]["zernike3d_extra_params"]["tmpDir"]
+        thr = self.config["analysis"]["zernike3d_extra_params"]["thr"]
+        numProjections = self.config["analysis"]["zernike3d_extra_params"][
+            "numProjections"
+        ]
+
+        # Create output directory
+        if not os.path.isdir(outputPath):
+            os.mkdir(outputPath)
+
+        # Prepare data to call external
+        targets_paths = os.path.join(outputPath, "target_maps.npy")
+        references_path = os.path.join(outputPath, "reference_maps.npy")
+        if not os.path.isfile(targets_paths):
+            np.save(targets_paths, maps1)
+        if not os.path.isfile(references_path):
+            np.save(references_path, maps2)
+
+        # Check conda is in PATH (otherwise abort as external software is not installed)
+        try:
+            subprocess.check_call("conda", shell=True, stdout=subprocess.PIPE)
+        except FileNotFoundError:
+            raise Exception("Conda not found in PATH... Aborting")
+
+        # Check if conda env is installed
+        env_installed = subprocess.run(
+            r"conda env list | grep 'flexutils-tensorflow '",
+            shell=True,
+            check=False,
+            stdout=subprocess.PIPE,
+        ).stdout
+        env_installed = bool(
+            env_installed.decode("utf-8").replace("\n", "").replace("*", "")
+        )
+        if not env_installed:
+            raise Exception("External software not found... Aborting")
+
+        # Find conda executable (needed to activate conda envs in a subprocess)
+        condabin_path = subprocess.run(
+            r"which conda | sed 's: ::g'",
+            shell=True,
+            check=False,
+            stdout=subprocess.PIPE,
+        ).stdout
+        condabin_path = condabin_path.decode("utf-8").replace("\n", "").replace("*", "")
+
+        # Call external program
+        subprocess.check_call(
+            f'eval "$({condabin_path} shell.bash hook)" &&'
+            f" conda activate flexutils-tensorflow && "
+            f"compute_distance_matrix_zernike3deep.py --references_file {references_path} "
+            f"--targets_file {targets_paths} --out_path {outputPath} --gpu {gpuID} --num_projections {numProjections} "
+            f"--thr {thr}",
+            shell=True,
+        )
+
+        # Read distance matrix
+        dists = np.load(os.path.join(outputPath, "dist_mat.npy")).T
+        self.stored_computed_assets = {"zernike3d": dists}
+        return dists
+
+    @override
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
+        return self.stored_computed_assets  # must run get_distance_matrix first
+
+
+def compute_distance(args):
+    (
+        idx_i,
+        sparse_coordinates_i,
+        sparse_coordinates_sets_j,
+        marginal_i,
+        marginals_j,
+        extra_params,
+    ) = args
+    results = []
+    for idx_j in range(len(sparse_coordinates_sets_j)):
+        if idx_i == idx_j:
+            continue
+        logger.info(f"Computing distance between {idx_i} and {idx_j}")
+        _, _, logs = procrustes_wasserstein(
+            torch.from_numpy(sparse_coordinates_i),
+            torch.from_numpy(sparse_coordinates_sets_j[idx_j]),
+            torch.from_numpy(marginal_i),
+            torch.from_numpy(marginals_j[idx_j]),
+            max_iter=extra_params["max_iter"],
+            tol=extra_params["tol"],
+        )
+        results.append((idx_i, idx_j, logs[-1]["cost"], logs))
+        logger.info(f"Done      distance between {idx_i} and {idx_j}")
+
+    return results
+
+
+class ProcrustesWassersteinDistance(MapToMapDistance):
+    """Procrustes-Wasserstein
+
+    Procrustes-Wasserstein distance is invariant to SE(3) map alignment, because it maximizes the transport plan and rototranslation.
+    """
+
+    mp.set_start_method("spawn", force=True)
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        logger.info("Computing Procrustes-Wasserstein distance")
+        extra_params = self.config["analysis"]["procrustes_wasserstein_extra_params"]
+
+        n_pix = self.config["data"]["n_pix"]
+        maps1 = maps1.reshape((len(maps1), n_pix, n_pix, n_pix))
+        maps2 = maps2.reshape((len(maps2), n_pix, n_pix, n_pix))
+
+        logger.info("Setting up volumes and distances")
+        (
+            _,
+            _,
+            marginals_i,
+            marginals_j,
+            sparse_coordinates_sets_i,
+            sparse_coordinates_sets_j,
+            _,
+            _,
+            _,
+            _,
+        ) = setup_volume_and_distance(
+            maps1,
+            maps2,
+            extra_params["n_downsample_pix"],
+            extra_params["top_k"],
+            exponent=1,
+            cost_scale_factor=1,
+            normalize=False,
+        )
+        logger.info("Done setting up volumes and distances")
+
+        dists = torch.zeros(len(maps1), len(maps2))
+        self.stored_computed_assets = {"procrustes_wasserstein": {}}
+
+        def parallel_compute_distances(
+            maps1,
+            maps2,
+            sparse_coordinates_sets_i,
+            sparse_coordinates_sets_j,
+            marginals_i,
+            marginals_j,
+            extra_params,
+        ):
+            dists = torch.zeros(len(maps1), len(maps2))
+            local_stored_computed_assets = {}
+
+            logger.info("Setting up tasks")
+            with mp.Pool(processes=mp.cpu_count()) as pool:
+                args_list = [
+                    (
+                        idx_i,
+                        sparse_coordinates_sets_i[idx_i],
+                        sparse_coordinates_sets_j,
+                        marginals_i[idx_i],
+                        marginals_j,
+                        extra_params,
+                    )
+                    for idx_i in range(len(maps1))
+                ]
+
+                logger.info("Computing distances")
+                results_list = pool.map(compute_distance, args_list)
+
+            logger.info("Unpacking results")
+            for results in results_list:
+                for idx_i, idx_j, cost, logs in results:
+                    dists[idx_i, idx_j] = cost
+                    local_stored_computed_assets[(idx_i, idx_j)] = logs
+
+            return dists, local_stored_computed_assets
+
+        dists, local_stored_computed_assets = parallel_compute_distances(
+            maps1,
+            maps2,
+            sparse_coordinates_sets_i,
+            sparse_coordinates_sets_j,
+            marginals_i,
+            marginals_j,
+            extra_params,
+        )
+        self.stored_computed_assets["procrustes_wasserstein"] = (
+            local_stored_computed_assets
+        )
+        return dists
+
+    @override
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
+        return self.stored_computed_assets  # must run get_distance_matrix first
+
+
+class GromovWassersteinDistance(MapToMapDistance):
+    """Gromov-Wasserstein distance.
+
+    Gromov-Wasserstein distance is invariant to map alignment, because it compares the self-distances in a map, which are S3(3) equivariant.
+    """
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        extra_params = self.config["analysis"]["gromov_wasserstein_extra_params"]
+        n_pix = self.config["data"]["n_pix"]
+        maps1 = maps1.reshape((len(maps1), n_pix, n_pix, n_pix))
+        maps2 = maps2.reshape((len(maps2), n_pix, n_pix, n_pix))
+
+        (
+            _,
+            _,
+            marginals_i,
+            marginals_j,
+            _,
+            _,
+            pairwise_distances_i,
+            pairwise_distances_j,
+            _,
+            _,
+        ) = setup_volume_and_distance(
+            maps1,
+            maps2,
+            extra_params["n_downsample_pix"],
+            extra_params["top_k"],
+            extra_params["exponent"],
+            extra_params["cost_scale_factor"],
+            normalize=False,
+        )
+
+        if extra_params["slurm"]:
+            job_id = os.environ["SLURM_JOB_ID"]
+            scheduler_file = os.path.join(
+                extra_params["scheduler_file_dir"], f"scheduler-{job_id}.json"
+            )
+
+            with SLURMRunner(
+                scheduler_file=scheduler_file,
+            ) as runner:
+                # The runner object contains the scheduler address and can be passed directly to a client
+                with Client(runner) as client:
+                    distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+                        marginals_i=marginals_i,
+                        marginals_j=marginals_j,
+                        pairwise_distances_i=pairwise_distances_i,
+                        pairwise_distances_j=pairwise_distances_j,
+                        scheduler=extra_params["scheduler"],
+                        element_wise=extra_params["element_wise"],
+                        gw_distance_function_key="gromov_wasserstein2",
+                    )
+
+        else:
+            local_directory = extra_params["local_directory"]
+            with Client(local_directory=local_directory) as client:
+                distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+                    marginals_i=marginals_i,
+                    marginals_j=marginals_j,
+                    pairwise_distances_i=pairwise_distances_i,
+                    pairwise_distances_j=pairwise_distances_j,
+                    scheduler=extra_params["scheduler"],
+                    element_wise=extra_params["element_wise"],
+                    gw_distance_function_key="gromov_wasserstein2",
+                )
+        assert isinstance(client, type(client))
+
+        self.stored_computed_assets = {"gromov_wasserstein": distance_matrix_dask_gw}
+        return distance_matrix_dask_gw
+
+    @override
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
+        return self.stored_computed_assets  # must run get_distance_matrix first

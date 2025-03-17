@@ -2,6 +2,9 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.build]
 include = [
     "src/cryo_challenge",
@@ -17,7 +20,7 @@ name = "cryo-em-heterogeneity-challenge-1"
 dynamic = ["version"]
 description = ''
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = "MIT"
 keywords = []
 authors = [
@@ -31,10 +34,10 @@ authors = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
@@ -52,8 +55,14 @@ dependencies = [
   "osfclient",
   "seaborn",
   "ipyfilechooser",
-  "omegaconf"
+  "omegaconf",
+  "pydantic",
+  "ecos",
+  "dask",
+  "dask[distributed]",
+  "dask-jobqueue",
 ]
+
 
 [project.optional-dependencies]
 dev = [

@@ -1,6 +1,7 @@
 import pandas as pd
 import pickle
 import torch
+import logging
 
 from ..data._validation.output_validators import MapToMapResultsValidator
 from .._map_to_map.map_to_map_distance import (
@@ -9,8 +10,13 @@ from .._map_to_map.map_to_map_distance import (
     L2DistanceNorm,
     BioEM3dDistance,
     FSCResDistance,
+    Zernike3DDistance,
+    GromovWassersteinDistance,
+    ProcrustesWassersteinDistance,
 )
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 AVAILABLE_MAP2MAP_DISTANCES = {
     "fsc": FSCDistance,
@@ -18,6 +24,9 @@ AVAILABLE_MAP2MAP_DISTANCES = {
     "l2": L2DistanceNorm,
     "bioem": BioEM3dDistance,
     "res": FSCResDistance,
+    "zernike3d": Zernike3DDistance,
+    "gromov_wasserstein": GromovWassersteinDistance,
+    "procrustes_wasserstein": ProcrustesWassersteinDistance,
 }
 
 
@@ -26,6 +35,7 @@ def run(config):
     Compare a submission to ground truth.
     """
 
+    logger.info("Running map-to-map analysis")
     map_to_map_distances = {
         distance_label: distance_class(config)
         for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
@@ -34,7 +44,8 @@ def run(config):
 
     do_low_memory_mode = config["analysis"]["low_memory"]["do"]
 
-    submission = torch.load(config["data"]["submission"]["fname"])
+    logger.info("Loading submission")
+    submission = torch.load(config["data"]["submission"]["fname"], weights_only=False)
     submission_volume_key = config["data"]["submission"]["volume_key"]
     submission_metadata_key = config["data"]["submission"]["metadata_key"]
     label_key = config["data"]["submission"]["label_key"]
@@ -51,14 +62,18 @@ def run(config):
     maps_user_flat = submission[submission_volume_key].reshape(
         len(submission["volumes"]), -1
     )
+
+    logger.info("Loading ground truth")
     maps_gt_flat = torch.load(
-        config["data"]["ground_truth"]["volumes"], mmap=do_low_memory_mode
+        config["data"]["ground_truth"]["volumes"],
+        mmap=do_low_memory_mode,
+        weights_only=False,
     )
 
     computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
         if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
-            print("cost matrix", distance_label)
+            logger.info(f"cost matrix: {distance_label}")
 
             map_to_map_distance.distance_matrix_precomputation(
                 maps_gt_flat, maps_user_flat

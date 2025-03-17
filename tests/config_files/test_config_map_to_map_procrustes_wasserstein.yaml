@@ -10,20 +10,21 @@ data:
     volumes: tests/data/Ground_truth/test_maps_gt_flat_10.pt
     metadata: tests/data/Ground_truth/test_metadata_10.csv
   mask:
-    do: true
+    do: false
     volume: tests/data/Ground_truth/test_mask_bool.mrc
 analysis:
+  procrustes_wasserstein_extra_params:
+    n_downsample_pix: 4
+    top_k: 5
+    max_iter: 10
+    tol: 0.000001
   metrics:
-    - l2
-    - corr
-    - bioem
-    - fsc
-    - res
+    - procrustes_wasserstein
   chunk_size_submission: 4
   chunk_size_gt: 5
   low_memory:
-    do: true
-    chunk_size_low_memory: 2
+    do: false
+    chunk_size_low_memory: null
   normalize:
     do: true
     method: median_zscore
