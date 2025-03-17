@@ -23,42 +23,47 @@ elif precision == 128:
 
 
 def return_top_k_voxel_idxs(volume, top_k):
-    thresh = np.sort(volume.flatten())[-top_k - 1]
-    idx_above_thresh = volume > thresh
-    return idx_above_thresh
+    flat_volume = volume.flatten()
+    idx = torch.zeros(len(flat_volume), dtype=torch.bool)
+    idx[torch.topk(flat_volume, top_k).indices] = True
+    return idx.reshape(volume.shape)
 
 
 def make_sparse_cost(idx_above_thresh, dtype):
     n_downsample_pix = len(idx_above_thresh)
     one_dim = torch.arange(n_downsample_pix, dtype=dtype)
-    coordinates = torch.meshgrid(one_dim, one_dim, one_dim)
+    coordinates = torch.meshgrid(one_dim, one_dim, one_dim, indexing="ij")
     coordinates = torch.stack(coordinates, dim=-1)
     coordinates = coordinates.reshape(-1, 3)
     sparse_coordiantes = coordinates[idx_above_thresh.flatten()]
     pairwise_distances = torch.cdist(sparse_coordiantes, sparse_coordiantes)
-    return pairwise_distances
+    return pairwise_distances, sparse_coordiantes
 
 
 def normalize_mass_to_one(p):
-    p = p - p.min()
+    """Normalize mass to one"""
+    if p.min() < 0:  # if all positive, no need to shift
+        p = p - p.min()
     return p / p.sum()
 
 
 def prepare_volume_and_distance(
-    volume, top_k, n_downsample_pix, exponent, cost_scale_factor
+    volume, top_k, n_downsample_pix, exponent, cost_scale_factor, normalize
 ):
-    volume = downsample_volume(volume, n_downsample_pix).numpy().astype(numpy_dtype)
-    idx_above_thresh = return_top_k_voxel_idxs(volume, top_k)
-    marginal = normalize_mass_to_one(volume[idx_above_thresh].flatten())
-    pairwise_distance = (
-        make_sparse_cost(idx_above_thresh, dtype=torch_dtype)
-        .numpy()
-        .astype(numpy_dtype)
+    downsampled_volume = (
+        downsample_volume(volume, n_downsample_pix).numpy().astype(numpy_dtype)
     )
-    pairwise_distance = (
-        cost_scale_factor * pairwise_distance / pairwise_distance.max()
-    ) ** exponent
-    return marginal, pairwise_distance
+    idx_above_thresh = return_top_k_voxel_idxs(volume, top_k)
+    marginal_volume = normalize_mass_to_one(volume[idx_above_thresh].flatten())
+    pairwise_distance, sparse_coordiantes = [
+        x.numpy().astype(numpy_dtype)
+        for x in make_sparse_cost(idx_above_thresh, dtype=torch_dtype)
+    ]
+
+    if normalize:
+        pairwise_distance /= pairwise_distance.max()
+    pairwise_distance = (cost_scale_factor * pairwise_distance) ** exponent
+    return downsampled_volume, marginal_volume, sparse_coordiantes, pairwise_distance
 
 
 def gw_distance_wrapper_element_wise(
@@ -282,6 +287,7 @@ def parse_args():
         "--scheduler", type=str, default=None, help="Dask scheduler to use"
     )
     parser.add_argument("--element_wise", action="store_true", default=False)
+    parser.add_argument("--skip_normalize", action="store_false", default=False)
     parser.add_argument("--slurm", action="store_true", default=False)
     parser.add_argument(
         "--local_directory", type=str, default="/tmp", help="Local directory for dask"
@@ -304,39 +310,24 @@ def parse_args():
         default=f"/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/scheduler-{job_id}.json",
         help="Dask scheduler file (output file name)",
     )
+    parser.add_argument(
+        "--fname",
+        type=str,
+        help="Path to submission file",
+    )
 
     return parser.parse_args()
 
 
 def get_distance_matrix_dask_gw(
-    volumes_i,
-    volumes_j,
-    top_k,
-    n_downsample_pix,
-    exponent,
-    cost_scale_factor,
+    marginals_i,
+    marginals_j,
+    pairwise_distances_i,
+    pairwise_distances_j,
     scheduler,
     element_wise,
+    gw_distance_function_key,
 ):
-    gw_distance_function_key = "gromov_wasserstein2"
-    marginals_i = np.empty((len(volumes_i), top_k))
-    marginals_j = np.empty((len(volumes_j), top_k))
-    pairwise_distances_i = np.empty((len(volumes_i), top_k, top_k))
-    pairwise_distances_j = np.empty((len(volumes_j), top_k, top_k))
-
-    for i in range(len(volumes_i)):
-        volume_i, pairwise_distance_i = prepare_volume_and_distance(
-            volumes_i[i], top_k, n_downsample_pix, exponent, cost_scale_factor
-        )
-        marginals_i[i] = volume_i
-        pairwise_distances_i[i] = pairwise_distance_i
-    for j in range(len(volumes_j)):
-        volume_j, pairwise_distance_j = prepare_volume_and_distance(
-            volumes_j[j], top_k, n_downsample_pix, exponent, cost_scale_factor
-        )
-        marginals_j[j] = volume_j
-        pairwise_distances_j[j] = pairwise_distance_j
-
     # TODO: dask.array.from_array for marginals and pairwise_distances
 
     if element_wise:
@@ -376,28 +367,125 @@ def get_distance_matrix_dask_gw(
     return distance_matrix_dask_gw
 
 
+def setup_volume_and_distance(
+    volumes_i,
+    volumes_j,
+    n_downsample_pix,
+    top_k,
+    exponent,
+    cost_scale_factor,
+    normalize,
+):
+    downsampled_volumes_i = np.empty(
+        (len(volumes_i), n_downsample_pix, n_downsample_pix, n_downsample_pix)
+    )
+    downsampled_volumes_j = np.empty(
+        (len(volumes_j), n_downsample_pix, n_downsample_pix, n_downsample_pix)
+    )
+    marginals_i = np.empty((len(volumes_i), top_k))
+    marginals_j = np.empty((len(volumes_j), top_k))
+    sparse_coordinates_sets_i = np.empty((len(volumes_i), top_k, 3))
+    sparse_coordinates_sets_j = np.empty((len(volumes_j), top_k, 3))
+    pairwise_distances_i = np.empty((len(volumes_i), top_k, top_k))
+    pairwise_distances_j = np.empty((len(volumes_j), top_k, top_k))
+
+    for i in range(len(volumes_i)):
+        (
+            downsampled_volume_i,
+            marginal_volume_i,
+            sparse_coordinates_i,
+            pairwise_distance_i,
+        ) = prepare_volume_and_distance(
+            volumes_i[i],
+            top_k,
+            n_downsample_pix,
+            exponent,
+            cost_scale_factor,
+            normalize,
+        )
+        downsampled_volumes_i[i] = downsampled_volume_i
+        marginals_i[i] = marginal_volume_i
+        sparse_coordinates_sets_i[i] = sparse_coordinates_i
+        pairwise_distances_i[i] = pairwise_distance_i
+    for j in range(len(volumes_j)):
+        (
+            downsampled_volume_j,
+            marginal_volume_j,
+            sparse_coordinates_j,
+            pairwise_distance_j,
+        ) = prepare_volume_and_distance(
+            volumes_j[j],
+            top_k,
+            n_downsample_pix,
+            exponent,
+            cost_scale_factor,
+            normalize,
+        )
+        downsampled_volumes_j[j] = downsampled_volume_j
+        marginals_j[j] = marginal_volume_j
+        sparse_coordinates_sets_j[j] = sparse_coordinates_j
+        pairwise_distances_j[j] = pairwise_distance_j
+
+    return (
+        downsampled_volumes_i,
+        downsampled_volumes_j,
+        marginals_i,
+        marginals_j,
+        sparse_coordinates_sets_i,
+        sparse_coordinates_sets_j,
+        pairwise_distances_i,
+        pairwise_distances_j,
+        volumes_i,
+        volumes_j,
+    )
+
+
 def main(args):
-    fname = "/mnt/home/smbp/ceph/smbpchallenge/round2/set2/processed_submissions/submission_23.pt"
-    submission = torch.load(fname, weights_only=False)
-    volumes = submission["volumes"].to(torch_dtype)
-    volumes_i = volumes[: args.n_i]
-    volumes_j = volumes[: args.n_j]
+    n_i = args.n_i
+    n_j = args.n_j
     n_downsample_pix = args.n_downsample_pix
     top_k = args.top_k
     exponent = args.exponent
-    scheduler = args.scheduler
-    element_wise = args.element_wise
     cost_scale_factor = args.cost_scale_factor
+    normalize = not args.skip_normalize
 
-    distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+    fname = args.fname  # e.g. /path/to/submission_23.pt
+    submission = torch.load(fname, weights_only=False)
+    volumes = submission["volumes"].to(torch_dtype)
+
+    (
+        _,
+        _,
+        marginals_i,
+        marginals_j,
+        _,
+        _,
+        pairwise_distances_i,
+        pairwise_distances_j,
         volumes_i,
         volumes_j,
-        top_k,
+    ) = setup_volume_and_distance(
+        volumes[:n_i],
+        volumes[:n_j],
         n_downsample_pix,
+        top_k,
         exponent,
         cost_scale_factor,
+        normalize,
+    )
+
+    gw_distance_function_key = "gromov_wasserstein2"
+    scheduler = args.scheduler
+    element_wise = args.element_wise
+
+    distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+        marginals_i,
+        marginals_j,
+        pairwise_distances_i,
+        pairwise_distances_j,
         scheduler,
         element_wise,
+        gw_distance_function_key,
     )
 
     np.save(

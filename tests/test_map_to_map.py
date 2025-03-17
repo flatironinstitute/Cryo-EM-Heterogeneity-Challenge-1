@@ -5,6 +5,13 @@ import numpy as np
 
 def test_run_map2map_pipeline():
     args = OmegaConf.create(
+        {
+            "config": "tests/config_files//test_config_map_to_map_procrustes_wasserstein.yaml"
+        }
+    )
+    results_dict = run_map2map_pipeline.main(args)
+
+    args = OmegaConf.create(
         {"config": "tests/config_files/test_config_map_to_map_gw.yaml"}
     )
     results_dict = run_map2map_pipeline.main(args)

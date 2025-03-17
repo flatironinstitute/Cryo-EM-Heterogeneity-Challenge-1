@@ -2,14 +2,26 @@ import os
 import subprocess
 import math
 import torch
+import logging
 from typing import Optional, Sequence
 from typing_extensions import override
 import mrcfile
 import numpy as np
 from dask.distributed import Client
 from dask_jobqueue.slurm import SLURMRunner
+import torch.multiprocessing as mp
 
 from .gromov_wasserstein.gw_weighted_voxels import get_distance_matrix_dask_gw
+from cryo_challenge._map_to_map.gromov_wasserstein.gw_weighted_voxels import (
+    setup_volume_and_distance,
+)
+from cryo_challenge._map_to_map.procrustes_wasserstein.procrustes_wasserstein import (
+    procrustes_wasserstein,
+)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def normalize(maps, method):
@@ -486,6 +498,133 @@ class Zernike3DDistance(MapToMapDistance):
         return self.stored_computed_assets  # must run get_distance_matrix first
 
 
+def compute_distance(args):
+    (
+        idx_i,
+        sparse_coordinates_i,
+        sparse_coordinates_sets_j,
+        marginal_i,
+        marginals_j,
+        extra_params,
+    ) = args
+    results = []
+    for idx_j in range(len(sparse_coordinates_sets_j)):
+        if idx_i == idx_j:
+            continue
+        logger.info(f"Computing distance between {idx_i} and {idx_j}")
+        _, _, logs = procrustes_wasserstein(
+            torch.from_numpy(sparse_coordinates_i),
+            torch.from_numpy(sparse_coordinates_sets_j[idx_j]),
+            torch.from_numpy(marginal_i),
+            torch.from_numpy(marginals_j[idx_j]),
+            max_iter=extra_params["max_iter"],
+            tol=extra_params["tol"],
+        )
+        results.append((idx_i, idx_j, logs[-1]["cost"], logs))
+        logger.info(f"Done      distance between {idx_i} and {idx_j}")
+
+    return results
+
+
+class ProcrustesWassersteinDistance(MapToMapDistance):
+    """Procrustes-Wasserstein
+
+    Procrustes-Wasserstein distance is invariant to SE(3) map alignment, because it maximizes the transport plan and rototranslation.
+    """
+
+    mp.set_start_method("spawn", force=True)
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        logger.info("Computing Procrustes-Wasserstein distance")
+        extra_params = self.config["analysis"]["procrustes_wasserstein_extra_params"]
+
+        n_pix = self.config["data"]["n_pix"]
+        maps1 = maps1.reshape((len(maps1), n_pix, n_pix, n_pix))
+        maps2 = maps2.reshape((len(maps2), n_pix, n_pix, n_pix))
+
+        logger.info("Setting up volumes and distances")
+        (
+            _,
+            _,
+            marginals_i,
+            marginals_j,
+            sparse_coordinates_sets_i,
+            sparse_coordinates_sets_j,
+            _,
+            _,
+            _,
+            _,
+        ) = setup_volume_and_distance(
+            maps1,
+            maps2,
+            extra_params["n_downsample_pix"],
+            extra_params["top_k"],
+            exponent=1,
+            cost_scale_factor=1,
+            normalize=False,
+        )
+        logger.info("Done setting up volumes and distances")
+
+        dists = torch.zeros(len(maps1), len(maps2))
+        self.stored_computed_assets = {"procrustes_wasserstein": {}}
+
+        def parallel_compute_distances(
+            maps1,
+            maps2,
+            sparse_coordinates_sets_i,
+            sparse_coordinates_sets_j,
+            marginals_i,
+            marginals_j,
+            extra_params,
+        ):
+            dists = torch.zeros(len(maps1), len(maps2))
+            local_stored_computed_assets = {}
+
+            logger.info("Setting up tasks")
+            with mp.Pool(processes=mp.cpu_count()) as pool:
+                args_list = [
+                    (
+                        idx_i,
+                        sparse_coordinates_sets_i[idx_i],
+                        sparse_coordinates_sets_j,
+                        marginals_i[idx_i],
+                        marginals_j,
+                        extra_params,
+                    )
+                    for idx_i in range(len(maps1))
+                ]
+
+                logger.info("Computing distances")
+                results_list = pool.map(compute_distance, args_list)
+
+            logger.info("Unpacking results")
+            for results in results_list:
+                for idx_i, idx_j, cost, logs in results:
+                    dists[idx_i, idx_j] = cost
+                    local_stored_computed_assets[(idx_i, idx_j)] = logs
+
+            return dists, local_stored_computed_assets
+
+        dists, local_stored_computed_assets = parallel_compute_distances(
+            maps1,
+            maps2,
+            sparse_coordinates_sets_i,
+            sparse_coordinates_sets_j,
+            marginals_i,
+            marginals_j,
+            extra_params,
+        )
+        self.stored_computed_assets["procrustes_wasserstein"] = (
+            local_stored_computed_assets
+        )
+        return dists
+
+    @override
+    def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
+        return self.stored_computed_assets  # must run get_distance_matrix first
+
+
 class GromovWassersteinDistance(MapToMapDistance):
     """Gromov-Wasserstein distance.
 
@@ -495,42 +634,63 @@ class GromovWassersteinDistance(MapToMapDistance):
     @override
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         extra_params = self.config["analysis"]["gromov_wasserstein_extra_params"]
+        n_pix = self.config["data"]["n_pix"]
+        maps1 = maps1.reshape((len(maps1), n_pix, n_pix, n_pix))
+        maps2 = maps2.reshape((len(maps2), n_pix, n_pix, n_pix))
 
-        maps2 = maps2.reshape((len(maps2),) + maps1.shape[1:])
+        (
+            _,
+            _,
+            marginals_i,
+            marginals_j,
+            _,
+            _,
+            pairwise_distances_i,
+            pairwise_distances_j,
+            _,
+            _,
+        ) = setup_volume_and_distance(
+            maps1,
+            maps2,
+            extra_params["n_downsample_pix"],
+            extra_params["top_k"],
+            extra_params["exponent"],
+            extra_params["cost_scale_factor"],
+            normalize=False,
+        )
 
         if extra_params["slurm"]:
             job_id = os.environ["SLURM_JOB_ID"]
             scheduler_file = os.path.join(
                 extra_params["scheduler_file_dir"], f"scheduler-{job_id}.json"
             )
+
             with SLURMRunner(
                 scheduler_file=scheduler_file,
             ) as runner:
                 # The runner object contains the scheduler address and can be passed directly to a client
                 with Client(runner) as client:
                     distance_matrix_dask_gw = get_distance_matrix_dask_gw(
-                        volumes_i=maps1,
-                        volumes_j=maps2,
-                        top_k=extra_params["top_k"],
-                        n_downsample_pix=extra_params["n_downsample_pix"],
-                        exponent=extra_params["exponent"],
-                        cost_scale_factor=extra_params["cost_scale_factor"],
+                        marginals_i=marginals_i,
+                        marginals_j=marginals_j,
+                        pairwise_distances_i=pairwise_distances_i,
+                        pairwise_distances_j=pairwise_distances_j,
                         scheduler=extra_params["scheduler"],
                         element_wise=extra_params["element_wise"],
+                        gw_distance_function_key="gromov_wasserstein2",
                     )
 
         else:
             local_directory = extra_params["local_directory"]
             with Client(local_directory=local_directory) as client:
                 distance_matrix_dask_gw = get_distance_matrix_dask_gw(
-                    volumes_i=maps1,
-                    volumes_j=maps2,
-                    top_k=extra_params["top_k"],
-                    n_downsample_pix=extra_params["n_downsample_pix"],
-                    exponent=extra_params["exponent"],
-                    cost_scale_factor=extra_params["cost_scale_factor"],
+                    marginals_i=marginals_i,
+                    marginals_j=marginals_j,
+                    pairwise_distances_i=pairwise_distances_i,
+                    pairwise_distances_j=pairwise_distances_j,
                     scheduler=extra_params["scheduler"],
                     element_wise=extra_params["element_wise"],
+                    gw_distance_function_key="gromov_wasserstein2",
                 )
         assert isinstance(client, type(client))
 
