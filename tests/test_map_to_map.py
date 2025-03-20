@@ -10,6 +10,13 @@ def test_run_map2map_pipeline():
         }
     )
     results_dict = run_map2map_pipeline.main(args)
+    n_pairs = len(
+        results_dict["procrustes_wasserstein"]["computed_assets"][
+            "procrustes_wasserstein_logs"
+        ].keys()
+    )
+    n_gt, n_sub = results_dict["procrustes_wasserstein"]["cost_matrix"].shape
+    assert n_pairs == n_gt * n_sub
 
     args = OmegaConf.create(
         {"config": "tests/config_files/test_config_map_to_map_gw.yaml"}
