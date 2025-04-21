@@ -407,6 +407,9 @@ class FSCResDistance(MapToMapDistance):
         fsc_matrix = global_store_of_running_results[self.fsc_label]["computed_assets"][
             "fsc_matrix"
         ]
+        print("fsc_matrix.shape", fsc_matrix.shape)
+        print("fsc_matrix[:3,:3]", fsc_matrix[:3, :3])
+
         units_Angstroms = (
             2 * psize / (np.arange(1, fourier_pixel_max + 1) / fourier_pixel_max)
         )

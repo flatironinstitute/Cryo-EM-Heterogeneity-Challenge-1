@@ -53,8 +53,10 @@ def run(config):
 
     metadata_gt = pd.read_csv(config["data"]["ground_truth"]["metadata"])
 
-    results_dict = {}
+    self_results_dict, results_dict = {}, {}
     results_dict["config"] = config
+    self_results_dict["config"] = config
+
     results_dict["user_submitted_populations"] = (
         submission[submission_metadata_key] / submission[submission_metadata_key].sum()
     )
@@ -109,16 +111,23 @@ def run(config):
             cost_matrix = map_to_map_distance.get_distance_matrix(
                 maps_user_flat,
                 maps_user_flat,
-                global_store_of_running_results=results_dict,
+                global_store_of_running_results=self_results_dict,
             )
-            computed_assets = map_to_map_distance.get_computed_assets(
+            self_computed_assets = map_to_map_distance.get_computed_assets(
                 maps_user_flat,
                 maps_user_flat,
-                global_store_of_running_results=results_dict,
+                global_store_of_running_results=self_results_dict,
             )
+
+            print("self_results_dict.keys()", self_results_dict.keys())
 
             self_computed_assets.update(self_computed_assets)
 
+            print(
+                distance_label,
+                cost_matrix.shape,
+                results_dict["user_submitted_populations"].shape,
+            )
             cost_matrix_df = pd.DataFrame(
                 cost_matrix,
                 columns=None,
@@ -127,20 +136,30 @@ def run(config):
 
             self_single_distance_results_dict = {
                 "self_cost_matrix": cost_matrix_df,
+                "computed_assets": self_computed_assets,
+            }
+
+            self_single_distance_results_dict_nooverwrite = {
+                "self_cost_matrix": cost_matrix_df,
                 "self_computed_assets": self_computed_assets,
             }
 
-            single_distance_results_dict.update(self_single_distance_results_dict)
+            self_results_dict[distance_label] = self_single_distance_results_dict
+
+            single_distance_results_dict.update(
+                self_single_distance_results_dict_nooverwrite
+            )
 
         if (
             distance_label in config["analysis"]["metrics"]
-            or distance_label not in config["analysis"]["self_m2m"]
+            or distance_label not in config["analysis"]["self_metrics"]
         ):
             single_distance_results_dict.update(
                 {"user_submission_label": user_submission_label}
             )
 
             results_dict[distance_label] = single_distance_results_dict
+            print("results_dict.keys()", results_dict.keys())
 
     # Validate before saving
     _ = MapToMapResultsValidator.from_dict(results_dict)
