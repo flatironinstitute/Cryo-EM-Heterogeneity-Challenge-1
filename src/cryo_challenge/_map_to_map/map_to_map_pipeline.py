@@ -119,15 +119,8 @@ def run(config):
                 global_store_of_running_results=self_results_dict,
             )
 
-            print("self_results_dict.keys()", self_results_dict.keys())
-
             self_computed_assets.update(self_computed_assets)
 
-            print(
-                distance_label,
-                cost_matrix.shape,
-                results_dict["user_submitted_populations"].shape,
-            )
             cost_matrix_df = pd.DataFrame(
                 cost_matrix,
                 columns=None,
@@ -159,7 +152,6 @@ def run(config):
             )
 
             results_dict[distance_label] = single_distance_results_dict
-            print("results_dict.keys()", results_dict.keys())
 
     # Validate before saving
     _ = MapToMapResultsValidator.from_dict(results_dict)
