@@ -104,7 +104,10 @@ def run(config):
                 "computed_assets": computed_assets,
             }
 
-        if distance_label in config["analysis"]["self_metrics"]:
+        if (
+            "self_metrics" in config["analysis"]
+            and distance_label in config["analysis"]["self_metrics"]
+        ):
             map_to_map_distance.distance_matrix_precomputation(
                 maps_user_flat, maps_user_flat
             )
