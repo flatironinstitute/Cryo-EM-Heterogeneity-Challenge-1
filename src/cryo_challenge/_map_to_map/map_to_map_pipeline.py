@@ -71,7 +71,9 @@ def run(config):
     )
 
     computed_assets = {}
+    self_computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
+        single_distance_results_dict = {}
         if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
             logger.info(f"cost matrix: {distance_label}")
 
@@ -97,9 +99,46 @@ def run(config):
             # output results
             single_distance_results_dict = {
                 "cost_matrix": cost_matrix_df,
-                "user_submission_label": user_submission_label,
                 "computed_assets": computed_assets,
             }
+
+        if distance_label in config["analysis"]["self_metrics"]:
+            map_to_map_distance.distance_matrix_precomputation(
+                maps_user_flat, maps_user_flat
+            )
+            cost_matrix = map_to_map_distance.get_distance_matrix(
+                maps_user_flat,
+                maps_user_flat,
+                global_store_of_running_results=results_dict,
+            )
+            computed_assets = map_to_map_distance.get_computed_assets(
+                maps_user_flat,
+                maps_user_flat,
+                global_store_of_running_results=results_dict,
+            )
+
+            self_computed_assets.update(self_computed_assets)
+
+            cost_matrix_df = pd.DataFrame(
+                cost_matrix,
+                columns=None,
+                index=results_dict["user_submitted_populations"].tolist(),
+            )
+
+            self_single_distance_results_dict = {
+                "self_cost_matrix": cost_matrix_df,
+                "self_computed_assets": self_computed_assets,
+            }
+
+            single_distance_results_dict.update(self_single_distance_results_dict)
+
+        if (
+            distance_label in config["analysis"]["metrics"]
+            or distance_label not in config["analysis"]["self_m2m"]
+        ):
+            single_distance_results_dict.update(
+                {"user_submission_label": user_submission_label}
+            )
 
             results_dict[distance_label] = single_distance_results_dict
 

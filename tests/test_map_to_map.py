@@ -5,8 +5,15 @@ import numpy as np
 
 def test_run_map2map_pipeline():
     args = OmegaConf.create(
+        {"config": "tests/config_files/test_config_map_to_map_self.yaml"}
+    )
+    results_dict = run_map2map_pipeline.main(args)
+    n_row_self, n_col_self = results_dict["l2"]["self_cost_matrix"].values.shape
+    assert n_row_self == n_col_self
+
+    args = OmegaConf.create(
         {
-            "config": "tests/config_files//test_config_map_to_map_procrustes_wasserstein.yaml"
+            "config": "tests/config_files/test_config_map_to_map_procrustes_wasserstein.yaml"
         }
     )
     results_dict = run_map2map_pipeline.main(args)
