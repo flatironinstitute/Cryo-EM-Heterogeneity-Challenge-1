@@ -189,6 +189,58 @@ def optimal_q_emd_vec(p, cost, constraints=None, **kwargs):
     return q_opt, T, flow, prob, runtime
 
 
+def optimal_q_emd_vec_regularized(p, cost, self_cost, constraints=None, **kwargs):
+    R, L = cost.shape
+    R_self, L_self = self_cost.shape
+    assert L == L_self, "cost and self_cost must share a marginal"
+
+    flow = cp.Variable(L + L * R)
+    transport_plan_self = cp.Variable(L_self * R_self)
+    u = np.zeros(L + L * R)
+    u_self = np.zeros(L_self * R_self)
+    u[L:] = cost.flatten()
+    u_self = self_cost.flatten()
+
+    def make_constraints(flow, p, L, R):
+        q = flow[:L]
+        return [
+            cp.sum(flow[L:].reshape((L, R)), axis=1) == q,
+            cp.sum(flow[L:].reshape((L, R)), axis=0) == p,
+            cp.sum(q) == 1,
+            flow >= 0,
+        ]
+
+    def make_constraints_self(transport_plan_self, q, L, R):
+        return [
+            cp.sum(transport_plan_self.reshape((L, R)), axis=1) == q,
+            cp.sum(transport_plan_self.reshape((L, R)), axis=0) == q,
+            transport_plan_self >= 0,
+        ]
+
+    constraints = make_constraints(flow, p, L, R)
+    q = flow[:L]
+    constraints_self = make_constraints_self(transport_plan_self, q, L_self, R_self)
+    flow_term_cross = u.flatten().T @ flow
+    flow_term_self = u_self.flatten().T @ transport_plan_self
+    reg_scalar_hyperparam = 0.0
+    prob = cp.Problem(
+        cp.Minimize(flow_term_cross + reg_scalar_hyperparam * flow_term_self),
+        constraints + constraints_self,
+    )
+    start = time.time()
+    prob.solve(**kwargs)
+    end = time.time()
+    runtime = end - start
+
+    T = flow[L:].value.reshape(cost.shape)
+    q_opt = T.sum(0)
+
+    T_self = transport_plan_self.value.reshape(self_cost.shape)
+    assert np.allclose(q_opt, T_self.sum(0))
+
+    return q_opt, T, flow, prob, runtime
+
+
 def main():
     p = np.array([0.25, 0.25, 0.5])
     cost = np.array(
@@ -198,8 +250,18 @@ def main():
             [1 / 2, 0],
         ]
     )
-    q_opt, T, _, _, _ = optimal_q_emd_vec(p, cost, solver=cp.GUROBI, verbose=True)
-    print(q_opt)
+    q_opt, T, _, _, _ = optimal_q_emd_vec(p, cost, solver=cp.CVXOPT, verbose=True)
+
+    cost = np.array(
+        [
+            [0, 1],
+            [1 / 2, 0],
+            [1 / 2, 0],
+        ]
+    )
+    q_opt, T, _, _, _ = optimal_q_emd_vec_regularized(
+        p, cost, self_cost=np.eye(2), solver=cp.CVXOPT, verbose=True
+    )
 
 
 if __name__ == "__main__":
