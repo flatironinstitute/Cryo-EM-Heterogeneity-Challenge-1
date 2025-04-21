@@ -6,6 +6,8 @@ n_replicates: 3
 n_pool_microstate: 2
 replicate_fraction: 0.9
 cvxpy_solver: ECOS
+regularization:
+  reg_scalar_hyperparam: 1.0
 optimal_q_kl:
   n_iter: 100000
   break_atol: 0.0001

@@ -13,7 +13,7 @@ data:
     do: true
     volume: tests/data/Ground_truth/test_mask_bool.mrc
 analysis:
-  self_metrics:
+  metrics_self:
     - l2
     - corr
     - bioem

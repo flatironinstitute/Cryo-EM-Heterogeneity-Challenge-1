@@ -1,11 +1,10 @@
 import pandas as pd
 import numpy as np
 import pickle
-from scipy.stats import rankdata
 import torch
 import ot
 
-from .optimal_transport import optimal_q_emd_vec
+from .optimal_transport import optimal_q_emd_vec, optimal_q_emd_vec_regularized
 from ..data._validation.output_validators import (
     DistributionToDistributionResultsValidator,
 )
@@ -73,7 +72,9 @@ def run(config):
 
     # user_submitted_populations = np.ones(80)/80
     user_submitted_populations = data["user_submitted_populations"]  # .numpy()
-    id = torch.load(data["config"]["data"]["submission"]["fname"], weights_only=False)["id"]
+    id = torch.load(data["config"]["data"]["submission"]["fname"], weights_only=False)[
+        "id"
+    ]
 
     results_dict = {}
     results_dict["config"] = config
@@ -92,6 +93,8 @@ def run(config):
         m = len(cost_matrix_df)
         # m_reduce = m//50
         cost_matrix = cost_matrix_df.values
+
+        cost_self = data[metric]["cost_matrix_self"].values
 
         n = cost_matrix.shape[1]
         # assert n == 80
@@ -119,19 +122,34 @@ def run(config):
                 Window[i, e] = 1  # TODO: soft windowing
 
             cost = cost_matrix[idxs]
-            cost_rank = np.apply_along_axis(rankdata, 1, cost)
+            W_distance = Window @ cost
+            # cost_rank = np.apply_along_axis(rankdata, 1, cost)
             # Wcost_rank = Window @ (cost_rank.max() - cost_rank)
             # W_distance = Wcost_rank
-            W_distance = Window @ cost_rank
+            # W_distance = Window @ cost_rank
 
             ## gt prob
             Wp = Window @ prob_gt_reduced
+
+            ## self for regularization
+            W_distance_self = cost_self
 
             # EMD
             ## opt
             q_opt, T, flow, prob, runtime = optimal_q_emd_vec(
                 Wp, W_distance, solver=config["cvxpy_solver"], verbose=True
             )
+            q_opt_reg, T_reg, flow_reg, prob_reg, runtime_reg = (
+                optimal_q_emd_vec_regularized(
+                    Wp,
+                    W_distance,
+                    W_distance_self,
+                    config["regularization"]["reg_scalar_hyperparam"],
+                    solver=config["cvxpy_solver"],
+                    verbose=True,
+                )
+            )
+
             results_dict[metric]["replicates"][replicate_idx]["EMD"] = {
                 "q_opt": q_opt,
                 "EMD_opt": prob.value,
@@ -139,6 +157,12 @@ def run(config):
                 "flow_opt": flow,
                 "prob_opt": prob,
                 "runtime_opt": runtime,
+                "q_opt_reg": q_opt_reg,
+                "EMD_opt_reg": prob_reg.value,
+                "transport_plan_opt_reg": T_reg,
+                "flow_opt_reg": flow_reg,
+                "prob_opt_reg": prob_reg,
+                "runtime_opt_reg": runtime_reg,
             }
             ## submission
             (

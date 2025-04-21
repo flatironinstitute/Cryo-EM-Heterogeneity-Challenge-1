@@ -189,7 +189,9 @@ def optimal_q_emd_vec(p, cost, constraints=None, **kwargs):
     return q_opt, T, flow, prob, runtime
 
 
-def optimal_q_emd_vec_regularized(p, cost, self_cost, constraints=None, **kwargs):
+def optimal_q_emd_vec_regularized(
+    p, cost, self_cost, reg_scalar_hyperparam, constraints=None, **kwargs
+):
     R, L = cost.shape
     R_self, L_self = self_cost.shape
     assert L == L_self, "cost and self_cost must share a marginal"
@@ -222,7 +224,7 @@ def optimal_q_emd_vec_regularized(p, cost, self_cost, constraints=None, **kwargs
     constraints_self = make_constraints_self(transport_plan_self, q, L_self, R_self)
     flow_term_cross = u.flatten().T @ flow
     flow_term_self = u_self.flatten().T @ transport_plan_self
-    reg_scalar_hyperparam = 0.0
+    reg_scalar_hyperparam = 1
     prob = cp.Problem(
         cp.Minimize(flow_term_cross + reg_scalar_hyperparam * flow_term_self),
         constraints + constraints_self,
@@ -259,9 +261,14 @@ def main():
             [1 / 2, 0],
         ]
     )
-    q_opt, T, _, _, _ = optimal_q_emd_vec_regularized(
-        p, cost, self_cost=np.eye(2), solver=cp.CVXOPT, verbose=True
+    q_opt_reg, T_reg, _, _, _ = optimal_q_emd_vec_regularized(
+        p, cost, self_cost=-np.eye(2), solver=cp.CVXOPT, verbose=True
     )
+
+    print("q_opt", q_opt)
+    print("q_opt_reg", q_opt_reg)
+    print("T", T)
+    print("T_reg", T_reg)
 
 
 if __name__ == "__main__":

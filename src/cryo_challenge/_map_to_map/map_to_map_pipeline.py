@@ -72,8 +72,6 @@ def run(config):
         weights_only=False,
     )
 
-    computed_assets = {}
-    self_computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
         single_distance_results_dict = {}
         if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
@@ -105,8 +103,8 @@ def run(config):
             }
 
         if (
-            "self_metrics" in config["analysis"]
-            and distance_label in config["analysis"]["self_metrics"]
+            "metrics_self" in config["analysis"]
+            and distance_label in config["analysis"]["metrics_self"]
         ):
             map_to_map_distance.distance_matrix_precomputation(
                 maps_user_flat, maps_user_flat
@@ -116,13 +114,13 @@ def run(config):
                 maps_user_flat,
                 global_store_of_running_results=self_results_dict,
             )
-            self_computed_assets = map_to_map_distance.get_computed_assets(
+            computed_assets_self = map_to_map_distance.get_computed_assets(
                 maps_user_flat,
                 maps_user_flat,
                 global_store_of_running_results=self_results_dict,
             )
 
-            self_computed_assets.update(self_computed_assets)
+            computed_assets_self.update(computed_assets_self)
 
             cost_matrix_df = pd.DataFrame(
                 cost_matrix,
@@ -131,13 +129,13 @@ def run(config):
             )
 
             self_single_distance_results_dict = {
-                "self_cost_matrix": cost_matrix_df,
-                "computed_assets": self_computed_assets,
+                "cost_matrix_self": cost_matrix_df,
+                "computed_assets": computed_assets_self,
             }
 
             self_single_distance_results_dict_nooverwrite = {
-                "self_cost_matrix": cost_matrix_df,
-                "self_computed_assets": self_computed_assets,
+                "cost_matrix_self": cost_matrix_df,
+                "computed_assets_self": computed_assets_self,
             }
 
             self_results_dict[distance_label] = self_single_distance_results_dict
@@ -148,7 +146,7 @@ def run(config):
 
         if (
             distance_label in config["analysis"]["metrics"]
-            or distance_label not in config["analysis"]["self_metrics"]
+            or distance_label not in config["analysis"]["metrics_self"]
         ):
             single_distance_results_dict.update(
                 {"user_submission_label": user_submission_label}

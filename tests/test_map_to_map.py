@@ -10,7 +10,7 @@ def test_run_map2map_pipeline():
     results_dict = run_map2map_pipeline.main(args)
     for metric in ["fsc", "res", "corr", "l2", "bioem"]:
         assert metric in results_dict.keys()
-        n_row_self, n_col_self = results_dict[metric]["self_cost_matrix"].values.shape
+        n_row_self, n_col_self = results_dict[metric]["cost_matrix_self"].values.shape
         assert n_row_self == n_col_self
 
     args = OmegaConf.create(
