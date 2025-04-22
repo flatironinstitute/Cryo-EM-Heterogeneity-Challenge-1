@@ -1,5 +1,15 @@
 import torch
+from torch.fft import fftn, fftshift
 from .crop_pad_utils import crop_vol_3d
+
+
+def fftn_center(input, norm="forward"):
+    return fftshift(fftn(fftshift(input), norm=norm))
+
+
+def htn_center(input):
+    output = fftn_center(input, norm="ortho")
+    return output.real - output.imag
 
 
 @torch.no_grad()
@@ -17,19 +27,12 @@ def downsample_volume(volume: torch.Tensor, box_size_ds: int) -> torch.Tensor:
     --------
     vol_ds (torch.Tensor): downsampled 3D volume
     """
-    vol_fft = torch.fft.fftshift(torch.fft.fftn(volume))
-    crop_vol_fft = crop_vol_3d(vol_fft, box_size_ds)
-
-    vol_ds = (
-        torch.fft.ifftn(torch.fft.ifftshift(crop_vol_fft))
-        * box_size_ds**3
-        / volume.shape[-1] ** 3
-    )
-
-    return vol_ds.real
+    return htn_center(crop_vol_3d(htn_center(volume), box_size_ds))
 
 
-def downsample_submission(volumes: torch.Tensor, box_size_ds: int) -> torch.Tensor:
+def downsample_submission(
+    volumes: torch.Tensor, box_size_ds: int, *, chunk_size=1
+) -> torch.Tensor:
     """
     Downsample submission volumes in Fourier space to specified box size.
 
@@ -38,20 +41,20 @@ def downsample_submission(volumes: torch.Tensor, box_size_ds: int) -> torch.Tens
     volumes (torch.Tensor): submission volumes
         shape: (n_volumes, im_x, im_y, im_z)
     box_size_ds (int): box size to downsample volumes to
+    chunck_size (int): chunk size for vmap
+        default: 1 (equivalent to for loop)
 
     Returns:
     --------
     volumes (torch.Tensor): downsampled submission volumes
     """
+
+    downsample_volume_batch = torch.vmap(
+        downsample_volume, in_dims=(0, None), chunk_size=chunk_size
+    )
+
     if volumes.shape[-1] == box_size_ds:
-        pass
+        return volumes
 
     else:
-        volumes_ds = torch.zeros(
-            (volumes.shape[0], box_size_ds, box_size_ds, box_size_ds)
-        )
-        for i in range(volumes.shape[0]):
-            volumes_ds[i] = downsample_volume(volumes[i], box_size_ds)
-        volumes = volumes_ds
-
-    return volumes
+        return downsample_volume_batch(volumes, box_size_ds)
