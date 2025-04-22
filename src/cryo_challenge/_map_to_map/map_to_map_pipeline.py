@@ -4,6 +4,10 @@ import torch
 import logging
 
 from ..data._validation.output_validators import MapToMapResultsValidator
+from .._map_to_map.alignment.map_alignment import (
+    run_all_by_all_alignment_mp,
+    apply_alignments,
+)
 from .._map_to_map.map_to_map_distance import (
     FSCDistance,
     Correlation,
@@ -71,6 +75,32 @@ def run(config):
     )
 
     computed_assets = {}
+    all_by_all_alignment = True
+    if all_by_all_alignment:
+        n_pix = config["data"]["n_pix"]
+
+        class Args:
+            n_i: int = len(maps_user_flat)
+            n_j: int = len(maps_gt_flat)
+            n_cpus: int = 64
+            downsample_box_size: int = 8
+            no_normalize: bool = False
+            apply_alignments: bool = True
+
+        args = Args()
+        volumes_i = maps_user_flat.reshape(-1, n_pix, n_pix, n_pix)
+        volumes_j = maps_gt_flat.reshape(-1, n_pix, n_pix, n_pix)
+        results = run_all_by_all_alignment_mp(volumes_i, volumes_j, args)
+        rotations = results["rotations"]
+        translations = results["translations"]
+        if args.apply_alignments:
+            (
+                results["interpolated_volumes_i_to_j"],
+                results["loss_initial"],
+                results["loss_final"],
+            ) = apply_alignments(volumes_i, rotations, translations, volumes_j)
+        computed_assets["all_by_all_alignment"] = results
+
     for distance_label, map_to_map_distance in map_to_map_distances.items():
         if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
             logger.info(f"cost matrix: {distance_label}")
