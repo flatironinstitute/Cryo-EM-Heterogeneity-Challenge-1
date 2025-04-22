@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import torch
 import ot
+from scipy.stats import rankdata
 
 from .optimal_transport import optimal_q_emd_vec, optimal_q_emd_vec_regularized
 from ..data._validation.output_validators import (
@@ -122,24 +123,27 @@ def run(config):
                 Window[i, e] = 1  # TODO: soft windowing
 
             cost = cost_matrix[idxs]
-            W_distance = Window @ cost
-            # cost_rank = np.apply_along_axis(rankdata, 1, cost)
-            # Wcost_rank = Window @ (cost_rank.max() - cost_rank)
-            # W_distance = Wcost_rank
-            # W_distance = Window @ cost_rank
+            # W_distance = Window @ cost
+
+            cost_rank = np.apply_along_axis(rankdata, 1, cost)
+            Wcost_rank = Window @ (cost_rank.max() - cost_rank)
+            W_distance = Wcost_rank
+            W_distance = Window @ cost_rank
 
             ## gt prob
             Wp = Window @ prob_gt_reduced
 
             ## self for regularization
-            W_distance_self = cost_self
+            # W_distance_self = cost_self
+            cost_self_rank = np.apply_along_axis(rankdata, 1, cost_self)
+            W_distance_self = cost_self_rank
 
             # EMD
             ## opt
             q_opt, T, flow, prob, runtime = optimal_q_emd_vec(
                 Wp, W_distance, solver=config["cvxpy_solver"], verbose=True
             )
-            q_opt_reg, T_reg, flow_reg, prob_reg, runtime_reg = (
+            q_opt_reg, T_reg, T_self, flow_reg, prob_reg, runtime_reg = (
                 optimal_q_emd_vec_regularized(
                     Wp,
                     W_distance,
@@ -160,6 +164,7 @@ def run(config):
                 "q_opt_reg": q_opt_reg,
                 "EMD_opt_reg": prob_reg.value,
                 "transport_plan_opt_reg": T_reg,
+                "transport_plan_opt_self": T_self,
                 "flow_opt_reg": flow_reg,
                 "prob_opt_reg": prob_reg,
                 "runtime_opt_reg": runtime_reg,
