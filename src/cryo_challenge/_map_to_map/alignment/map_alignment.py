@@ -211,8 +211,10 @@ def mp_main(args):
     )
     for i, v in enumerate(_volumes_i):
         volumes_i[i] = downsample_volume(v, box_size_ds)
+        volumes_i[i] /= torch.norm(volumes_i[i])
     for j, v in enumerate(_volumes_j):
         volumes_j[j] = downsample_volume(v, box_size_ds)
+        volumes_j[j] /= torch.norm(volumes_j[j])
 
     box_size_ds = args.downsample_box_size_ds
 
