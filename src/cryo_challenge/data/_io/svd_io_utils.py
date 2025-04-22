@@ -38,7 +38,7 @@ def load_submissions_svd(
             submission_files.append(file)
     submission_files = natsorted(submission_files)
 
-    vols = torch.load(os.path.join(path_to_submissions, submission_files[0]))["volumes"]
+    vols = torch.load(os.path.join(path_to_submissions, submission_files[0]), weights_only=False)["volumes"]
     box_size = vols.shape[-1]
 
     if config["normalize_params"]["mask_path"] is not None:
@@ -54,7 +54,7 @@ def load_submissions_svd(
 
     for file in submission_files:
         sub_path = os.path.join(path_to_submissions, file)
-        submission = torch.load(sub_path)
+        submission = torch.load(sub_path, weights_only=False)
 
         label = submission["id"]
         populations = submission["populations"]

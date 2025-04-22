@@ -49,7 +49,7 @@ def load_volumes(
     counter = 0
 
     for i, idx in enumerate(submission_list):
-        submission = torch.load(f"{path_to_submissions}/submission_{idx}.pt")
+        submission = torch.load(f"{path_to_submissions}/submission_{idx}.pt", weights_only=False)
         vols = submission["volumes"]
         pops = submission["populations"]
 
@@ -100,7 +100,7 @@ def load_ref_vols(box_size_ds: int, path_to_volumes: str, dtype=torch.float32):
     >>> volumes_ds = load_ref_vols(box_size_ds, path_to_volumes)
     """  # noqa: E501
     try:
-        volumes = torch.load(path_to_volumes)
+        volumes = torch.load(path_to_volumes, weights_only=False)
     except (FileNotFoundError, EOFError):
         raise ValueError("Volumes not found or not in PyTorch format.")
 
