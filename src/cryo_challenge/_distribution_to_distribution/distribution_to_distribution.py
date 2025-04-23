@@ -95,7 +95,12 @@ def run(config):
         # m_reduce = m//50
         cost_matrix = cost_matrix_df.values
 
+        ## self for regularization
         cost_self = data[metric]["cost_matrix_self"].values
+        # W_distance_self = cost_self
+        cost_self_rank = np.apply_along_axis(rankdata, 1, cost_self)
+        W_distance_self = cost_self_rank
+        results_dict[metric]["cost_self"] = W_distance_self
 
         n = cost_matrix.shape[1]
         # assert n == 80
@@ -126,17 +131,12 @@ def run(config):
             # W_distance = Window @ cost
 
             cost_rank = np.apply_along_axis(rankdata, 1, cost)
-            Wcost_rank = Window @ (cost_rank.max() - cost_rank)
-            W_distance = Wcost_rank
+            # Wcost_rank = Window @ (cost_rank.max() - cost_rank)
+            # W_distance = Wcost_rank
             W_distance = Window @ cost_rank
 
             ## gt prob
             Wp = Window @ prob_gt_reduced
-
-            ## self for regularization
-            # W_distance_self = cost_self
-            cost_self_rank = np.apply_along_axis(rankdata, 1, cost_self)
-            W_distance_self = cost_self_rank
 
             # EMD
             ## opt

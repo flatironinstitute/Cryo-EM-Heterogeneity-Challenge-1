@@ -249,7 +249,6 @@ def optimal_q_emd_vec_regularized(
     constraints_self = make_constraints_self(transport_plan_self, q_row, q_col, True)
     flow_term_cross = u.flatten().T @ flow
     flow_term_self = u_self.flatten().T @ transport_plan_self
-    reg_scalar_hyperparam = 1
     prob = cp.Problem(
         cp.Minimize(flow_term_cross + reg_scalar_hyperparam * flow_term_self),
         constraints + constraints_self,
