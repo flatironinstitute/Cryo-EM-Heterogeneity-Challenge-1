@@ -190,26 +190,27 @@ def optimal_q_emd_vec(p, cost, constraints=None, **kwargs):
 
 
 def optimal_q_emd_vec_regularized(
-    p, cost, self_cost, reg_scalar_hyperparam, constraints=None, **kwargs
+    p, q_sub, cost, self_cost, reg_scalar_hyperparam, constraints=None, **kwargs
 ):
     R, L = cost.shape
     flow = cp.Variable(L + L * R)
+    q = flow[:L]
 
-    split_q_in_half = True
+    # split_q_in_half = True
     R_self, L_self = self_cost.shape
     assert R_self == L_self, "self_cost must be square"
     assert L == L_self, "cost and self_cost must share a marginal"
-    if split_q_in_half:
-        idx_half_set_1 = np.arange(0, L_self, 2)
-        idx_half_set_2 = idx_half_set_1 + 1
-        self_cost_subset = self_cost[idx_half_set_1][:, idx_half_set_2]
-        self_cost = self_cost_subset
-        L_self = R_self = len(idx_half_set_1)
-        q = flow[:L]
-        q_row = q[idx_half_set_1]
-        q_col = q[idx_half_set_2]
-    else:
-        q_row = q_col = flow[:L]
+    # if split_q_in_half:
+    #     idx_half_set_1 = np.arange(0, L_self, 2)
+    #     idx_half_set_2 = idx_half_set_1 + 1
+    #     self_cost_subset = self_cost[idx_half_set_1][:, idx_half_set_2]
+    #     self_cost = self_cost_subset
+    #     L_self = R_self = len(idx_half_set_1)
+    #     q = flow[:L]
+    #     q_row = q[idx_half_set_1]
+    #     q_col = q[idx_half_set_2]
+    # else:
+    #     q_row = q_col = flow[:L]
 
     transport_plan_self = cp.Variable(L_self * R_self)
     u = np.zeros(L + L * R)
@@ -227,14 +228,14 @@ def optimal_q_emd_vec_regularized(
         ]
 
     def make_constraints_self(
-        transport_plan_self, q_row, q_col, self_transport_fix_zero
+        transport_plan_self, q_to_opt, q_ref, self_transport_fix_zero
     ):
-        L = q_row.size
-        R = q_col.size
+        L = q_to_opt.size
+        R = len(q_ref)
         assert L == R, "self_cost must be square"
         constraints = [
-            cp.sum(transport_plan_self.reshape((L, R)), axis=1) == q_row,
-            cp.sum(transport_plan_self.reshape((L, R)), axis=0) == q_col,
+            cp.sum(transport_plan_self.reshape((L, R)), axis=1) == q_to_opt,
+            cp.sum(transport_plan_self.reshape((L, R)), axis=0) == q_ref,
             transport_plan_self >= 0,
         ]
 
@@ -246,7 +247,7 @@ def optimal_q_emd_vec_regularized(
 
     constraints = make_constraints(flow, p, L, R)
 
-    constraints_self = make_constraints_self(transport_plan_self, q_row, q_col, True)
+    constraints_self = make_constraints_self(transport_plan_self, q, q_sub, True)
     flow_term_cross = u.flatten().T @ flow
     flow_term_self = u_self.flatten().T @ transport_plan_self
     prob = cp.Problem(
@@ -262,8 +263,8 @@ def optimal_q_emd_vec_regularized(
     q_opt = T.sum(0)
 
     T_self = transport_plan_self.value.reshape(self_cost.shape)
-    if not split_q_in_half:
-        assert np.allclose(q_opt, T_self.sum(0))
+    # if not split_q_in_half:
+    #     assert np.allclose(q_opt, T_self.sum(0))
 
     return (
         q_opt,

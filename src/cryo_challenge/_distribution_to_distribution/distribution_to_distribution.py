@@ -146,6 +146,7 @@ def run(config):
             q_opt_reg, T_reg, T_self, flow_reg, prob_reg, runtime_reg = (
                 optimal_q_emd_vec_regularized(
                     Wp,
+                    user_submitted_populations,
                     W_distance,
                     W_distance_self,
                     config["regularization"]["reg_scalar_hyperparam"],
