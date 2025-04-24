@@ -1,17 +1,17 @@
 data:
-  n_pix: 224
-  psize: 2.146
-  submission:
-    fname: data/dataset_2_ground_truth/submission_0.pt
+  box_size: 224
+  voxel_size: 2.146
+  submission_params:
+    path_to_submission_file: data/dataset_2_ground_truth/submission_0.pt
     volume_key: volumes
     metadata_key: populations
     label_key: id
-  ground_truth:
-    volumes: data/dataset_2_ground_truth/maps_gt_flat.pt
-    metadata: data/dataset_2_ground_truth/metadata.csv
-  mask:
-    do: true
-    volume: data/dataset_2_ground_truth/mask_dilated_wide_224x224.mrc
+  ground_truth_params:
+    path_to_volumes: data/dataset_2_ground_truth/maps_gt_flat.pt
+    path_to_path_to_metadata: data/dataset_2_ground_truth/metadata.csv
+  mask_params:
+    apply_mask: true
+    path_to_mask: data/dataset_2_ground_truth/mask_dilated_wide_224x224.mrc
 analysis:
   metrics:
     - l2
@@ -21,7 +21,7 @@ analysis:
     - res
   chunk_size_submission: 80
   chunk_size_gt: 190
-  normalize:
+  normalize_params:
     do: true
     method: median_zscore
 output: results/map_to_map_distance_matrix_submission_0.pkl

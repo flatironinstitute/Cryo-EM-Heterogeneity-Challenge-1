@@ -1,8 +1,8 @@
 import torch
 from cryo_challenge.power_spectrum_utils import _centered_ifftn, compute_power_spectrum
-from cryo_challenge._preprocessing.bfactor_normalize import (
-    _compute_bfactor_scaling,
-    bfactor_normalize_volumes,
+from cryo_challenge.utils._bfactor_filters import (
+    _compute_bfactor_filter,
+    apply_bfactor_filter,
 )
 
 
@@ -64,10 +64,10 @@ def test_bfactor_normalize_volumes():
 
     oscillatory_volume = torch.sin(300 * s2).reshape(volume_shape)
     oscillatory_volume = _centered_ifftn(oscillatory_volume)
-    bfactor_scaling_vol = _compute_bfactor_scaling(170, box_size, voxel_size)
+    bfactor_scaling_vol = _compute_bfactor_filter(-170, box_size, voxel_size)
 
-    norm_oscillatory_vol = bfactor_normalize_volumes(
-        oscillatory_volume, 170, voxel_size, in_place=False
+    norm_oscillatory_vol = apply_bfactor_filter(
+        oscillatory_volume, -170, voxel_size, in_place=False
     )
 
     ps_osci = torch.fft.fftn(oscillatory_volume, dim=(-3, -2, -1), norm="backward")[

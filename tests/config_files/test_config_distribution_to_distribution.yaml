@@ -1,12 +1,12 @@
-input_fname: tests/data/data_for_dist_to_dist/test_map_to_map_distance_matrix_submission_0.pkl
+path_to_map_to_map_results: tests/data/data_for_dist_to_dist/test_map_to_map_distance_matrix_submission_0.pkl
 metrics:
   - l2
-gt_metadata_fname: tests/data/Ground_truth/test_metadata_10.csv
+path_to_ground_truth_metadata: tests/data/Ground_truth/test_metadata_10.csv
 n_replicates: 3
 n_pool_microstate: 2
 replicate_fraction: 0.9
 cvxpy_solver: ECOS
-optimal_q_kl:
+optimal_q_kl_params:
   n_iter: 100000
   break_atol: 0.0001
-output_fname: tests/results/test_distribution_to_distribution_submission_0.pkl
+path_to_output_file: tests/results/test_distribution_to_distribution_submission_0.pkl

@@ -61,6 +61,7 @@ dependencies = [
   "dask",
   "dask[distributed]",
   "dask-jobqueue",
+  "jaxtyping"
 ]
 
 
@@ -106,5 +107,9 @@ exclude_lines = [
   "if TYPE_CHECKING:",
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"**.py" = ["F722"]
+
 [project.scripts]
-cryo_challenge = "cryo_challenge.command_line:main_commands"
+#cryo_challenge = "cryo_challenge.command_line:main_commands"
+run_preprocessing = "cryo_challenge.commands.run_preprocessing:main_as_cli"
