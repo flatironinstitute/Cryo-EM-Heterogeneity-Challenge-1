@@ -6,6 +6,9 @@ import torch
 import ot
 
 from .optimal_transport import optimal_q_emd_vec
+from cryo_challenge.config_validation._distribution_to_disribution_validation import (
+    DistToDistResultsValidator,
+)
 
 
 def sort_by_transport(cost):
