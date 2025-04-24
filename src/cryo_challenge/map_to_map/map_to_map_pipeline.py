@@ -2,6 +2,7 @@ import pandas as pd
 import pickle
 import torch
 import logging
+from collections import OrderedDict
 
 from ..config_validation._map_to_map_validation import MapToMapResultsValidator
 from .map_to_map_distance import (
@@ -18,16 +19,31 @@ from .map_to_map_distance import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+ORDER_TO_ENDURE_FSC_BEFORE_RES = [
+    "corr",
+    "l2",
+    "bioem",
+    "fsc",
+    "res",
+    "zernike3d",
+    "gromov_wasserstein",
+    "procrustes_wasserstein",
+]
+
 AVAILABLE_MAP2MAP_DISTANCES = {
-    "fsc": FSCDistance,
     "corr": Correlation,
     "l2": L2DistanceNorm,
     "bioem": BioEM3dDistance,
+    "fsc": FSCDistance,
     "res": FSCResDistance,
     "zernike3d": Zernike3DDistance,
     "gromov_wasserstein": GromovWassersteinDistance,
     "procrustes_wasserstein": ProcrustesWassersteinDistance,
 }
+
+AVAILABLE_MAP2MAP_DISTANCES = OrderedDict(
+    (k, AVAILABLE_MAP2MAP_DISTANCES[k]) for k in ORDER_TO_ENDURE_FSC_BEFORE_RES
+)
 
 
 def run(config):
