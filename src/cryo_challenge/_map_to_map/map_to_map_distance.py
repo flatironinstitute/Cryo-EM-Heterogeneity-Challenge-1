@@ -509,8 +509,6 @@ def compute_distance(args):
     ) = args
     results = []
     for idx_j in range(len(sparse_coordinates_sets_j)):
-        if idx_i == idx_j:
-            continue
         logger.info(f"Computing distance between {idx_i} and {idx_j}")
         _, _, logs = procrustes_wasserstein(
             torch.from_numpy(sparse_coordinates_i),
@@ -540,6 +538,9 @@ class ProcrustesWassersteinDistance(MapToMapDistance):
         extra_params = self.config["analysis"]["procrustes_wasserstein_extra_params"]
 
         n_pix = self.config["data"]["n_pix"]
+        logger.info(f"maps1 shape {maps1.shape}")
+        logger.info(f"maps2 shape {maps2.shape}")
+
         maps1 = maps1.reshape((len(maps1), n_pix, n_pix, n_pix))
         maps2 = maps2.reshape((len(maps2), n_pix, n_pix, n_pix))
 
@@ -567,7 +568,7 @@ class ProcrustesWassersteinDistance(MapToMapDistance):
         logger.info("Done setting up volumes and distances")
 
         dists = torch.zeros(len(maps1), len(maps2))
-        self.stored_computed_assets = {"procrustes_wasserstein": {}}
+        self.stored_computed_assets = {"procrustes_wasserstein_logs": {}}
 
         def parallel_compute_distances(
             maps1,
@@ -606,18 +607,39 @@ class ProcrustesWassersteinDistance(MapToMapDistance):
 
             return dists, local_stored_computed_assets
 
-        dists, local_stored_computed_assets = parallel_compute_distances(
-            maps1,
-            maps2,
-            sparse_coordinates_sets_i,
-            sparse_coordinates_sets_j,
-            marginals_i,
-            marginals_j,
-            extra_params,
-        )
-        self.stored_computed_assets["procrustes_wasserstein"] = (
-            local_stored_computed_assets
-        )
+        n_chunks = extra_params["n_chunks"]
+        idx_chunk_i = 0
+        for maps1_chunk in torch.chunk(maps1, n_chunks):
+            idxs_chunk_f = idx_chunk_i + len(maps1_chunk)
+            dists_chunk, local_stored_computed_assets_chunk = (
+                parallel_compute_distances(
+                    maps1_chunk,
+                    maps2,
+                    sparse_coordinates_sets_i,
+                    sparse_coordinates_sets_j,
+                    marginals_i,
+                    marginals_j,
+                    extra_params,
+                )
+            )
+            dists[idx_chunk_i:idxs_chunk_f] = dists_chunk
+
+            def modify_key(dictionary, offset):
+                # Iterate over keys and update in place
+                for old_key in list(
+                    dictionary.keys()
+                ):  # Use list() to avoid runtime error (modifying dict during iteration)
+                    new_key = (old_key[0] + offset, old_key[1])
+                    dictionary[new_key] = dictionary.pop(
+                        old_key
+                    )  # Move value to new key and delete old key
+
+            modify_key(local_stored_computed_assets_chunk, idx_chunk_i)
+            idx_chunk_i = idxs_chunk_f
+            self.stored_computed_assets["procrustes_wasserstein_logs"].update(
+                local_stored_computed_assets_chunk
+            )
+
         return dists
 
     @override
