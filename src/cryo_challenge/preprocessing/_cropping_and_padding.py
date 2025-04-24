@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 from typing import Tuple
-from jaxtyping import Array, Float
+from torch import Tensor
 
 
 def _get_slices_for_cropping(shape, cropped_shape):
@@ -22,9 +22,7 @@ def _get_slices_for_cropping(shape, cropped_shape):
     return slice(start_z, end_z), slice(start_y, end_y), slice(start_x, end_x)
 
 
-def crop_volume_to_shape(
-    volume: Float[Array, "_ _ _"], new_shape: Tuple[int, int, int]
-) -> Float[Array, "_ _ _"]:
+def crop_volume_to_shape(volume: Tensor, new_shape: Tuple[int, int, int]) -> Tensor:
     """
     Crop 3D volume to specified shape
 
@@ -47,9 +45,7 @@ def crop_volume_to_shape(
 
 
 @torch.no_grad()
-def crop_volume_to_box_size(
-    volume: Float[Array, "_ _ _"], new_box_size
-) -> Float[Array, "_ _ _"]:
+def crop_volume_to_box_size(volume: Tensor, new_box_size) -> Tensor:
     """
     Crop 3D volume to specified box size
 
@@ -67,9 +63,7 @@ def crop_volume_to_box_size(
     return crop_volume_to_shape(volume, (new_box_size, new_box_size, new_box_size))
 
 
-def crop_submission_to_box_size(
-    volumes: Float[Array, "N_vols Nz Ny Nx"], new_box_size: int
-) -> Float[Array, "N_vols _ _ _"]:
+def crop_submission_to_box_size(volumes: Tensor, new_box_size: int) -> Tensor:
     """
     Crop submission volumes to specified box size
 
@@ -92,9 +86,7 @@ def crop_submission_to_box_size(
     return volumes[:, slices[0], slices[1], slices[2]]
 
 
-def pad_submission_to_box_size(
-    volumes: Float[Array, "N_vols _ _ _"], box_size_pad: int
-) -> Float[Array, "N_vols _ _ _"]:
+def pad_submission_to_box_size(volumes: Tensor, box_size_pad: int) -> Tensor:
     """
     Pad submission volumes to specified box size
 
@@ -119,11 +111,11 @@ def pad_submission_to_box_size(
 
 
 def crop_or_pad_submission(
-    volumes: Float[Array, "N_vols _ _ _"],
+    volumes: Tensor,
     box_size_gt: int,
     pixel_size_sub: int,
     pixel_size_gt: int,
-) -> Float[Array, "N_vols _ _ _"]:
+) -> Tensor:
     """
     Crop or pad submission volumes to match ground truth pixel size and box size
 
