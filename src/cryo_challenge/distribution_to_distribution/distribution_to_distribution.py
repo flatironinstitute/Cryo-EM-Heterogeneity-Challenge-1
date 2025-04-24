@@ -5,10 +5,10 @@ from scipy.stats import rankdata
 import torch
 import ot
 
-from .optimal_transport import optimal_q_emd_vec
-from cryo_challenge.config_validation._distribution_to_disribution_validation import (
+from ..config_validation._distribution_to_disribution_validation import (
     DistToDistResultsValidator,
 )
+from .optimal_transport import optimal_q_emd_vec
 
 
 def sort_by_transport(cost):

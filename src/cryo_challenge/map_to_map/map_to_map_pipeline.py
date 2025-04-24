@@ -16,6 +16,7 @@ from .map_to_map_distance import (
     ProcrustesWassersteinDistance,
 )
 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
