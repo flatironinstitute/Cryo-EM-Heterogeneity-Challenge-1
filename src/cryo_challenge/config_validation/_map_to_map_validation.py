@@ -185,6 +185,23 @@ class MapToMapInputConfigAnalysisGromovWasserstein(BaseModel, extra="forbid"):
     )
 
 
+class MapToMapInputConfigAnalysisProcrustesWasserstein(BaseModel, extra="forbid"):
+    downsample_box_size: PositiveInt = Field(
+        default=32,
+        description="Final box size of downsampled volume.",
+    )
+    top_k: PositiveInt = Field(
+        default=1000,
+        description="Number of voxels to use (ranked according to highest mass)",
+    )
+    max_iter: PositiveInt = Field(
+        description="Number of iterations, where each iterations updates the correspondence / transport plan and pose)",
+    )
+    tol: PositiveFloat = Field(
+        description="Stopping tolerance (absolute difference of objective between iterations).",
+    )
+
+
 class MapToMapInputConfigAnalysisZernike3d(BaseModel, extra="forbid"):
     gpuID: PositiveInt = Field(
         default=0,
@@ -243,12 +260,12 @@ class MapToMapInputConfigAnalysis(BaseModel):
     zernike3d_extra_params: Optional[dict] = Field(
         default=None,
         description="Extra parameters for the Zernike3D distance",
-    )  # TODO!!!!
+    )
 
     procrustes_wasserstein_extra_params: Optional[dict] = Field(
         default=None,
         description="Extra parameters for the Procrustes Wasserstein distance",
-    )  # TODO!!!!
+    )
 
     @field_validator("normalize_params")
     @classmethod
@@ -272,6 +289,19 @@ class MapToMapInputConfigAnalysis(BaseModel):
                 ).model_dump()
             )
         return gromov_wasserstein_extra_params
+
+    @field_validator("procrustes_wasserstein_extra_params")
+    @classmethod
+    def validate_procrustes_wasserstein_params(
+        cls, procrustes_wasserstein_extra_params
+    ):
+        if procrustes_wasserstein_extra_params is not None:
+            procrustes_wasserstein_extra_params = dict(
+                MapToMapInputConfigAnalysisProcrustesWasserstein(
+                    **procrustes_wasserstein_extra_params
+                ).model_dump()
+            )
+        return procrustes_wasserstein_extra_params
 
     @field_validator("zernike3d_extra_params")
     @classmethod
