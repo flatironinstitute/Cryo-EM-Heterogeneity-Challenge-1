@@ -27,4 +27,4 @@ analysis:
   normalize_params:
     do: false
     method: median_zscore
-output: tests/results/test_map_to_map_distance_matrix_submission_0.pkl
+path_to_output_file: tests/results/test_map_to_map_distance_matrix_submission_0.pkl

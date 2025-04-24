@@ -111,7 +111,7 @@ def run(config):
     # Validate before saving
     results_dict = dict(MapToMapResultsValidator(**results_dict).model_dump())
 
-    with open(config["output"], "wb") as f:
+    with open(config["path_to_output_file"], "wb") as f:
         pickle.dump(results_dict, f)
 
     return results_dict

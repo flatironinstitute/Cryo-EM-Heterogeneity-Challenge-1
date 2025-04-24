@@ -322,7 +322,7 @@ class MapToMapInputConfig(BaseModel, extra="forbid"):
     analysis: dict = Field(
         description="Parameters for the analysis",
     )
-    output: PurePath
+    path_to_output_file: PurePath
 
     @field_validator("data_params")
     @classmethod
