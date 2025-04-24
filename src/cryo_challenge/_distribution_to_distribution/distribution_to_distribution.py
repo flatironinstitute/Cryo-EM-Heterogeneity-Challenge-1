@@ -149,7 +149,7 @@ def run(config):
                     user_submitted_populations,
                     W_distance,
                     W_distance_self,
-                    config["regularization"]["reg_scalar_hyperparam"],
+                    config["regularization"],
                     solver=config["cvxpy_solver"],
                     verbose=True,
                 )

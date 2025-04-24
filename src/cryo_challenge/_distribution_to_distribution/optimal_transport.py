@@ -190,7 +190,7 @@ def optimal_q_emd_vec(p, cost, constraints=None, **kwargs):
 
 
 def optimal_q_emd_vec_regularized(
-    p, q_sub, cost, self_cost, reg_scalar_hyperparam, constraints=None, **kwargs
+    p, q_sub, cost, self_cost, regularization_dict, constraints=None, **kwargs
 ):
     R, L = cost.shape
     flow = cp.Variable(L + L * R)
@@ -212,7 +212,7 @@ def optimal_q_emd_vec_regularized(
     # else:
     #     q_row = q_col = flow[:L]
 
-    transport_plan_self = cp.Variable(L_self * R_self)
+    # transport_plan_self = cp.Variable(L_self * R_self)
     u = np.zeros(L + L * R)
     u_self = np.zeros(L_self * R_self)
     u[L:] = cost.flatten()
@@ -247,22 +247,27 @@ def optimal_q_emd_vec_regularized(
 
     constraints = make_constraints(flow, p, L, R)
 
-    constraints_self = make_constraints_self(transport_plan_self, q, q_sub, True)
+    constraints_self = []  # make_constraints_self(transport_plan_self, q, q_sub, True)
     flow_term_cross = u.flatten().T @ flow
-    flow_term_self = u_self.flatten().T @ transport_plan_self
+    flow_term_self = 1  # u_self.flatten().T @ transport_plan_self
+    entropy_q = -cp.sum(cp.entr(q))
     prob = cp.Problem(
-        cp.Minimize(flow_term_cross + reg_scalar_hyperparam * flow_term_self),
+        cp.Minimize(
+            flow_term_cross
+            + regularization_dict["scalar_hyperparam_self_emd"] * flow_term_self
+            + regularization_dict["scalar_hyperparam_self_entropy_q"] * entropy_q
+        ),
         constraints + constraints_self,
     )
     start = time.time()
-    prob.solve(**kwargs)
+    prob.solve(**kwargs, max_iters=1000)
     end = time.time()
     runtime = end - start
 
     T = flow[L:].value.reshape(cost.shape)
     q_opt = T.sum(0)
 
-    T_self = transport_plan_self.value.reshape(self_cost.shape)
+    T_self = None  # transport_plan_self.value.reshape(self_cost.shape)
     # if not split_q_in_half:
     #     assert np.allclose(q_opt, T_self.sum(0))
 
