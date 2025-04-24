@@ -58,9 +58,11 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     replicate_fraction: PositiveFloat = Field(
         description="Fraction of the data to use for replicates."
     )
-    cvxpy_solver: Literal["TODO", "ECOS"] = Field(
-        default="TODO",
-        description="CVXPY solver to use for optimization. TODO: add more solvers.",
+    cvxpy_solver: Literal["ECOS", "CVXOPT", "CLARABEL", "GUROBI", "SCS", "MOSEK"] = (
+        Field(
+            default="ECOS",
+            description="CVXPY solver to use for optimization. See https://www.cvxpy.org/tutorial/solvers/index.html.",
+        )
     )
     optimal_q_kl_params: dict = Field(
         description="Parameters for the optimal q KL divergence.",
@@ -113,7 +115,7 @@ class DistToDistResultsValidatorReplicateKL(BaseModel, extra="forbid"):
     klqp_opt: float, KL divergence between the (optimized) user submitted distribution and the ground truth distribution (p).
     A: List[List[float]], assignment matrix.
     iter_stop: int, number of iterations until convergence.
-    eps_stop: float, stopping criterion.
+    eps_stop: float, stopping tolerance.
     klpq_submitted: float, KL divergence between the ground truth distribution (p) and the user submitted distribution (q).
     klqp_submitted: float, KL divergence between the user submitted distribution (q) and the ground truth distribution (p).
     """

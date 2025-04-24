@@ -185,6 +185,23 @@ class MapToMapInputConfigAnalysisGromovWasserstein(BaseModel, extra="forbid"):
     )
 
 
+class MapToMapInputConfigAnalysisZernike3d(BaseModel, extra="forbid"):
+    gpuID: PositiveInt = Field(
+        default=0,
+        description="Identifier of GPU",
+    )
+    tmpDir: str = Field(
+        default="tmp_zernike",
+        description="Name of directory to store intermediate files",
+    )
+    thr: PositiveInt = Field(
+        description="Number of threads to use for the computation",
+    )
+    numProjections: PositiveInt = Field(
+        description="Number of projections. Suggested 20-100.",
+    )
+
+
 class MapToMapInputConfigAnalysis(BaseModel):
     metrics: List[
         Literal[
@@ -255,6 +272,17 @@ class MapToMapInputConfigAnalysis(BaseModel):
                 ).model_dump()
             )
         return gromov_wasserstein_extra_params
+
+    @field_validator("zernike3d_extra_params")
+    @classmethod
+    def validate_zernike3d__params(cls, zernike3d_extra_params):
+        if zernike3d_extra_params is not None:
+            zernike3d_extra_params = dict(
+                MapToMapInputConfigAnalysisZernike3d(
+                    **zernike3d_extra_params
+                ).model_dump()
+            )
+        return zernike3d_extra_params
 
 
 class MapToMapInputConfig(BaseModel, extra="forbid"):
