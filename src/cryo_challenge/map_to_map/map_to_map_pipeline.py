@@ -52,14 +52,19 @@ def run(config):
     Compare a submission to ground truth.
     """
 
+    for key, value in config["metrics"].copy().items():
+        if len(value) == 0:
+            del config["metrics"][key]
+            print(f"Removing {key} from config['metrics'] because it is empty")
+
     logger.info("Running map-to-map analysis")
     map_to_map_distances = {
         distance_label: distance_class(config)
         for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
-        if distance_label in config["analysis"]["metrics"]
+        if distance_label in config["metrics"]
     }
 
-    do_low_memory_mode = config["analysis"]["low_memory"]["do"]
+    do_low_memory_mode = config["metrics"]["shared_params"]["low_memory"] is not None
 
     logger.info("Loading submission")
     submission = torch.load(
@@ -77,6 +82,7 @@ def run(config):
 
     results_dict = {}
     results_dict["config"] = config
+
     results_dict["user_submitted_populations"] = torch.tensor(
         submission[submission_metadata_key] / submission[submission_metadata_key].sum()
     )
@@ -94,7 +100,18 @@ def run(config):
 
     computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
-        if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
+        print(f"Computing {distance_label} distance")
+        if distance_label in config["metrics"].keys():
+            print(f"Computing {distance_label} distance")
+            config_metric = config["metrics"][distance_label]
+            print(f"with config {config_metric}")
+        else:
+            del config["metrics"][distance_label]
+
+        if (
+            distance_label in config["metrics"].keys()
+            and len(config["metrics"][distance_label]) != 0
+        ):  # TODO: can remove
             logger.info(f"cost matrix: {distance_label}")
 
             map_to_map_distance.distance_matrix_precomputation(
@@ -124,6 +141,8 @@ def run(config):
             }
 
             results_dict[distance_label] = single_distance_results_dict
+    print("results_dict.keys()", results_dict.keys())
+    print("results_dict['config']", results_dict["config"])
 
     # Validate before saving
     results_dict = dict(MapToMapResultsValidator(**results_dict).model_dump())

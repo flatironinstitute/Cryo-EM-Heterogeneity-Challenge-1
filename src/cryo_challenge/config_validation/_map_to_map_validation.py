@@ -1,4 +1,4 @@
-from typing import Optional, Annotated, Literal, List
+from typing import Optional, Annotated, Literal, Dict
 from typing_extensions import Self
 import glob
 import os
@@ -219,108 +219,94 @@ class MapToMapInputConfigAnalysisZernike3d(BaseModel, extra="forbid"):
     )
 
 
-class MapToMapInputConfigAnalysis(BaseModel):
-    metrics: List[
-        Literal[
-            "fsc",
-            "corr",
-            "l2",
-            "bioem",
-            "res",
-            "zernike3d",
-            "gromov_wasserstein",
-            "procrustes_wasserstein",
-        ]
-    ] = Field(
-        description="List of metrics to compute",
-    )
-
+class MapToMapInputConfigAnalysisL2BioemCorr(BaseModel, extra="forbid"):
     chunk_size_submission: PositiveInt = Field(
-        default=1,
-        description="Chunk size for the submission volumes",
+        default=20,
+        description="Batch size of the submission volumes",
     )
     chunk_size_gt: PositiveInt = Field(
-        default=1,
-        description="Chunk size for the ground truth volumes",
+        default=100,
+        description="Batch size of the ground truth volumes",
     )
-
-    normalize_params: dict = Field(
+    normalize_params: Optional[Dict] = Field(
         description="Parameters for the normalization of the volumes",
     )
-
-    low_memory: dict = Field(
+    low_memory: Optional[Dict] = Field(
         description="Parameters for the low memory mode",
     )
 
-    gromov_wasserstein_extra_params: Optional[dict] = Field(
-        default=None,
-        description="Extra parameters for the Gromov-Wasserstein distance",
-    )
 
-    zernike3d_extra_params: Optional[dict] = Field(
-        default=None,
-        description="Extra parameters for the Zernike3D distance",
+class MapToMapInputConfigMetrics(BaseModel):
+    l2: Optional[dict] = Field(
+        default={},
+        description="List of metrics to compute, and there own parameters",
     )
-
-    procrustes_wasserstein_extra_params: Optional[dict] = Field(
-        default=None,
+    corr: Optional[dict] = Field(
+        default={},
+        description="List of metrics to compute, and there own parameters",
+    )
+    bioem: Optional[dict] = Field(
+        default={},
+        description="List of metrics to compute, and there own parameters",
+    )
+    fsc: Optional[dict] = Field(
+        default={},
+        description="List of metrics to compute, and there own parameters",
+    )
+    res: Optional[dict] = Field(
+        default={},
+        description="List of metrics to compute, and there own parameters",
+    )
+    procrustes_wasserstein: Optional[dict] = Field(
+        default={},
         description="Extra parameters for the Procrustes Wasserstein distance",
     )
+    gromov_wasserstein: Optional[dict] = Field(
+        default={},
+        description="Extra parameters for the Gromov-Wasserstein distance",
+    )
+    zernike3d: Optional[dict] = Field(
+        default={},
+        description="Extra parameters for the Zernike3D distance",
+    )
+    shared_params: Optional[Dict] = Field(
+        description="Shared parameters for the metrics",
+    )
 
-    @field_validator("normalize_params")
+    @field_validator("l2")
     @classmethod
-    def validate_normalize_params(cls, normalize_params):
-        return dict(
-            MapToMapInputConfigAnalysisNormalize(**normalize_params).model_dump()
-        )
-
-    @field_validator("low_memory")
-    @classmethod
-    def validate_low_memory(cls, low_memory):
-        return dict(MapToMapInputConfigAnalysisLowMemory(**low_memory).model_dump())
-
-    @field_validator("gromov_wasserstein_extra_params")
-    @classmethod
-    def validate_gromov_wasserstein_params(cls, gromov_wasserstein_extra_params):
-        if gromov_wasserstein_extra_params is not None:
-            gromov_wasserstein_extra_params = dict(
-                MapToMapInputConfigAnalysisGromovWasserstein(
-                    **gromov_wasserstein_extra_params
-                ).model_dump()
+    def validate_l2_params(cls, l2_params):
+        if l2_params is not None:
+            l2_params = dict(
+                MapToMapInputConfigAnalysisL2BioemCorr(**l2_params).model_dump()
             )
-        return gromov_wasserstein_extra_params
+        return l2_params
 
-    @field_validator("procrustes_wasserstein_extra_params")
+    @field_validator("corr")
     @classmethod
-    def validate_procrustes_wasserstein_params(
-        cls, procrustes_wasserstein_extra_params
-    ):
-        if procrustes_wasserstein_extra_params is not None:
-            procrustes_wasserstein_extra_params = dict(
-                MapToMapInputConfigAnalysisProcrustesWasserstein(
-                    **procrustes_wasserstein_extra_params
-                ).model_dump()
+    def validate_corr_params(cls, corr_params):
+        if corr_params is not None:
+            corr_params = dict(
+                MapToMapInputConfigAnalysisL2BioemCorr(**corr_params).model_dump()
             )
-        return procrustes_wasserstein_extra_params
+        return corr_params
 
-    @field_validator("zernike3d_extra_params")
+    @field_validator("bioem")
     @classmethod
-    def validate_zernike3d__params(cls, zernike3d_extra_params):
-        if zernike3d_extra_params is not None:
-            zernike3d_extra_params = dict(
-                MapToMapInputConfigAnalysisZernike3d(
-                    **zernike3d_extra_params
-                ).model_dump()
+    def validate_bioem_params(cls, bioem_params):
+        if bioem_params is not None:
+            bioem_params = dict(
+                MapToMapInputConfigAnalysisL2BioemCorr(**bioem_params).model_dump()
             )
-        return zernike3d_extra_params
+        return bioem_params
 
 
 class MapToMapInputConfig(BaseModel, extra="forbid"):
     data_params: dict = Field(
         description="Parameters for loading the submission, ground truth and mask",
     )
-    analysis: dict = Field(
-        description="Parameters for the analysis",
+    metrics: Dict[str, Dict] = Field(
+        description="Dictionary of metrics to compute and their parameters, including shared parameters",
     )
     path_to_output_file: PurePath
 
@@ -329,16 +315,16 @@ class MapToMapInputConfig(BaseModel, extra="forbid"):
     def validate_data_params(cls, data_params):
         return dict(MapToMapInputConfigData(**data_params).model_dump())
 
-    @field_validator("analysis")
+    @field_validator("metrics")
     @classmethod
-    def validate_analysis(cls, analysis):
-        return dict(MapToMapInputConfigAnalysis(**analysis).model_dump())
+    def validate_metrics(cls, metrics):
+        return dict(MapToMapInputConfigMetrics(**metrics).model_dump())
 
 
 def _validate_metric_in_config(metric, metric_name, config):
     if metric is None:
         assert (
-            metric_name not in config["analysis"]["metrics"]
+            metric_name not in config["metrics"]
         ), f"{metric_name} metric is not computed, but is requested."
     return metric
 
