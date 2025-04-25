@@ -52,11 +52,6 @@ def run(config):
     Compare a submission to ground truth.
     """
 
-    # for key, value in config["metrics"].copy().items():
-    #     if len(value) == 0:
-    #         del config["metrics"][key]
-    #         print(f"Removing {key} from config['metrics'] because it is empty")
-
     logger.info("Running map-to-map analysis")
     map_to_map_distances = {
         distance_label: distance_class(config)
@@ -101,43 +96,33 @@ def run(config):
     computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
         print(f"Computing {distance_label} distance")
-        # if distance_label in config["metrics"].keys():
-        #     print(f"Computing {distance_label} distance")
-        #     config_metric = config["metrics"][distance_label]
-        #     print(f"with config {config_metric}")
-        # else:
-        #     del config["metrics"][distance_label]
+        assert distance_label in config["metrics"].keys()
+        logger.info(f"cost matrix: {distance_label}")
 
-        if distance_label in config["metrics"].keys():  # TODO: can remove
-            logger.info(f"cost matrix: {distance_label}")
+        map_to_map_distance.distance_matrix_precomputation(maps_gt_flat, maps_user_flat)
+        cost_matrix = map_to_map_distance.get_distance_matrix(
+            maps_gt_flat,
+            maps_user_flat,
+            global_store_of_running_results=results_dict,
+        )
+        computed_assets = map_to_map_distance.get_computed_assets(
+            maps_gt_flat,
+            maps_user_flat,
+            global_store_of_running_results=results_dict,
+        )
+        computed_assets.update(computed_assets)
 
-            map_to_map_distance.distance_matrix_precomputation(
-                maps_gt_flat, maps_user_flat
-            )
-            cost_matrix = map_to_map_distance.get_distance_matrix(
-                maps_gt_flat,
-                maps_user_flat,
-                global_store_of_running_results=results_dict,
-            )
-            computed_assets = map_to_map_distance.get_computed_assets(
-                maps_gt_flat,
-                maps_user_flat,
-                global_store_of_running_results=results_dict,
-            )
-            computed_assets.update(computed_assets)
+        cost_matrix_df = pd.DataFrame(
+            cost_matrix, columns=None, index=metadata_gt.populations.tolist()
+        )
 
-            cost_matrix_df = pd.DataFrame(
-                cost_matrix, columns=None, index=metadata_gt.populations.tolist()
-            )
+        single_distance_results_dict = {
+            "cost_matrix": cost_matrix_df,
+            "user_submission_label": user_submission_label,
+            "computed_assets": computed_assets,
+        }
 
-            # output results
-            single_distance_results_dict = {
-                "cost_matrix": cost_matrix_df,
-                "user_submission_label": user_submission_label,
-                "computed_assets": computed_assets,
-            }
-
-            results_dict[distance_label] = single_distance_results_dict
+        results_dict[distance_label] = single_distance_results_dict
     print("results_dict.keys()", results_dict.keys())
     print("results_dict['config']", results_dict["config"])
 

@@ -250,7 +250,7 @@ def fourier_shell_correlation(
     -------
     torch.Tensor
         The correlation between x and y for each Fourier shell.
-    """  # noqa: E501
+    """
     batch_shape = x.shape[: -len(dim)]
 
     freqs = [torch.fft.fftfreq(x.shape[d], d=1 / x.shape[d]).to(x) for d in dim]
@@ -513,7 +513,8 @@ class Zernike3DDistance(MapToMapDistance):
 
     @override
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
-        return self.stored_computed_assets  # must run get_distance_matrix first
+        """Note: must run get_distance_matrix first"""
+        return self.stored_computed_assets
 
 
 def compute_distance(args):

@@ -71,7 +71,6 @@ def run(config):
     with open(config["path_to_map_to_map_results"], "rb") as f:
         data = pickle.load(f)
 
-    # user_submitted_populations = np.ones(80)/80
     user_submitted_populations = data["user_submitted_populations"]  # .numpy()
     id = torch.load(data["config"]["data"]["submission"]["fname"], weights_only=False)[
         "id"
@@ -94,11 +93,9 @@ def run(config):
             metadata_df.index.tolist()
         ]  # ordering along het-pc for windowing
         m = len(cost_matrix_df)
-        # m_reduce = m//50
         cost_matrix = cost_matrix_df.values
 
         n = cost_matrix.shape[1]
-        # assert n == 80
 
         n_pool_microstate = config["n_pool_microstate"]
         n_replicates = config["n_replicates"]
@@ -204,6 +201,7 @@ def run(config):
                 "A": A,
                 "iter_stop": iter_stop,
                 "eps_stop": eps_stop,
+                "objective": objective,
             }
             ## submission
             klpq, klqp = compute_kl_between_distributions(
