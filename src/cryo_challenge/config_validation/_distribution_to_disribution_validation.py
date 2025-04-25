@@ -106,9 +106,7 @@ class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):
     transport_plan_submitted: List[List[float]]
 
 
-class DistToDistResultsValidatorReplicateKL(
-    BaseModel, extra="forbid", arbitrary_types_allowed=True
-):
+class DistToDistResultsValidatorReplicateKL(BaseModel, extra="forbid"):
     """
     Validate the output dictionary of one KL divergence in the the distribution-to-distribution pipeline.
 
@@ -120,6 +118,7 @@ class DistToDistResultsValidatorReplicateKL(
     eps_stop: float, stopping tolerance.
     klpq_submitted: float, KL divergence between the ground truth distribution (p) and the user submitted distribution (q).
     klqp_submitted: float, KL divergence between the user submitted distribution (q) and the ground truth distribution (p).
+    objective: List[float], objective function values at each iteration.
     """
 
     q_opt: List[PositiveFloat]
@@ -130,7 +129,7 @@ class DistToDistResultsValidatorReplicateKL(
     eps_stop: float
     klpq_submitted: float
     klqp_submitted: float
-    objective: Tensor
+    objective: List[float]
 
 
 class DistToDistResultsValidatorMetrics(BaseModel, extra="forbid"):
