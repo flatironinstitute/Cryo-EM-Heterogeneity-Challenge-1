@@ -56,10 +56,10 @@ def run(config):
     map_to_map_distances = {
         distance_label: distance_class(config)
         for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
-        if distance_label in config["analysis"]["metrics"]
+        if distance_label in config["metrics"]
     }
 
-    do_low_memory_mode = config["analysis"]["low_memory"]["do"]
+    do_low_memory_mode = config["metrics"]["shared_params"]["low_memory"] is not None
 
     logger.info("Loading submission")
     submission = torch.load(
@@ -77,6 +77,7 @@ def run(config):
 
     results_dict = {}
     results_dict["config"] = config
+
     results_dict["user_submitted_populations"] = torch.tensor(
         submission[submission_metadata_key] / submission[submission_metadata_key].sum()
     )
@@ -94,39 +95,41 @@ def run(config):
 
     computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
-        if distance_label in config["analysis"]["metrics"]:  # TODO: can remove
-            logger.info(f"cost matrix: {distance_label}")
+        print(f"Computing {distance_label} distance")
+        assert distance_label in config["metrics"].keys()
+        logger.info(f"cost matrix: {distance_label}")
 
-            map_to_map_distance.distance_matrix_precomputation(
-                maps_gt_flat, maps_user_flat
-            )
-            cost_matrix = map_to_map_distance.get_distance_matrix(
-                maps_gt_flat,
-                maps_user_flat,
-                global_store_of_running_results=results_dict,
-            )
-            computed_assets = map_to_map_distance.get_computed_assets(
-                maps_gt_flat,
-                maps_user_flat,
-                global_store_of_running_results=results_dict,
-            )
-            computed_assets.update(computed_assets)
+        map_to_map_distance.distance_matrix_precomputation(maps_gt_flat, maps_user_flat)
+        cost_matrix = map_to_map_distance.get_distance_matrix(
+            maps_gt_flat,
+            maps_user_flat,
+            global_store_of_running_results=results_dict,
+        )
+        computed_assets = map_to_map_distance.get_computed_assets(
+            maps_gt_flat,
+            maps_user_flat,
+            global_store_of_running_results=results_dict,
+        )
+        computed_assets.update(computed_assets)
 
-            cost_matrix_df = pd.DataFrame(
-                cost_matrix, columns=None, index=metadata_gt.populations.tolist()
-            )
+        cost_matrix_df = pd.DataFrame(
+            cost_matrix, columns=None, index=metadata_gt.populations.tolist()
+        )
 
-            # output results
-            single_distance_results_dict = {
-                "cost_matrix": cost_matrix_df,
-                "user_submission_label": user_submission_label,
-                "computed_assets": computed_assets,
-            }
+        single_distance_results_dict = {
+            "cost_matrix": cost_matrix_df,
+            "user_submission_label": user_submission_label,
+            "computed_assets": computed_assets,
+        }
 
-            results_dict[distance_label] = single_distance_results_dict
+        results_dict[distance_label] = single_distance_results_dict
+    print("results_dict.keys()", results_dict.keys())
+    print("results_dict['config']", results_dict["config"])
 
     # Validate before saving
-    results_dict = dict(MapToMapResultsValidator(**results_dict).model_dump())
+    results_dict = dict(
+        MapToMapResultsValidator(**results_dict).model_dump(exclude_none=True)
+    )
 
     with open(config["path_to_output_file"], "wb") as f:
         pickle.dump(results_dict, f)

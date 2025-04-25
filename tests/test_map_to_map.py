@@ -71,3 +71,7 @@ def test_run_map2map_pipeline_low_memory():
                 results_dict_low_memory[metric]["cost_matrix"].values,
             )
     return
+
+
+if __name__ == "__main__":
+    test_run_map2map_pipeline_zernike()

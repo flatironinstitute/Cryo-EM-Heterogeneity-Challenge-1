@@ -118,6 +118,7 @@ class DistToDistResultsValidatorReplicateKL(BaseModel, extra="forbid"):
     eps_stop: float, stopping tolerance.
     klpq_submitted: float, KL divergence between the ground truth distribution (p) and the user submitted distribution (q).
     klqp_submitted: float, KL divergence between the user submitted distribution (q) and the ground truth distribution (p).
+    objective: List[float], objective function values at each iteration.
     """
 
     q_opt: List[PositiveFloat]
@@ -128,6 +129,7 @@ class DistToDistResultsValidatorReplicateKL(BaseModel, extra="forbid"):
     eps_stop: float
     klpq_submitted: float
     klqp_submitted: float
+    objective: List[float]
 
 
 class DistToDistResultsValidatorMetrics(BaseModel, extra="forbid"):

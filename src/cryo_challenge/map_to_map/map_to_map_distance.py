@@ -36,11 +36,18 @@ def normalize(maps, method):
 class MapToMapDistance:
     def __init__(self, config):
         self.config = config
-        self.do_low_memory_mode = self.config["analysis"]["low_memory"]["do"]
-        self.chunk_size_gt = self.config["analysis"]["chunk_size_gt"]
-        self.chunk_size_submission = self.config["analysis"]["chunk_size_submission"]
+        self.do_low_memory_mode = (
+            self.config["metrics"]["shared_params"]["low_memory"] is not None
+        )
+        self.chunk_size_gt = self.config["metrics"]["shared_params"]["chunk_size_gt"]
+        self.chunk_size_submission = self.config["metrics"]["shared_params"][
+            "chunk_size_submission"
+        ]
         self.box_size = self.config["data_params"]["box_size"]
-        self.chunk_size = self.config["analysis"]["low_memory"]["chunk_size"]
+        if self.do_low_memory_mode:
+            self.chunk_size = self.config["metrics"]["shared_params"]["low_memory"][
+                "chunk_size"
+            ]
         if self.config["data_params"]["mask_params"]["apply_mask"]:
             self.mask = (
                 mrcfile.open(self.config["data_params"]["mask_params"]["path_to_mask"])
@@ -75,9 +82,12 @@ class MapToMapDistance:
         else:
             maps2 = maps2.reshape(len(maps2), -1)
 
-        if self.config["analysis"]["normalize_params"]["do"]:
+        if self.config["metrics"]["shared_params"]["normalize_params"] is not None:
             maps2 = normalize(
-                maps2, method=self.config["analysis"]["normalize_params"]["method"]
+                maps2,
+                method=self.config["metrics"]["shared_params"]["normalize_params"][
+                    "method"
+                ],
             )
         if self.do_low_memory_mode:
             self.n_chunks_low_memory = len(maps1) // self.chunk_size
@@ -90,10 +100,15 @@ class MapToMapDistance:
                     ]
                 else:
                     maps1_in_memory = maps1_in_memory.reshape(len(maps1_in_memory), -1)
-                if self.config["analysis"]["normalize_params"]["do"]:
+                if (
+                    self.config["metrics"]["shared_params"]["normalize_params"]
+                    is not None
+                ):
                     maps1_in_memory = normalize(
                         maps1_in_memory,
-                        method=self.config["analysis"]["normalize_params"]["method"],
+                        method=self.config["metrics"]["shared_params"][
+                            "normalize_params"
+                        ]["method"],
                     )
                 sub_distance_matrix = self.get_sub_distance_matrix(
                     maps1_in_memory,
@@ -235,7 +250,7 @@ def fourier_shell_correlation(
     -------
     torch.Tensor
         The correlation between x and y for each Fourier shell.
-    """  # noqa: E501
+    """
     batch_shape = x.shape[: -len(dim)]
 
     freqs = [torch.fft.fftfreq(x.shape[d], d=1 / x.shape[d]).to(x) for d in dim]
@@ -347,9 +362,12 @@ class FSCDistance(MapToMapDistance):
         else:
             maps2 = maps2.reshape(len(maps2), -1)
 
-        if self.config["analysis"]["normalize_params"]["do"]:
+        if self.config["metrics"]["shared_params"]["normalize_params"] is not None:
             maps2 = normalize(
-                maps2, method=self.config["analysis"]["normalize_params"]["method"]
+                maps2,
+                method=self.config["metrics"]["shared_params"]["normalize_params"][
+                    "method"
+                ],
             )
         if self.chunk_size is None:
             self.n_chunks_low_memory = 1
@@ -366,10 +384,12 @@ class FSCDistance(MapToMapDistance):
 
             else:
                 maps1_in_memory = maps1_in_memory.reshape(len(maps1_in_memory), -1)
-            if self.config["analysis"]["normalize_params"]["do"]:
+            if self.config["metrics"]["shared_params"]["normalize_params"] is not None:
                 maps1_in_memory = normalize(
                     maps1_in_memory,
-                    method=self.config["analysis"]["normalize_params"]["method"],
+                    method=self.config["metrics"]["shared_params"]["normalize_params"][
+                        "method"
+                    ],
                 )
             sub_distance_matrix = self.get_sub_distance_matrix(
                 maps1_in_memory,
@@ -431,12 +451,10 @@ class Zernike3DDistance(MapToMapDistance):
 
     @override
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
-        gpuID = self.config["analysis"]["zernike3d_extra_params"]["gpuID"]
-        outputPath = self.config["analysis"]["zernike3d_extra_params"]["tmpDir"]
-        thr = self.config["analysis"]["zernike3d_extra_params"]["thr"]
-        numProjections = self.config["analysis"]["zernike3d_extra_params"][
-            "numProjections"
-        ]
+        gpuID = self.config["metrics"]["zernike3d"]["gpuID"]
+        outputPath = self.config["metrics"]["zernike3d"]["tmpDir"]
+        thr = self.config["metrics"]["zernike3d"]["thr"]
+        numProjections = self.config["metrics"]["zernike3d"]["numProjections"]
 
         # Create output directory
         if not os.path.isdir(outputPath):
@@ -495,7 +513,8 @@ class Zernike3DDistance(MapToMapDistance):
 
     @override
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
-        return self.stored_computed_assets  # must run get_distance_matrix first
+        """Note: must run get_distance_matrix first"""
+        return self.stored_computed_assets
 
 
 def compute_distance(args):
@@ -537,7 +556,7 @@ class ProcrustesWassersteinDistance(MapToMapDistance):
     @override
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         logger.info("Computing Procrustes-Wasserstein distance")
-        extra_params = self.config["analysis"]["procrustes_wasserstein_extra_params"]
+        extra_params = self.config["metrics"]["procrustes_wasserstein"]
 
         box_size = self.config["data_params"]["box_size"]
         maps1 = maps1.reshape((len(maps1), box_size, box_size, box_size))
@@ -633,7 +652,7 @@ class GromovWassersteinDistance(MapToMapDistance):
 
     @override
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
-        extra_params = self.config["analysis"]["gromov_wasserstein_extra_params"]
+        extra_params = self.config["metrics"]["gromov_wasserstein"]
         box_size = self.config["data_params"]["box_size"]
         maps1 = maps1.reshape((len(maps1), box_size, box_size, box_size))
         maps2 = maps2.reshape((len(maps2), box_size, box_size, box_size))

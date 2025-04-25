@@ -11,18 +11,18 @@ data_params:
     path_to_metadata: tests/data/Ground_truth/test_metadata_10.csv
   mask_params:
     apply_mask: false
-analysis:
-  metrics:
-    - l2
-    - corr
-    - bioem
-    - fsc
-    - res
-  chunk_size_submission: 4
-  chunk_size_gt: 5
-  low_memory:
-    do: true
-    chunk_size: 2
-  normalize_params:
-    do: false
+
+metrics:
+  l2: {}
+  corr: {}
+  bioem: {}
+  fsc: {}
+  res: {}
+  shared_params:
+    low_memory:
+      chunk_size: 2
+    chunk_size_submission: 4
+    chunk_size_gt: 5
+    normalize_params: null
+
 path_to_output_file: tests/results/test_map_to_map_distance_matrix_submission_0.pkl

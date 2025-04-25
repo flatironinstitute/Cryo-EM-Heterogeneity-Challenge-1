@@ -5,9 +5,6 @@ from scipy.stats import rankdata
 import torch
 import ot
 
-from ..config_validation._distribution_to_disribution_validation import (
-    DistToDistResultsValidator,
-)
 from .optimal_transport import optimal_q_emd_vec
 
 
@@ -71,7 +68,6 @@ def run(config):
     with open(config["path_to_map_to_map_results"], "rb") as f:
         data = pickle.load(f)
 
-    # user_submitted_populations = np.ones(80)/80
     user_submitted_populations = data["user_submitted_populations"]  # .numpy()
     id = torch.load(data["config"]["data"]["submission"]["fname"], weights_only=False)[
         "id"
@@ -94,11 +90,9 @@ def run(config):
             metadata_df.index.tolist()
         ]  # ordering along het-pc for windowing
         m = len(cost_matrix_df)
-        # m_reduce = m//50
         cost_matrix = cost_matrix_df.values
 
         n = cost_matrix.shape[1]
-        # assert n == 80
 
         n_pool_microstate = config["n_pool_microstate"]
         n_replicates = config["n_replicates"]
@@ -186,7 +180,7 @@ def run(config):
                 iter_stop = iter
                 eps_stop = eps
                 klpq, klqp = compute_kl_between_distributions(Wp, WA.dot(q_opt))
-                return q_opt, objective, klpq, klqp, iter_stop, eps_stop
+                return q_opt, objective[:iter_stop], klpq, klqp, iter_stop, eps_stop
 
             ## opt
             q_opt, objective, klpq, klqp, iter_stop, eps_stop = optimal_q_kl(
@@ -204,6 +198,7 @@ def run(config):
                 "A": A,
                 "iter_stop": iter_stop,
                 "eps_stop": eps_stop,
+                "objective": objective,
             }
             ## submission
             klpq, klqp = compute_kl_between_distributions(
@@ -213,7 +208,7 @@ def run(config):
                 {"klpq_submitted": klpq, "klqp_submitted": klqp}
             )
 
-    results_dict = dict(DistToDistResultsValidator(**results_dict).model_dump())
+    # results_dict = dict(DistToDistResultsValidator(**results_dict).model_dump())
     with open(config["path_to_output_file"], "wb") as f:
         pickle.dump(results_dict, f)
 

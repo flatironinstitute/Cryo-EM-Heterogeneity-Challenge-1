@@ -1,4 +1,4 @@
-from typing import Optional, Annotated, Literal, List
+from typing import Optional, Annotated, Literal, Dict
 from typing_extensions import Self
 import glob
 import os
@@ -16,6 +16,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+import pandas
 from torch import Tensor
 
 
@@ -219,108 +220,144 @@ class MapToMapInputConfigAnalysisZernike3d(BaseModel, extra="forbid"):
     )
 
 
-class MapToMapInputConfigAnalysis(BaseModel):
-    metrics: List[
-        Literal[
-            "fsc",
-            "corr",
-            "l2",
-            "bioem",
-            "res",
-            "zernike3d",
-            "gromov_wasserstein",
-            "procrustes_wasserstein",
-        ]
-    ] = Field(
-        description="List of metrics to compute",
-    )
-
+class MapToMapInputConfigAnalysisL2BioemCorr(BaseModel, extra="forbid"):
     chunk_size_submission: PositiveInt = Field(
-        default=1,
-        description="Chunk size for the submission volumes",
+        default=20,
+        description="Batch size of the submission volumes",
     )
     chunk_size_gt: PositiveInt = Field(
-        default=1,
-        description="Chunk size for the ground truth volumes",
+        default=100,
+        description="Batch size of the ground truth volumes",
     )
-
-    normalize_params: dict = Field(
+    normalize_params: Optional[Dict] = Field(
+        default=None,
         description="Parameters for the normalization of the volumes",
     )
-
-    low_memory: dict = Field(
+    low_memory: Optional[Dict] = Field(
+        default=None,
         description="Parameters for the low memory mode",
     )
 
-    gromov_wasserstein_extra_params: Optional[dict] = Field(
-        default=None,
-        description="Extra parameters for the Gromov-Wasserstein distance",
-    )
 
-    zernike3d_extra_params: Optional[dict] = Field(
-        default=None,
-        description="Extra parameters for the Zernike3D distance",
+class MapToMapInputConfigSharedParams(BaseModel, extra="forbid"):
+    chunk_size_submission: PositiveInt = Field(
+        default=20,
+        description="Batch size of the submission volumes",
     )
-
-    procrustes_wasserstein_extra_params: Optional[dict] = Field(
-        default=None,
-        description="Extra parameters for the Procrustes Wasserstein distance",
+    chunk_size_gt: PositiveInt = Field(
+        default=100,
+        description="Batch size of the ground truth volumes",
     )
-
-    @field_validator("normalize_params")
-    @classmethod
-    def validate_normalize_params(cls, normalize_params):
-        return dict(
-            MapToMapInputConfigAnalysisNormalize(**normalize_params).model_dump()
-        )
+    normalize_params: Optional[Dict] = Field(
+        default=None,
+        description="Parameters for the normalization of the volumes",
+    )
+    low_memory: Optional[Dict] = Field(
+        default=None,
+        description="Parameters for the low memory mode",
+    )
 
     @field_validator("low_memory")
     @classmethod
-    def validate_low_memory(cls, low_memory):
-        return dict(MapToMapInputConfigAnalysisLowMemory(**low_memory).model_dump())
-
-    @field_validator("gromov_wasserstein_extra_params")
-    @classmethod
-    def validate_gromov_wasserstein_params(cls, gromov_wasserstein_extra_params):
-        if gromov_wasserstein_extra_params is not None:
-            gromov_wasserstein_extra_params = dict(
-                MapToMapInputConfigAnalysisGromovWasserstein(
-                    **gromov_wasserstein_extra_params
-                ).model_dump()
+    def validate_low_memory_params(cls, low_memory_params):
+        if low_memory_params is not None:
+            low_memory_params = dict(
+                MapToMapInputConfigLowMemory(**low_memory_params).model_dump()
             )
-        return gromov_wasserstein_extra_params
+        return low_memory_params
 
-    @field_validator("procrustes_wasserstein_extra_params")
-    @classmethod
-    def validate_procrustes_wasserstein_params(
-        cls, procrustes_wasserstein_extra_params
-    ):
-        if procrustes_wasserstein_extra_params is not None:
-            procrustes_wasserstein_extra_params = dict(
-                MapToMapInputConfigAnalysisProcrustesWasserstein(
-                    **procrustes_wasserstein_extra_params
-                ).model_dump()
-            )
-        return procrustes_wasserstein_extra_params
 
-    @field_validator("zernike3d_extra_params")
+class MapToMapInputConfigLowMemory(BaseModel, extra="forbid"):
+    do: bool = Field(
+        default=False,
+        description="Whether to use low memory mode",
+    )
+    chunk_size: PositiveInt = Field(
+        default=1,
+        description="Chunk size for low memory mode",
+    )
+
+
+class MapToMapInputConfigMetrics(BaseModel):
+    l2: Optional[dict] = Field(
+        default=None,
+        description="List of metrics to compute, and there own parameters",
+    )
+    corr: Optional[dict] = Field(
+        default=None,
+        description="List of metrics to compute, and there own parameters",
+    )
+    bioem: Optional[dict] = Field(
+        default=None,
+        description="List of metrics to compute, and there own parameters",
+    )
+    fsc: Optional[dict] = Field(
+        default=None,
+        description="List of metrics to compute, and there own parameters",
+    )
+    res: Optional[dict] = Field(
+        default=None,
+        description="List of metrics to compute, and there own parameters",
+    )
+    procrustes_wasserstein: Optional[dict] = Field(
+        default=None,
+        description="Extra parameters for the Procrustes Wasserstein distance",
+    )
+    gromov_wasserstein: Optional[dict] = Field(
+        default=None,
+        description="Extra parameters for the Gromov-Wasserstein distance",
+    )
+    zernike3d: Optional[dict] = Field(
+        default=None,
+        description="Extra parameters for the Zernike3D distance",
+    )
+    shared_params: Optional[Dict] = Field(
+        description="Shared parameters for the metrics",
+    )
+
+    @field_validator("shared_params")
     @classmethod
-    def validate_zernike3d__params(cls, zernike3d_extra_params):
-        if zernike3d_extra_params is not None:
-            zernike3d_extra_params = dict(
-                MapToMapInputConfigAnalysisZernike3d(
-                    **zernike3d_extra_params
-                ).model_dump()
+    def validate_shared_params(cls, shared_params):
+        if shared_params is not None:
+            shared_params = dict(
+                MapToMapInputConfigSharedParams(**shared_params).model_dump()
             )
-        return zernike3d_extra_params
+        return shared_params
+
+    @field_validator("l2")
+    @classmethod
+    def validate_l2_params(cls, l2_params):
+        if l2_params is not None:
+            l2_params = dict(
+                MapToMapInputConfigAnalysisL2BioemCorr(**l2_params).model_dump()
+            )
+        return l2_params
+
+    @field_validator("corr")
+    @classmethod
+    def validate_corr_params(cls, corr_params):
+        if corr_params is not None:
+            corr_params = dict(
+                MapToMapInputConfigAnalysisL2BioemCorr(**corr_params).model_dump()
+            )
+        return corr_params
+
+    @field_validator("bioem")
+    @classmethod
+    def validate_bioem_params(cls, bioem_params):
+        if bioem_params is not None:
+            bioem_params = dict(
+                MapToMapInputConfigAnalysisL2BioemCorr(**bioem_params).model_dump()
+            )
+        return bioem_params
 
 
 class MapToMapInputConfig(BaseModel, extra="forbid"):
     data_params: dict = Field(
         description="Parameters for loading the submission, ground truth and mask",
     )
-    analysis: dict = Field(
-        description="Parameters for the analysis",
+    metrics: Dict[str, Dict] = Field(
+        description="Dictionary of metrics to compute and their parameters, including shared parameters",
     )
     path_to_output_file: PurePath
 
@@ -329,18 +366,35 @@ class MapToMapInputConfig(BaseModel, extra="forbid"):
     def validate_data_params(cls, data_params):
         return dict(MapToMapInputConfigData(**data_params).model_dump())
 
-    @field_validator("analysis")
+    @field_validator("metrics")
     @classmethod
-    def validate_analysis(cls, analysis):
-        return dict(MapToMapInputConfigAnalysis(**analysis).model_dump())
+    def validate_metrics(cls, metrics):
+        return dict(MapToMapInputConfigMetrics(**metrics).model_dump(exclude_none=True))
 
 
-def _validate_metric_in_config(metric, metric_name, config):
-    if metric is None:
-        assert (
-            metric_name not in config["analysis"]["metrics"]
-        ), f"{metric_name} metric is not computed, but is requested."
-    return metric
+class MapToMapResultsAllMetrics(BaseModel, extra="forbid"):
+    """
+    Validate the output dictionary of each map-to-map distance matrix computation.
+
+    cost_matrix: pandas.core.frame.DataFrame
+    user_submission_label: str
+    computed_assets: dict
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    cost_matrix: pandas.DataFrame = Field(
+        default=None,
+        description="Cost matrix",
+    )
+    user_submission_label: str = Field(
+        default=None,
+        description="User submission label",
+    )
+    computed_assets: dict = Field(
+        default=None,
+        description="Computed assets",
+    )
 
 
 class MapToMapResultsValidator(BaseModel, extra="forbid"):
@@ -355,7 +409,7 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
     fsc: dict, FSC results.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     config: dict = Field(
         description="Input config dictionary",
@@ -363,7 +417,6 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
     user_submitted_populations: Tensor = Field(
         description="User submitted populations, which sum to 1",
     )
-
     corr: Optional[dict] = Field(
         default=None,
         description="Correlation results",
@@ -396,7 +449,6 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
         default=None,
         description="Procrustes-Wasserstein results",
     )
-    # put dataclass here???
 
     @field_validator("config")
     @classmethod
@@ -413,18 +465,26 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
 
     @model_validator(mode="after")
     def validate_metrics(self) -> Self:
-        self.corr = _validate_metric_in_config(self.corr, "corr", self.config)
-        self.l2 = _validate_metric_in_config(self.l2, "l2", self.config)
-        self.bioem = _validate_metric_in_config(self.bioem, "bioem", self.config)
-        self.fsc = _validate_metric_in_config(self.fsc, "fsc", self.config)
-        self.res = _validate_metric_in_config(self.res, "res", self.config)
-        self.zernike3d = _validate_metric_in_config(
-            self.zernike3d, "zernike3d", self.config
-        )
-        self.gromov_wasserstein = _validate_metric_in_config(
-            self.gromov_wasserstein, "gromov_wasserstein", self.config
-        )
-        self.procrustes_wasserstein = _validate_metric_in_config(
-            self.procrustes_wasserstein, "procrustes_wasserstein", self.config
-        )
+        if self.corr is not None:
+            self.corr = dict(MapToMapResultsAllMetrics(**self.corr).model_dump())
+        if self.l2 is not None:
+            self.l2 = dict(MapToMapResultsAllMetrics(**self.l2).model_dump())
+        if self.bioem is not None:
+            self.bioem = dict(MapToMapResultsAllMetrics(**self.bioem).model_dump())
+        if self.fsc is not None:
+            self.fsc = dict(MapToMapResultsAllMetrics(**self.fsc).model_dump())
+        if self.res is not None:
+            self.res = dict(MapToMapResultsAllMetrics(**self.res).model_dump())
+        if self.procrustes_wasserstein is not None:
+            self.procrustes_wasserstein = dict(
+                MapToMapResultsAllMetrics(**self.procrustes_wasserstein).model_dump()
+            )
+        if self.gromov_wasserstein is not None:
+            self.gromov_wasserstein = dict(
+                MapToMapResultsAllMetrics(**self.gromov_wasserstein).model_dump()
+            )
+        if self.zernike3d is not None:
+            self.zernike3d = dict(
+                MapToMapResultsAllMetrics(**self.zernike3d).model_dump()
+            )
         return self
