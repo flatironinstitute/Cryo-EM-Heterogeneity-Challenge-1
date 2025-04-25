@@ -80,3 +80,6 @@ def test_refactor():
 #                 results_dict_low_memory[metric]["cost_matrix"].values,
 #             )
 #     return
+
+if __name__ == "__main__":
+    test_refactor()

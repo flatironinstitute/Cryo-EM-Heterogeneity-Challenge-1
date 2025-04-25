@@ -35,7 +35,7 @@ def main(args):
     with open(args.config, "r") as file:
         config = yaml.safe_load(file)
 
-    config = dict(MapToMapInputConfig(**config).model_dump())
+    config = dict(MapToMapInputConfig(**config).model_dump(exclude_none=True))
     warnexists(config["path_to_output_file"])
     mkbasedir(os.path.dirname(config["path_to_output_file"]))
 

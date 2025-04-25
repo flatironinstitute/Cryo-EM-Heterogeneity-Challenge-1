@@ -52,10 +52,10 @@ def run(config):
     Compare a submission to ground truth.
     """
 
-    for key, value in config["metrics"].copy().items():
-        if len(value) == 0:
-            del config["metrics"][key]
-            print(f"Removing {key} from config['metrics'] because it is empty")
+    # for key, value in config["metrics"].copy().items():
+    #     if len(value) == 0:
+    #         del config["metrics"][key]
+    #         print(f"Removing {key} from config['metrics'] because it is empty")
 
     logger.info("Running map-to-map analysis")
     map_to_map_distances = {
@@ -101,17 +101,14 @@ def run(config):
     computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
         print(f"Computing {distance_label} distance")
-        if distance_label in config["metrics"].keys():
-            print(f"Computing {distance_label} distance")
-            config_metric = config["metrics"][distance_label]
-            print(f"with config {config_metric}")
-        else:
-            del config["metrics"][distance_label]
+        # if distance_label in config["metrics"].keys():
+        #     print(f"Computing {distance_label} distance")
+        #     config_metric = config["metrics"][distance_label]
+        #     print(f"with config {config_metric}")
+        # else:
+        #     del config["metrics"][distance_label]
 
-        if (
-            distance_label in config["metrics"].keys()
-            and len(config["metrics"][distance_label]) != 0
-        ):  # TODO: can remove
+        if distance_label in config["metrics"].keys():  # TODO: can remove
             logger.info(f"cost matrix: {distance_label}")
 
             map_to_map_distance.distance_matrix_precomputation(

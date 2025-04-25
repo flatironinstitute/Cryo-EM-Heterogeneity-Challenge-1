@@ -239,35 +239,35 @@ class MapToMapInputConfigAnalysisL2BioemCorr(BaseModel, extra="forbid"):
 
 class MapToMapInputConfigMetrics(BaseModel):
     l2: Optional[dict] = Field(
-        default={},
+        default=None,
         description="List of metrics to compute, and there own parameters",
     )
     corr: Optional[dict] = Field(
-        default={},
+        default=None,
         description="List of metrics to compute, and there own parameters",
     )
     bioem: Optional[dict] = Field(
-        default={},
+        default=None,
         description="List of metrics to compute, and there own parameters",
     )
     fsc: Optional[dict] = Field(
-        default={},
+        default=None,
         description="List of metrics to compute, and there own parameters",
     )
     res: Optional[dict] = Field(
-        default={},
+        default=None,
         description="List of metrics to compute, and there own parameters",
     )
     procrustes_wasserstein: Optional[dict] = Field(
-        default={},
+        default=None,
         description="Extra parameters for the Procrustes Wasserstein distance",
     )
     gromov_wasserstein: Optional[dict] = Field(
-        default={},
+        default=None,
         description="Extra parameters for the Gromov-Wasserstein distance",
     )
     zernike3d: Optional[dict] = Field(
-        default={},
+        default=None,
         description="Extra parameters for the Zernike3D distance",
     )
     shared_params: Optional[Dict] = Field(
@@ -319,7 +319,7 @@ class MapToMapInputConfig(BaseModel, extra="forbid"):
     @field_validator("metrics")
     @classmethod
     def validate_metrics(cls, metrics):
-        return dict(MapToMapInputConfigMetrics(**metrics).model_dump())
+        return dict(MapToMapInputConfigMetrics(**metrics).model_dump(exclude_none=True))
 
 
 class MapToMapResultsAllMetrics(BaseModel, extra="forbid"):
