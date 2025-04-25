@@ -44,9 +44,10 @@ class MapToMapDistance:
             "chunk_size_submission"
         ]
         self.box_size = self.config["data_params"]["box_size"]
-        self.chunk_size = self.config["metrics"]["shared_params"]["low_memory"][
-            "chunk_size"
-        ]
+        if self.do_low_memory_mode:
+            self.chunk_size = self.config["metrics"]["shared_params"]["low_memory"][
+                "chunk_size"
+            ]
         if self.config["data_params"]["mask_params"]["apply_mask"]:
             self.mask = (
                 mrcfile.open(self.config["data_params"]["mask_params"]["path_to_mask"])

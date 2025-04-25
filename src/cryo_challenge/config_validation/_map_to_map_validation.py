@@ -237,6 +237,45 @@ class MapToMapInputConfigAnalysisL2BioemCorr(BaseModel, extra="forbid"):
     )
 
 
+class MapToMapInputConfigSharedParams(BaseModel, extra="forbid"):
+    chunk_size_submission: PositiveInt = Field(
+        default=20,
+        description="Batch size of the submission volumes",
+    )
+    chunk_size_gt: PositiveInt = Field(
+        default=100,
+        description="Batch size of the ground truth volumes",
+    )
+    normalize_params: Optional[Dict] = Field(
+        default=None,
+        description="Parameters for the normalization of the volumes",
+    )
+    low_memory: Optional[Dict] = Field(
+        default=None,
+        description="Parameters for the low memory mode",
+    )
+
+    @field_validator("low_memory")
+    @classmethod
+    def validate_low_memory_params(cls, low_memory_params):
+        if low_memory_params is not None:
+            low_memory_params = dict(
+                MapToMapInputConfigLowMemory(**low_memory_params).model_dump()
+            )
+        return low_memory_params
+
+
+class MapToMapInputConfigLowMemory(BaseModel, extra="forbid"):
+    do: bool = Field(
+        default=False,
+        description="Whether to use low memory mode",
+    )
+    chunk_size: PositiveInt = Field(
+        default=1,
+        description="Chunk size for low memory mode",
+    )
+
+
 class MapToMapInputConfigMetrics(BaseModel):
     l2: Optional[dict] = Field(
         default=None,
@@ -273,6 +312,15 @@ class MapToMapInputConfigMetrics(BaseModel):
     shared_params: Optional[Dict] = Field(
         description="Shared parameters for the metrics",
     )
+
+    @field_validator("shared_params")
+    @classmethod
+    def validate_shared_params(cls, shared_params):
+        if shared_params is not None:
+            shared_params = dict(
+                MapToMapInputConfigSharedParams(**shared_params).model_dump()
+            )
+        return shared_params
 
     @field_validator("l2")
     @classmethod
@@ -367,7 +415,6 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
     user_submitted_populations: Tensor = Field(
         description="User submitted populations, which sum to 1",
     )
-
     corr: Optional[dict] = Field(
         default=None,
         description="Correlation results",

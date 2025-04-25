@@ -12,14 +12,14 @@ def test_refactor():
     return
 
 
-# def test_run_map2map_pipeline_procrustes():
-#     args = OmegaConf.create(
-#         {
-#             "config": "tests/config_files//test_config_map_to_map_procrustes_wasserstein.yaml"
-#         }
-#     )
-#     _ = run_map2map_pipeline.main(args)
-#     return
+def test_run_map2map_pipeline_procrustes():
+    args = OmegaConf.create(
+        {
+            "config": "tests/config_files//test_config_map_to_map_procrustes_wasserstein.yaml"
+        }
+    )
+    _ = run_map2map_pipeline.main(args)
+    return
 
 
 # def test_run_map2map_pipeline_gw():
@@ -82,4 +82,5 @@ def test_refactor():
 #     return
 
 if __name__ == "__main__":
+    test_run_map2map_pipeline_procrustes()
     test_refactor()
