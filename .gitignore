@@ -9,6 +9,7 @@ data/dataset_2_ground_truth
 
 # testing results
 tests/results/
+tmp_zernike/
 
 # Aspire Logs
 logs/

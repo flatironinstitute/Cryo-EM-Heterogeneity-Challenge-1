@@ -1,7 +1,8 @@
-box_size_for_BOTAlign: 32
-loss_for_BOTAlign: wemd
-num_iterations_for_BOTAlign: 200
-run_refinement_BOTAlign: true
 path_to_submissions_config: tests/data/unprocessed_dataset_2_submissions/submission_x/submission_config.yaml
 path_to_reference_config: tests/data/unprocessed_dataset_2_submissions/submission_x/reference_config.yaml
 output_path: tests/results/preproccessed_submission_x/
+BOTAlign_params:
+  downsampled_size: 32
+  loss_type: wemd
+  max_iters: 200
+  refine: true
