@@ -110,5 +110,7 @@ exclude_lines = [
 "**.py" = ["F722"]
 
 [project.scripts]
-#cryo_challenge = "cryo_challenge.command_line:main_commands"
 run_preprocessing = "cryo_challenge.commands.run_preprocessing:main_as_cli"
+run_map_to_map_pipeline = "cryo_challenge.commands.run_map2map_pipeline:main_as_cli"
+run_dist_to_dist_pipeline = "cryo_challenge.commands.run_distribution2distribution_pipeline:main_as_cli"
+run_svd_pipeline = "cryo_challenge.commands.run_svd_pipeline:main_as_cli"

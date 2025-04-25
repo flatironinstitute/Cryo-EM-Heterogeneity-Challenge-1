@@ -100,8 +100,6 @@ def compute_fsc_matrix_first_eigvecs(
 
 
 ### Compute common embedding ###
-
-
 def compute_common_embedding(
     submissions_svd: Dict[str, torch.Tensor],
     gt_svd: Optional[Dict[str, torch.Tensor]] = None,
@@ -125,9 +123,9 @@ def compute_common_embedding(
     embeddings = {}
 
     for i, label in enumerate(labels):
-        Z_i = submissions_svd[label]["u_matrices"]  # @ torch.diag(
-        # submissions_svd[label]["singular_values"]
-        # )
+        Z_i = submissions_svd[label]["u_matrices"] @ torch.diag(
+            submissions_svd[label]["singular_values"]
+        )
         Z_i_common = torch.einsum("ij, jk -> ik", Z_i, Z_common[i])
         embeddings[labels[i]] = Z_i_common
 
