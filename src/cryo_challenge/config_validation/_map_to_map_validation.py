@@ -16,6 +16,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+import pandas
 from torch import Tensor
 
 
@@ -321,12 +322,29 @@ class MapToMapInputConfig(BaseModel, extra="forbid"):
         return dict(MapToMapInputConfigMetrics(**metrics).model_dump())
 
 
-def _validate_metric_in_config(metric, metric_name, config):
-    if metric is None:
-        assert (
-            metric_name not in config["metrics"]
-        ), f"{metric_name} metric is not computed, but is requested."
-    return metric
+class MapToMapResultsAllMetrics(BaseModel, extra="forbid"):
+    """
+    Validate the output dictionary of each map-to-map distance matrix computation.
+
+    cost_matrix: pandas.core.frame.DataFrame
+    user_submission_label: str
+    computed_assets: dict
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    cost_matrix: pandas.DataFrame = Field(
+        default=None,
+        description="Cost matrix",
+    )
+    user_submission_label: str = Field(
+        default=None,
+        description="User submission label",
+    )
+    computed_assets: dict = Field(
+        default=None,
+        description="Computed assets",
+    )
 
 
 class MapToMapResultsValidator(BaseModel, extra="forbid"):
@@ -341,7 +359,7 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
     fsc: dict, FSC results.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     config: dict = Field(
         description="Input config dictionary",
@@ -382,7 +400,6 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
         default=None,
         description="Procrustes-Wasserstein results",
     )
-    # put dataclass here???
 
     @field_validator("config")
     @classmethod
@@ -399,18 +416,26 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
 
     @model_validator(mode="after")
     def validate_metrics(self) -> Self:
-        self.corr = _validate_metric_in_config(self.corr, "corr", self.config)
-        self.l2 = _validate_metric_in_config(self.l2, "l2", self.config)
-        self.bioem = _validate_metric_in_config(self.bioem, "bioem", self.config)
-        self.fsc = _validate_metric_in_config(self.fsc, "fsc", self.config)
-        self.res = _validate_metric_in_config(self.res, "res", self.config)
-        self.zernike3d = _validate_metric_in_config(
-            self.zernike3d, "zernike3d", self.config
-        )
-        self.gromov_wasserstein = _validate_metric_in_config(
-            self.gromov_wasserstein, "gromov_wasserstein", self.config
-        )
-        self.procrustes_wasserstein = _validate_metric_in_config(
-            self.procrustes_wasserstein, "procrustes_wasserstein", self.config
-        )
+        if self.corr is not None:
+            self.corr = dict(MapToMapResultsAllMetrics(**self.corr).model_dump())
+        if self.l2 is not None:
+            self.l2 = dict(MapToMapResultsAllMetrics(**self.l2).model_dump())
+        if self.bioem is not None:
+            self.bioem = dict(MapToMapResultsAllMetrics(**self.bioem).model_dump())
+        if self.fsc is not None:
+            self.fsc = dict(MapToMapResultsAllMetrics(**self.fsc).model_dump())
+        if self.res is not None:
+            self.res = dict(MapToMapResultsAllMetrics(**self.res).model_dump())
+        if self.procrustes_wasserstein is not None:
+            self.procrustes_wasserstein = dict(
+                MapToMapResultsAllMetrics(**self.procrustes_wasserstein).model_dump()
+            )
+        if self.gromov_wasserstein is not None:
+            self.gromov_wasserstein = dict(
+                MapToMapResultsAllMetrics(**self.gromov_wasserstein).model_dump()
+            )
+        if self.zernike3d is not None:
+            self.zernike3d = dict(
+                MapToMapResultsAllMetrics(**self.zernike3d).model_dump()
+            )
         return self
