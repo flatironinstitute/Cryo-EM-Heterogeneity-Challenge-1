@@ -12,19 +12,41 @@ data_params:
   mask_params:
     apply_mask: true
     path_to_mask: tests/data/Ground_truth/test_mask_bool.mrc
-analysis:
-  metrics:
-    - l2
-    - corr
-    - bioem
-    - fsc
-    - res
-  chunk_size_submission: 4
-  chunk_size_gt: 5
-  low_memory:
-    do: true
-    chunk_size: 2
-  normalize_params:
-    do: true
-    method: median_zscore
+metrics:
+  l2:
+    chunk_size_submission: 4
+    chunk_size_gt: 5
+    low_memory:
+      chunk_size: 2
+    normalize_params: null
+  corr:
+    chunk_size_submission: 4
+    chunk_size_gt: 5
+    low_memory:
+      chunk_size: 2
+    normalize_params: null
+  bioem:
+    chunk_size_submission: 4
+    chunk_size_gt: 5
+    low_memory:
+      chunk_size: 2
+    normalize_params: null
+  fsc:
+    chunk_size_submission: 4
+    chunk_size_gt: 5
+    low_memory:
+      chunk_size: 2
+    normalize_params: null
+  res:
+    normalize_params: null
+
+  shared_params:
+    low_memory:
+      chunk_size: 2
+    chunk_size_submission: 4
+    chunk_size_gt: 5
+    normalize_params:
+      do: true
+      method: median_zscore
+
 path_to_output_file: tests/results/test_map_to_map_distance_matrix_submission_0.pkl
