@@ -1,6 +1,6 @@
 from ._preprocessing_validators import (
-    PreprocessingDatasetReferenceConfig as PreprocessingDatasetReferenceConfig,
-    PreprocessingDatasetSubmissionConfig as PreprocessingDatasetSubmissionConfig,
+    PreprocessingReferenceConfig as PreprocessingReferenceConfig,
+    PreprocessingSubmissionConfig as PreprocessingSubmissionConfig,
     PreprocessingRunConfig as PreprocessingRunConfig,
 )
 

@@ -11,3 +11,7 @@ from ._cropping_and_padding import (
     crop_or_pad_submission as crop_or_pad_submission,
     pad_submission_to_box_size as pad_submission_to_box_size,
 )
+
+from ._submission_dataset import (
+    SubmissionPreprocessingDataset as SubmissionPreprocessingDataset,
+)

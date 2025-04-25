@@ -23,20 +23,27 @@ def run_preprocessing_pipeline(
     ) as file:
         reference_volume = file.data.copy()
 
+    metadata_preproc_path = os.path.join(
+        run_config.output_path, "submission_to_icecream_table.json"
+    )
+
     for i in range(len(submission_dataset)):
         dataset_item = submission_dataset[i]
         sub_config = dataset_item["config"]
+
         sub_fname = _flavor_and_version_to_fname(
             sub_config.ice_cream_flavor,
             sub_config.submission_version,
         )
+        submission_id = f"{sub_config.ice_cream_flavor} {sub_config.submission_version}"
 
-        metadata_submission_preproc[sub_config.ice_cream_flavor] = {
-            "name": sub_config.submission_name,
+        metadata_submission_preproc[submission_id] = {
+            "submission name": sub_config.submission_name,
+            "submission_version": sub_config.submission_version,
             "filename": sub_fname,
         }
 
-        print(f"Preprocessing submission {sub_config.submission_name}...")
+        print(f"Preprocessing submission {submission_id}...")
 
         voxel_size_sub = sub_config.voxel_size
         volumes = dataset_item["volumes"]
@@ -60,26 +67,31 @@ def run_preprocessing_pipeline(
             print("    Flipping handedness of submission")
             volumes = volumes.flip(-1)
 
-        # align to GT
+        # align to reference
         if sub_config.align:
-            print("    Aligning submission to ground truth")
+            print("    Aligning submission to reference")
             volumes = align_submission_to_reference(
                 volumes,
                 reference_volume,
-                downsampled_size=run_config.box_size_for_BOTAlign,
-                loss_type=run_config.loss_for_BOTAlign,
-                max_iters=run_config.num_iterations_for_BOTAlign,
-                refine=run_config.run_refinement_BOTAlign,
+                sub_config.initial_rotation_guess,
+                loss_type=run_config.BOTAlign_params["loss_type"],
+                loss_params=run_config.BOTAlign_params["loss_params"],
+                downsampled_size=run_config.BOTAlign_params["downsampled_size"],
+                refinement_downsampled_size=run_config.BOTAlign_params[
+                    "refinement_downsampled_size"
+                ],
+                max_iters=run_config.BOTAlign_params["max_iters"],
+                refine=run_config.BOTAlign_params["refine"],
+                tau=run_config.BOTAlign_params["tau"],
+                surrogate_max_iter=run_config.BOTAlign_params["surrogate_max_iter"],
+                surrogate_min_grad=run_config.BOTAlign_params["surrogate_min_grad"],
+                surrogate_min_step=run_config.BOTAlign_params["surrogate_min_step"],
+                verbosity=run_config.BOTAlign_params["verbosity"],
+                dtype=run_config.BOTAlign_params["dtype"],
             )
 
         # save preprocessed volumes
         print("    Saving preprocessed submission")
-        print(f" SUBMISSION VERSION {sub_config.submission_version}")
-
-        submission_id = (
-            sub_config.ice_cream_flavor + " " + sub_config.submission_version
-        )
-        print(f"SUBMISSION ID {submission_id}")
 
         _save_submission(
             volumes,
@@ -91,11 +103,7 @@ def run_preprocessing_pipeline(
         print(f"   submission saved as {sub_fname}")
         print(f"Preprocessing submission {submission_id} complete")
 
-    metadata_preproc_path = os.path.join(
-        run_config.output_path, "submission_to_icecream_table.json"
-    )
-
-    _update_metadata_file(metadata_preproc_path, metadata_submission_preproc)
+        _update_metadata_file(metadata_preproc_path, metadata_submission_preproc)
 
     return
 

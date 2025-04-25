@@ -3,9 +3,9 @@ import os
 import yaml
 
 from ..config_validation._preprocessing_validators import (
-    PreprocessingDatasetReferenceConfig,
+    PreprocessingReferenceConfig,
     PreprocessingRunConfig,
-    PreprocessingDatasetSubmissionConfig,
+    PreprocessingSubmissionConfig,
 )
 from ..preprocessing._preprocessing_pipeline import run_preprocessing_pipeline
 from ..preprocessing._submission_dataset import SubmissionPreprocessingDataset
@@ -35,7 +35,7 @@ def _warnexists(out):
 def _load_submission_configs(path_to_submissions_config):
     with open(path_to_submissions_config, "r") as f:
         submission_config_list = [
-            PreprocessingDatasetSubmissionConfig(**sub_config)
+            PreprocessingSubmissionConfig(**sub_config)
             for sub_config in yaml.safe_load(f)
         ]
     return submission_config_list
@@ -45,7 +45,7 @@ def _load_reference_config(path_to_reference_config):
     with open(path_to_reference_config, "r") as f:
         reference_config_dict = yaml.safe_load(f)
 
-    reference_config = PreprocessingDatasetReferenceConfig(**reference_config_dict)
+    reference_config = PreprocessingReferenceConfig(**reference_config_dict)
     return reference_config
 
 
@@ -54,7 +54,6 @@ def main(args):
         config = yaml.safe_load(file)
 
     config = PreprocessingRunConfig(**config)
-    print(config)
 
     _warnexists(config.output_path)
     _mkbasedir(config.output_path)

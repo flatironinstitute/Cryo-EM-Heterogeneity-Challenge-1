@@ -1,4 +1,4 @@
-from typing import Optional, Annotated, Literal
+from typing import Optional, Annotated, Literal, Dict, Any, List
 import glob
 import os
 from pydantic import (
@@ -9,6 +9,7 @@ from pydantic import (
     FilePath,
     DirectoryPath,
     AfterValidator,
+    field_validator,
 )
 
 from pathlib import PurePath
@@ -32,7 +33,22 @@ def _contains_mrc_files_minus_mask(path_to_volumes: str) -> bool:
     return path_to_volumes
 
 
-class PreprocessingDatasetSubmissionConfig(BaseModel, extra="forbid"):
+class PreprocessingSubmissionConfigInitRotation(BaseModel, extra="forbid"):
+    seq: str = Field(
+        default="x",
+        description="Sequence of rotations to apply to the volume.",
+    )
+    angles: float | List[float] = Field(
+        default=0.0,
+        description="Angle of rotation in degrees.",
+    )
+    degrees: bool = Field(
+        default=True,
+        description="Whether the angle is in degrees or radians.",
+    )
+
+
+class PreprocessingSubmissionConfig(BaseModel, extra="forbid"):
     path_to_volumes: Annotated[
         DirectoryPath, AfterValidator(_contains_mrc_files_minus_mask)
     ] = Field(
@@ -69,9 +85,20 @@ class PreprocessingDatasetSubmissionConfig(BaseModel, extra="forbid"):
         default=False,
         description="Whether to align the submitted volumes to a reference volume",
     )
+    initial_rotation_guess: Optional[Dict] = Field(
+        default=PreprocessingSubmissionConfigInitRotation().model_dump(),
+        description=(
+            "Parameters for initializating Scipy Rotation object from euler for an initial guess of the rotation matrix."
+        ),
+    )
+
+    @field_validator("initial_rotation_guess", mode="after")
+    @classmethod
+    def validate_initial_rotation_guess(cls, values):
+        return dict(PreprocessingSubmissionConfigInitRotation(**values).model_dump())
 
 
-class PreprocessingDatasetReferenceConfig(BaseModel, extra="forbid"):
+class PreprocessingReferenceConfig(BaseModel, extra="forbid"):
     path_to_reference_volume: Annotated[FilePath, AfterValidator(_is_mrc_file)] = Field(
         description="Path to the reference volume in .mrc format",
     )
@@ -84,29 +111,68 @@ class PreprocessingDatasetReferenceConfig(BaseModel, extra="forbid"):
     )
 
 
+class PreprocessingRunConfigBOTAlign(BaseModel, extra="forbid"):
+    loss_type: Literal["wemd", "euclidean"] = Field(
+        default="wemd",
+        description="If the heterogeneity between vol_ref and vol_given is high, 'euclidean' is recommended.",
+    )
+    loss_params: Optional[Any] = Field(
+        default=None,
+        description="dictionary for overriding parameters in aspire.utils.bot_align.loss_types. Defaults to empty dictionary.",
+    )
+    downsampled_size: PositiveInt = Field(
+        default=32,
+        description="Downsampling (pixels). Integer, defaults to 32. If alignment fails try larger values.",
+    )
+    refinement_downsampled_size: PositiveInt = Field(
+        default=32,
+        description="Downsampling (pixels) used with refinement. Integer, defaults to 32.",
+    )
+    max_iters: PositiveInt = Field(
+        default=200,
+        description="Maximum iterations. Integer, defaults 200. If alignment fails try larger values.",
+    )
+    refine: bool = Field(
+        default=True,
+        description="Whether to perform refinement. Boolean, defaults True.",
+    )
+    tau: PositiveFloat = Field(
+        default=1e-3,
+        description="Regularization parameter for surrogate problems. Numeric, defaults 1e-3.",
+    )
+    surrogate_max_iter: PositiveInt = Field(
+        default=500,
+        description="Stopping criterion for surrogate problems--maximum iterations. Integer, defaults 500.",
+    )
+    surrogate_min_grad: PositiveFloat = Field(
+        default=0.1,
+        description="Stopping criterion for surrogate problems--minimum gradient norm. Numeric, defaults 0.1.",
+    )
+    surrogate_min_step: PositiveFloat = Field(
+        default=0.1,
+        description="Stopping criterion for surrogate problems--minimum step size. Numeric, defaults 0.1.",
+    )
+    verbosity: Literal[0, 1, 2] = Field(
+        default=0,
+        description="Surrogate problem optimization detail level. Integer, defaults 0 (silent). 2 is most verbose.",
+    )
+    dtype: Optional[Any] = Field(
+        default=None,
+        description="Numeric dtype to perform computations with. Default None infers dtype from vol_ref.",
+    )
+
+
 class PreprocessingRunConfig(BaseModel, extra="forbid"):
     """
     Configuration for the preprocessing run.
     """
 
-    box_size_for_BOTAlign: PositiveInt = Field(
-        default=32,
-        description="Box size used for volume alignment",
-    )
-
-    loss_for_BOTAlign: Literal["wemd", "l2"] = Field(
-        default="wemd",
-        description="Loss function used for volume alignment",
-    )
-
-    num_iterations_for_BOTAlign: PositiveInt = Field(
-        default=200,
-        description="Number of iterations for volume alignment",
-    )
-
-    run_refinement_BOTAlign: bool = Field(
-        default=True,
-        description="Whether to run refinement for volume alignment",
+    BOTAlign_params: Dict = Field(
+        default={},
+        description=(
+            "Parameters for the BOTAlign algorithm."
+            + "See aspire.utils.bot_align.align_BO"
+        ),
     )
 
     output_path: PurePath = Field(
@@ -120,3 +186,8 @@ class PreprocessingRunConfig(BaseModel, extra="forbid"):
     path_to_reference_config: FilePath = Field(
         description="Path to the file with configs for the reference",
     )
+
+    @field_validator("BOTAlign_params", mode="after")
+    @classmethod
+    def validate_BOTAlign_params(cls, values):
+        return dict(PreprocessingRunConfigBOTAlign(**values).model_dump())

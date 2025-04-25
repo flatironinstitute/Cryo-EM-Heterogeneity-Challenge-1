@@ -10,6 +10,9 @@ data/dataset_2_ground_truth
 # testing results
 tests/results/
 
+# Aspire Logs
+logs/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

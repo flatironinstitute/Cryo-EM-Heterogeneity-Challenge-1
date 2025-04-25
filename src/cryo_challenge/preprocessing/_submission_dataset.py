@@ -9,8 +9,8 @@ import pathlib
 
 from typing import List
 from ..config_validation._preprocessing_validators import (
-    PreprocessingDatasetReferenceConfig,
-    PreprocessingDatasetSubmissionConfig,
+    PreprocessingReferenceConfig,
+    PreprocessingSubmissionConfig,
 )
 
 
@@ -19,22 +19,22 @@ class SubmissionPreprocessingDataset(Dataset):
     A dataset class for loading the raw volumes and populations from the submission dataset.
     """
 
-    config_for_ref_vol: PreprocessingDatasetReferenceConfig
-    configs_for_vol_sets: List[PreprocessingDatasetSubmissionConfig]
+    config_for_ref_vol: PreprocessingReferenceConfig
+    configs_for_vol_sets: List[PreprocessingSubmissionConfig]
 
     def __init__(
         self,
-        config_for_ref_vol: PreprocessingDatasetReferenceConfig,
-        configs_for_vol_sets: List[PreprocessingDatasetSubmissionConfig],
+        config_for_ref_vol: PreprocessingReferenceConfig,
+        configs_for_vol_sets: List[PreprocessingSubmissionConfig],
     ):
         """
         Config arguments must be validate by our Pydantic validators.
 
         **Arguments**
         ----------
-        config_for_ref_vol : PreprocessingDatasetReferenceConfig
+        config_for_ref_vol : PreprocessingReferenceConfig
             Configuration for the reference volume set.
-        configs_for_vol_sets : List[PreprocessingDatasetSubmissionConfig]
+        configs_for_vol_sets : List[PreprocessingSubmissionConfig]
             List of configurations for the volume sets.
         """
 
@@ -81,15 +81,21 @@ def _load_all_volumes_in_directory(
     torch.Tensor
         Tensor containing the loaded volumes.
     """
-    list_of_vol_paths = _get_volumes_paths_from_directory(path_to_volumes)[:3]
+    list_of_vol_paths = _get_volumes_paths_from_directory(path_to_volumes)
 
-    volumes = torch.empty(
-        (len(list_of_vol_paths), box_size, box_size, box_size), dtype=torch.float32
+    volumes = torch.stack(
+        [
+            torch.from_numpy(mrcfile.open_async(vol_path).result().data.copy())
+            for vol_path in list_of_vol_paths
+        ]
     )
+    # volumes = torch.empty(
+    #     (len(list_of_vol_paths), box_size, box_size, box_size), dtype=torch.float32
+    # )
 
-    for i, vol_path in enumerate(list_of_vol_paths):
-        with mrcfile.open(vol_path, mode="r") as vol:
-            volumes[i] = torch.tensor(vol.data.copy())
+    # for i, vol_path in enumerate(list_of_vol_paths):
+    #     with mrcfile.open(vol_path, mode="r") as vol:
+    #         volumes[i] = torch.tensor(vol.data.copy())
 
     return volumes.to(torch.float32)
 

@@ -2,7 +2,7 @@ import torch
 from torch import Tensor
 
 from ..utils._fourier import htn_center
-from ._cropping_and_padding import crop_volume_to_box_size, crop_submission_to_box_size
+from ._cropping_and_padding import crop_volume_to_box_size
 
 
 @torch.no_grad()
@@ -43,9 +43,7 @@ def downsample_submission(volumes: Tensor, box_size_ds: int) -> Tensor:
         return volumes
 
     else:
-        return htn_center(
-            crop_submission_to_box_size(
-                htn_center(volumes, dim=(-3, -2, -1)), box_size_ds
-            ),
-            dim=(-3, -2, -1),
+        volumes = torch.vmap(downsample_volume, in_dims=(0, None), chunk_size=20)(
+            volumes, box_size_ds
         )
+        return volumes

@@ -1,5 +1,7 @@
 import torch
 import numpy as np
+from typing import Literal, Any, Optional
+from pydantic import PositiveFloat, PositiveInt
 
 
 def threshold_submissions(
@@ -70,11 +72,20 @@ def threshold_submissions(
 def align_submission_to_reference(
     volumes: torch.Tensor,
     ref_volume: torch.Tensor,
+    init_rot_guess_params: dict,
     *,
-    downsampled_size: int,
-    loss_type: str,
-    max_iters: int,
-    refine: bool,
+    loss_type: Literal["wemd", "euclidean"] = "wemd",
+    loss_params: Optional[Any] = None,
+    downsampled_size: PositiveInt = 32,
+    refinement_downsampled_size: PositiveInt = 32,
+    max_iters: PositiveInt = 200,
+    refine: bool = True,
+    tau: PositiveFloat = 1e-3,
+    surrogate_max_iter: PositiveFloat = 500,
+    surrogate_min_grad: PositiveFloat = 0.1,
+    surrogate_min_step: PositiveFloat = 0.1,
+    verbosity: Literal[0, 1, 2] = 0,
+    dtype: Optional[Any] = None,
 ) -> torch.Tensor:
     """
     Align submission volumes to ground truth volume
@@ -95,22 +106,44 @@ def align_submission_to_reference(
     from aspire.volume import Volume
     from aspire.utils.rotation import Rotation
     from aspire.utils.bot_align import align_BO
+    from scipy.spatial.transform import Rotation as R
 
-    obj_vol = volumes[0].numpy().astype(np.float32)
+    R_guess = (
+        R.from_euler(
+            init_rot_guess_params["seq"],
+            angles=init_rot_guess_params["angles"],
+            degrees=init_rot_guess_params["degrees"],
+        )
+        .as_matrix()
+        .astype(np.float32)
+    )
+
+    obj_vol = volumes.mean(0).numpy().astype(np.float32)
 
     obj_vol = Volume(obj_vol / obj_vol.sum())
     ref_vol = Volume(ref_volume / ref_volume.sum())
+
+    obj_vol = obj_vol.rotate(Rotation(R_guess))
 
     _, R_est = align_BO(
         ref_vol,
         obj_vol,
         loss_type=loss_type,
+        loss_params=loss_params,
         downsampled_size=downsampled_size,
+        refinement_downsampled_size=refinement_downsampled_size,
         max_iters=max_iters,
         refine=refine,
+        tau=tau,
+        surrogate_max_iter=surrogate_max_iter,
+        surrogate_min_grad=surrogate_min_grad,
+        surrogate_min_step=surrogate_min_step,
+        verbosity=verbosity,
+        dtype=dtype,
     )
-    R_est = Rotation(R_est.astype(np.float32))
+    R_est = R_est.astype(np.float32)
+    full_rotation = Rotation(R_est @ R_guess)
 
-    volumes = torch.from_numpy(Volume(volumes.numpy()).rotate(R_est)._data)
+    volumes = torch.from_numpy(Volume(volumes.numpy()).rotate(full_rotation)._data)
 
     return volumes
