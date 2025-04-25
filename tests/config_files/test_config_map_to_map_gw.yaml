@@ -12,8 +12,8 @@ data_params:
   mask_params:
     apply_mask: false
     path_to_mask: tests/data/Ground_truth/test_mask_bool.mrc
-analysis:
-  gromov_wasserstein_extra_params:
+metrics:
+  gromov_wasserstein:
     top_k: 10
     downsample_box_size: 4
     exponent: 1.0
@@ -22,14 +22,12 @@ analysis:
     element_wise: false
     local_directory: /tmp
     slurm: false
-  metrics:
-    - gromov_wasserstein
-  chunk_size_submission: 4
-  chunk_size_gt: 5
-  low_memory:
-    do: false
-
-  normalize_params:
-    do: true
-    method: median_zscore
+  shared_params:
+    chunk_size_submission: 4
+    chunk_size_gt: 5
+    low_memory:
+      do: false
+    normalize_params:
+      do: true
+      method: median_zscore
 path_to_output_file: tests/results/test_map_to_map_distance_matrix_submission_0.pkl

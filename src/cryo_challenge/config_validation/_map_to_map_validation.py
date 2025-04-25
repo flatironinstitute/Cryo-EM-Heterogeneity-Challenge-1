@@ -230,9 +230,11 @@ class MapToMapInputConfigAnalysisL2BioemCorr(BaseModel, extra="forbid"):
         description="Batch size of the ground truth volumes",
     )
     normalize_params: Optional[Dict] = Field(
+        default=None,
         description="Parameters for the normalization of the volumes",
     )
     low_memory: Optional[Dict] = Field(
+        default=None,
         description="Parameters for the low memory mode",
     )
 
