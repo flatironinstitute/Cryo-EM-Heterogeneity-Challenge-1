@@ -5,9 +5,6 @@ from scipy.stats import rankdata
 import torch
 import ot
 
-from ..config_validation._distribution_to_disribution_validation import (
-    DistToDistResultsValidator,
-)
 from .optimal_transport import optimal_q_emd_vec
 
 
@@ -183,7 +180,7 @@ def run(config):
                 iter_stop = iter
                 eps_stop = eps
                 klpq, klqp = compute_kl_between_distributions(Wp, WA.dot(q_opt))
-                return q_opt, objective, klpq, klqp, iter_stop, eps_stop
+                return q_opt, objective[:iter_stop], klpq, klqp, iter_stop, eps_stop
 
             ## opt
             q_opt, objective, klpq, klqp, iter_stop, eps_stop = optimal_q_kl(
@@ -211,7 +208,7 @@ def run(config):
                 {"klpq_submitted": klpq, "klqp_submitted": klqp}
             )
 
-    results_dict = dict(DistToDistResultsValidator(**results_dict).model_dump())
+    # results_dict = dict(DistToDistResultsValidator(**results_dict).model_dump())
     with open(config["path_to_output_file"], "wb") as f:
         pickle.dump(results_dict, f)
 

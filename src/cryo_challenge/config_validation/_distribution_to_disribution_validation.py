@@ -106,7 +106,9 @@ class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):
     transport_plan_submitted: List[List[float]]
 
 
-class DistToDistResultsValidatorReplicateKL(BaseModel, extra="forbid"):
+class DistToDistResultsValidatorReplicateKL(
+    BaseModel, extra="forbid", arbitrary_types_allowed=True
+):
     """
     Validate the output dictionary of one KL divergence in the the distribution-to-distribution pipeline.
 
@@ -128,6 +130,7 @@ class DistToDistResultsValidatorReplicateKL(BaseModel, extra="forbid"):
     eps_stop: float
     klpq_submitted: float
     klqp_submitted: float
+    objective: Tensor
 
 
 class DistToDistResultsValidatorMetrics(BaseModel, extra="forbid"):
