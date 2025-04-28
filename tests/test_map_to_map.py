@@ -33,19 +33,19 @@ def test_run_map2map_pipeline_gw():
     return
 
 
-def test_run_map2map_pipeline_zernike():
-    try:
-        args = OmegaConf.create(
-            {"config": "tests/config_files/test_config_map_to_map_external.yaml"}
-        )
-        results_dict = run_map2map_pipeline.main(args)
-        assert "zernike3d" in results_dict.keys()
-    except Exception as e:
-        print(e)
-        print(
-            "External test failed. Skipping test. Fails when running in CI if external dependencies are not installed."
-        )
-    return
+# def test_run_map2map_pipeline_zernike():
+#     try:
+#         args = OmegaConf.create(
+#             {"config": "tests/config_files/test_config_map_to_map_external.yaml"}
+#         )
+#         results_dict = run_map2map_pipeline.main(args)
+#         assert "zernike3d" in results_dict.keys()
+#     except Exception as e:
+#         print(e)
+#         print(
+#             "External test failed. Skipping test. Fails when running in CI if external dependencies are not installed."
+#         )
+#     return
 
 
 def test_run_map2map_pipeline_low_memory():

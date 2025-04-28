@@ -163,7 +163,10 @@ def run(config):
                 self_single_distance_results_dict_nooverwrite
             )
 
-        if distance_label not in config["metrics_self"]:
+        if (
+            "metrics_self" in config.keys()
+            and distance_label not in config["metrics_self"]
+        ):
             single_distance_results_dict.update(
                 {"user_submission_label": user_submission_label}
             )
