@@ -4,6 +4,27 @@ from typing import Literal, Any, Optional
 from pydantic import PositiveFloat, PositiveInt
 
 
+def threshold_volume(volume: torch.Tensor, thresh_percentile: float) -> torch.Tensor:
+    """
+    Threshold a volume to specified percentile
+
+    Parameters:
+    -----------
+    volume (torch.Tensor): volume
+        shape: (im_x, im_y, im_z)
+    thresh_percentile (float): percentile to threshold volume to
+
+    Returns:
+    --------
+    volume (torch.Tensor): thresholded volume
+    """
+
+    thresh = torch.quantile(volume.flatten(), thresh_percentile / 100.0)
+    volume[volume < thresh] = 0.0
+
+    return volume
+
+
 def threshold_submissions(
     volumes: torch.Tensor, thresh_percentile: float
 ) -> torch.Tensor:
@@ -22,8 +43,7 @@ def threshold_submissions(
     """
 
     for i in range(volumes.shape[0]):
-        thresh = np.percentile(volumes[i].flatten(), thresh_percentile)
-        volumes[i][volumes[i] < thresh] = 0.0
+        volumes[i] = threshold_volume(volumes[i], thresh_percentile)
 
     return volumes
 
@@ -73,6 +93,7 @@ def align_submission_to_reference(
     volumes: torch.Tensor,
     ref_volume: torch.Tensor,
     init_rot_guess_params: dict,
+    threshold_percentile: float,
     *,
     loss_type: Literal["wemd", "euclidean"] = "wemd",
     loss_params: Optional[Any] = None,
@@ -118,7 +139,12 @@ def align_submission_to_reference(
         .astype(np.float32)
     )
 
-    obj_vol = volumes.mean(0).numpy().astype(np.float32)
+    obj_vol = (
+        threshold_submissions(volumes.clone(), threshold_percentile)
+        .mean(0)
+        .numpy()
+        .astype(np.float32)
+    )
 
     obj_vol = Volume(obj_vol / obj_vol.sum())
     ref_vol = Volume(ref_volume / ref_volume.sum())

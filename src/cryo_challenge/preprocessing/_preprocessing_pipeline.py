@@ -3,7 +3,7 @@ import json
 import os
 import mrcfile
 
-from ._global_alignment import align_submission_to_reference, threshold_submissions
+from ._global_alignment import align_submission_to_reference
 from ._cropping_and_padding import crop_or_pad_submission
 from ._downsampling import downsample_submission
 from ._submission_dataset import SubmissionPreprocessingDataset
@@ -58,10 +58,6 @@ def run_preprocessing_pipeline(
         print("    Downsampling submission")
         volumes = downsample_submission(volumes, box_size_gt)
 
-        # thresholding
-        print("    Thresholding submission")
-        volumes = threshold_submissions(volumes, sub_config.threshold_percentile)
-
         # flip handedness
         if sub_config.flip_handedness:
             print("    Flipping handedness of submission")
@@ -74,6 +70,7 @@ def run_preprocessing_pipeline(
                 volumes,
                 reference_volume,
                 sub_config.initial_rotation_guess,
+                sub_config.threshold_percentile,
                 loss_type=run_config.BOTAlign_params["loss_type"],
                 loss_params=run_config.BOTAlign_params["loss_params"],
                 downsampled_size=run_config.BOTAlign_params["downsampled_size"],
