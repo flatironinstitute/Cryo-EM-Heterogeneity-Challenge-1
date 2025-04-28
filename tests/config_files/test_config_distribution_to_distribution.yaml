@@ -15,6 +15,7 @@ regularization:
     verbose: True
   scalar_hyperparam_self_emd: 1.0
   scalar_hyperparam_self_entropy_q: 1.0
+  scalar_hyperparam_weighted_l2_in_cost: 1.0
   epsilon_q: 0.000001
 optimal_q_kl_params:
   n_iter: 100000

@@ -267,13 +267,13 @@ def optimal_q_emd_vec_regularized(p, q_sub, cost, self_cost, regularization_dict
                 cp.square(cp.abs(Tj - Tj_prime)) / self_cost[j, j_prime]
             ).sum()
 
-    scalar_hyperparam_close_in_cost = 0.0
     prob = cp.Problem(
         cp.Minimize(
             flow_term_cross
             + regularization_dict["scalar_hyperparam_self_emd"] * flow_term_self
             + regularization_dict["scalar_hyperparam_self_entropy_q"] * entropy_q
-            + scalar_hyperparam_close_in_cost * close_in_cost
+            + regularization_dict["scalar_hyperparam_weighted_l2_in_cost"]
+            * close_in_cost
         ),
         constraints + constraints_self,
     )

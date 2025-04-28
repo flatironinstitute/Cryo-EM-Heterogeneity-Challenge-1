@@ -30,16 +30,16 @@ class DistToDistInputConfigRegularization(BaseModel, extra="forbid"):
         description="Scalar hyperparameter for the self EMD regularization.",
     )
     scalar_hyperparam_self_entropy_q: PositiveFloat = Field(
-        description="Scalar hyperparameter for the self entropy regularization.",
         default=0.0,
+        description="Scalar hyperparameter for the self entropy regularization.",
+    )
+    scalar_hyperparam_weighted_l2_in_cost: PositiveFloat = Field(
+        default=0.0,
+        description="Scalar hyperparameter for the weighted L2 regularization by the self cost matrix.",
     )
     epsilon_q: PositiveFloat = Field(
         description="Epsilon for numerical stability of the entropy regularization.",
         default=1e-6,
-    )
-    max_iters: PositiveInt = Field(
-        description="Maximum number of iterations for the optimization.",
-        default=100000,
     )
 
 
