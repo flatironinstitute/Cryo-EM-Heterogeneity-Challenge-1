@@ -1,4 +1,4 @@
-from typing import Optional, Annotated, Literal, Dict
+from typing import Optional, Annotated, Literal, Dict, List
 from typing_extensions import Self
 import glob
 import os
@@ -356,6 +356,10 @@ class MapToMapInputConfig(BaseModel, extra="forbid"):
     data_params: dict = Field(
         description="Parameters for loading the submission, ground truth and mask",
     )
+    metrics_self: Optional[List[str]] = Field(
+        default=None,
+        description="List of metrics to compute for the self transport plan",
+    )
     metrics: Dict[str, Dict] = Field(
         description="Dictionary of metrics to compute and their parameters, including shared parameters",
     )
@@ -373,17 +377,15 @@ class MapToMapInputConfig(BaseModel, extra="forbid"):
 
 
 class MapToMapResultsAllMetrics(BaseModel, extra="forbid"):
-    """
-    Validate the output dictionary of each map-to-map distance matrix computation.
-
-    cost_matrix: pandas.core.frame.DataFrame
-    user_submission_label: str
-    computed_assets: dict
-    """
+    """Validate the output dictionary of each map-to-map distance matrix computation."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     cost_matrix: pandas.DataFrame = Field(
+        default=None,
+        description="Cost matrix",
+    )
+    cost_matrix_self: pandas.DataFrame = Field(
         default=None,
         description="Cost matrix",
     )
@@ -392,6 +394,10 @@ class MapToMapResultsAllMetrics(BaseModel, extra="forbid"):
         description="User submission label",
     )
     computed_assets: dict = Field(
+        default=None,
+        description="Computed assets",
+    )
+    computed_assets_self: dict = Field(
         default=None,
         description="Computed assets",
     )
