@@ -1,9 +1,9 @@
 from omegaconf import OmegaConf
-from cryo_challenge._commands import run_map2map_pipeline
+from cryo_challenge.commands import run_map2map_pipeline
 import numpy as np
 
 
-def test_run_map2map_pipeline():
+def test_run_map2map_pipeline_procrustes():
     args = OmegaConf.create(
         {"config": "tests/config_files/test_config_map_to_map_self.yaml"}
     )
@@ -18,14 +18,20 @@ def test_run_map2map_pipeline():
             "config": "tests/config_files/test_config_map_to_map_procrustes_wasserstein.yaml"
         }
     )
-    results_dict = run_map2map_pipeline.main(args)
+    _ = run_map2map_pipeline.main(args)
+    return
 
+
+def test_run_map2map_pipeline_gw():
     args = OmegaConf.create(
         {"config": "tests/config_files/test_config_map_to_map_gw.yaml"}
     )
     results_dict = run_map2map_pipeline.main(args)
     assert "gromov_wasserstein" in results_dict.keys()
+    return
 
+
+def test_run_map2map_pipeline_zernike():
     try:
         args = OmegaConf.create(
             {"config": "tests/config_files/test_config_map_to_map_external.yaml"}
@@ -37,7 +43,10 @@ def test_run_map2map_pipeline():
         print(
             "External test failed. Skipping test. Fails when running in CI if external dependencies are not installed."
         )
+    return
 
+
+def test_run_map2map_pipeline_low_memory():
     for config_fname, config_fname_low_memory in zip(
         [
             "tests/config_files/test_config_map_to_map.yaml",
@@ -70,3 +79,8 @@ def test_run_map2map_pipeline():
                 results_dict[metric]["cost_matrix"].values,
                 results_dict_low_memory[metric]["cost_matrix"].values,
             )
+    return
+
+
+if __name__ == "__main__":
+    test_run_map2map_pipeline_zernike()

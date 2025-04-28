@@ -1,7 +1,8 @@
-submission_config_file: tests/data/unprocessed_dataset_2_submissions/submission_x/submission_config.json
-thresh_percentile: 93.0
-BOT_box_size: 32
-BOT_loss: wemd
-BOT_iter: 200
-BOT_refine: True
+path_to_submissions_config: tests/data/unprocessed_dataset_2_submissions/submission_x/submission_config.yaml
+path_to_reference_config: tests/data/unprocessed_dataset_2_submissions/submission_x/reference_config.yaml
 output_path: tests/results/preproccessed_submission_x/
+BOTAlign_params:
+  downsampled_size: 32
+  loss_type: wemd
+  max_iters: 200
+  refine: true
