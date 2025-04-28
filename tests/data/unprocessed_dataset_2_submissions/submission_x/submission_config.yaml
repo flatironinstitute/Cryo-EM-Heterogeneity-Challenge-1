@@ -1,0 +1,10 @@
+- align: true
+  box_size: 32
+  flip_handedness: true
+  ice_cream_flavor: Flavor Test
+  path_to_populations_file: tests/data/unprocessed_dataset_2_submissions/submission_x/populations.txt
+  path_to_volumes: tests/data/unprocessed_dataset_2_submissions/submission_x/
+  submission_name: raw_submission_in_testdata
+  submission_version: "1"
+  threshold_percentile: 93.0
+  voxel_size: 15.022

@@ -8,11 +8,10 @@ svd_max_rank: 5
 voxel_size: 1.0 # voxel size of the input maps
 normalize_params: # optional, if not given there will be no normalization
   mask_path: tests/data/Ground_truth/test_mask_dilated_wide.mrc
-  bfactor: 170
-  box_size_ds: 16
+  downsample_box_size: 16
 
 gt_params: # optional, if provided there will be extra results
-  gt_vols_file: tests/data/Ground_truth/test_maps_gt_flat_10.npy
+  path_to_gt_volumes: tests/data/Ground_truth/test_maps_gt_flat_10.pt
   skip_vols: 1
 
 output_params:
