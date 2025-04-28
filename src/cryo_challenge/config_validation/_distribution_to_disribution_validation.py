@@ -9,12 +9,22 @@ from pydantic import (
     Field,
     field_validator,
     model_validator,
+    confloat,
 )
 from pathlib import PurePath
 from torch import Tensor
 
 
+TolerantPositiveFloat = confloat(
+    ge=-1e-6
+)  # numerical issues in CVXPY can cause negative values
+
+
 class DistToDistInputConfigRegularization(BaseModel, extra="forbid"):
+    cvxpy_solve_kwargs: dict = Field(
+        description="Keyword arguments for the CVXPY solver.",
+        default={},
+    )
     scalar_hyperparam_self_emd: PositiveFloat = Field(
         default=0.0,
         description="Scalar hyperparameter for the self EMD regularization.",
@@ -23,9 +33,13 @@ class DistToDistInputConfigRegularization(BaseModel, extra="forbid"):
         description="Scalar hyperparameter for the self entropy regularization.",
         default=0.0,
     )
-    entropy_epsilon: PositiveFloat = Field(
-        description="Epsilon for the entropy regularization.",
+    epsilon_q: PositiveFloat = Field(
+        description="Epsilon for numerical stability of the entropy regularization.",
         default=1e-6,
+    )
+    max_iters: PositiveInt = Field(
+        description="Maximum number of iterations for the optimization.",
+        default=100000,
     )
 
 
@@ -73,12 +87,16 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     replicate_fraction: PositiveFloat = Field(
         description="Fraction of the data to use for replicates."
     )
-    cvxpy_solver: Literal["ECOS", "CVXOPT", "CLARABEL", "GUROBI", "SCS", "MOSEK"] = (
-        Field(
-            default="ECOS",
-            description="CVXPY solver to use for optimization. See https://www.cvxpy.org/tutorial/solvers/index.html.",
-        )
+    cvxpy_solve_kwargs: dict = Field(
+        description="Keyword arguments for the CVXPY solver.",
+        default={},
     )
+    # Literal["ECOS", "CVXOPT", "CLARABEL", "GUROBI", "SCS", "MOSEK"] = (
+    #     Field(
+    #         default="ECOS",
+    #         description="CVXPY solver to use for optimization. See https://www.cvxpy.org/tutorial/solvers/index.html.",
+    #     )
+    # )
     regularization: dict = Field(
         description="Parameters for the optimal q KL divergence.",
     )
@@ -100,6 +118,24 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     def validate_optimal_q_kl_params(cls, params):
         return dict(DistToDistInputConfigOptimalQKL(**params).model_dump())
 
+    @field_validator("cvxpy_solve_kwargs")
+    @classmethod
+    def validate_cvxpy_solve_kwargs(cls, params):
+        assert isinstance(params, dict), "cvxpy_solve_kwargs must be a dictionary."
+        assert "solver" in params, "cvxpy_solve_kwargs must contain a 'solver' key."
+        if params["solver"] not in [
+            "ECOS",
+            "CVXOPT",
+            "CLARABEL",
+            "GUROBI",
+            "SCS",
+            "MOSEK",
+        ]:
+            raise ValueError(
+                f"Solver {params['solver']} is not supported. Supported solvers are: ECOS, CVXOPT, CLARABEL, GUROBI, SCS, MOSEK."
+            )
+        return params
+
 
 class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):
     """
@@ -119,7 +155,7 @@ class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):
         summing over the rows gives the user submitted distribution, and summing over the columns gives the ground truth distribution.
     """
 
-    q_opt: List[PositiveFloat]
+    q_opt: List[TolerantPositiveFloat]
     EMD_opt: PositiveFloat
     transport_plan_opt: List[List[float]]
     flow_opt: Any
@@ -151,7 +187,7 @@ class DistToDistResultsValidatorReplicateKL(BaseModel, extra="forbid"):
     objective: List[float], objective function values at each iteration.
     """
 
-    q_opt: List[PositiveFloat]
+    q_opt: List[TolerantPositiveFloat]
     klpq_opt: float
     klqp_opt: float
     A: List[List[float]]

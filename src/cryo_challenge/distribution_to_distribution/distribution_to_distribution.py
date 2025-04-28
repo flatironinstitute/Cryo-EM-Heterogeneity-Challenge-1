@@ -140,7 +140,7 @@ def run(config):
             # EMD
             ## opt
             q_opt, T, flow, prob, runtime = optimal_q_emd_vec(
-                Wp, W_distance, solver=config["cvxpy_solver"], verbose=True
+                Wp, W_distance, cvxpy_solve_kwargs=config["cvxpy_solve_kwargs"]
             )
             q_opt_reg, T_reg, T_self, flow_reg, prob_reg, runtime_reg = (
                 optimal_q_emd_vec_regularized(
@@ -149,8 +149,6 @@ def run(config):
                     W_distance,
                     W_distance_self,
                     config["regularization"],
-                    solver=config["cvxpy_solver"],
-                    verbose=True,
                 )
             )
 

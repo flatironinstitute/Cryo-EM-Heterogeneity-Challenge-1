@@ -5,11 +5,17 @@ path_to_ground_truth_metadata: tests/data/Ground_truth/test_metadata_10.csv
 n_replicates: 3
 n_pool_microstate: 2
 replicate_fraction: 0.9
-cvxpy_solver: ECOS
+cvxpy_solve_kwargs:
+  solver: ECOS
+  verbose: True
 regularization:
+  cvxpy_solve_kwargs:
+    solver: SCS
+    max_iters: 100000
+    verbose: True
   scalar_hyperparam_self_emd: 1.0
   scalar_hyperparam_self_entropy_q: 1.0
-  entropy_epsilon: 0.000001
+  epsilon_q: 0.000001
 optimal_q_kl_params:
   n_iter: 100000
   break_atol: 0.0001

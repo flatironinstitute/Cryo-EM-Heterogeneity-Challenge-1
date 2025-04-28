@@ -161,7 +161,7 @@ def optimal_q_emd(p, cost, constraints=None, **kwargs):
     return q_opt, T, flow, prob, runtime
 
 
-def optimal_q_emd_vec(p, cost, constraints=None, **kwargs):
+def optimal_q_emd_vec(p, cost, constraints=None, cvxpy_solve_kwargs={}):
     R, L = cost.shape
 
     flow = cp.Variable(L + L * R)
@@ -180,7 +180,7 @@ def optimal_q_emd_vec(p, cost, constraints=None, **kwargs):
     constraints = make_constraints(flow, p, L, R)
     prob = cp.Problem(cp.Minimize(u.flatten().T @ flow), constraints)
     start = time.time()
-    prob.solve(**kwargs)
+    prob.solve(**cvxpy_solve_kwargs)
     end = time.time()
     runtime = end - start
     T = flow[L:].value.reshape(cost.shape)
@@ -189,9 +189,7 @@ def optimal_q_emd_vec(p, cost, constraints=None, **kwargs):
     return q_opt, T, flow, prob, runtime
 
 
-def optimal_q_emd_vec_regularized(
-    p, q_sub, cost, self_cost, regularization_dict, constraints=None, **kwargs
-):
+def optimal_q_emd_vec_regularized(p, q_sub, cost, self_cost, regularization_dict):
     R, L = cost.shape
     flow = cp.Variable(L + L * R)
     q = flow[:L]
@@ -220,17 +218,18 @@ def optimal_q_emd_vec_regularized(
     u[L:] = cost.flatten()
     u_self[:] = self_cost.flatten()
 
-    def make_constraints(flow, p, L, R):
+    def make_constraints(flow, p, L, R, eps_q):
         q = flow[:L]
         return [
             cp.sum(flow[L:].reshape((L, R)), axis=1) == q,
             cp.sum(flow[L:].reshape((L, R)), axis=0) == p,
             cp.sum(q) == 1,
             flow >= 0,
+            q >= eps_q,
         ]
 
     def make_constraints_self(
-        transport_plan_self, q_to_opt, q_ref, self_transport_fix_zero
+        transport_plan_self, q_to_opt, q_ref, self_transport_fix_zero, eps_q
     ):
         L = q_to_opt.size
         R = len(q_ref)
@@ -239,6 +238,8 @@ def optimal_q_emd_vec_regularized(
             cp.sum(transport_plan_self.reshape((L, R)), axis=1) == q_to_opt,
             cp.sum(transport_plan_self.reshape((L, R)), axis=0) == q_ref,
             transport_plan_self >= 0,
+            cp.sum(transport_plan_self) == 1,
+            q_to_opt >= eps_q,
         ]
 
         if self_transport_fix_zero:
@@ -247,23 +248,37 @@ def optimal_q_emd_vec_regularized(
             constraints.append(diag_elements == 0)
         return constraints
 
-    constraints = make_constraints(flow, p, L, R)
+    eps_q = regularization_dict["epsilon_q"]
+    constraints = make_constraints(flow, p, L, R, eps_q)
 
-    constraints_self = make_constraints_self(transport_plan_self, q, q_sub, True)
+    constraints_self = make_constraints_self(transport_plan_self, q, q_sub, True, eps_q)
     flow_term_cross = u.flatten().T @ flow
     flow_term_self = u_self.flatten().T @ transport_plan_self
-    eps = regularization_dict["entropy_epsilon"]
-    entropy_q = -cp.sum(cp.entr(q + eps))
+    entropy_q = -cp.sum(cp.entr(q))
+
+    T_preopt = flow[L:].reshape(cost.shape)
+
+    close_in_cost = 0
+    for j in range(L):
+        for j_prime in range(L):
+            Tj = T_preopt[:, j]
+            Tj_prime = T_preopt[:, j_prime]
+            close_in_cost += (
+                cp.square(cp.abs(Tj - Tj_prime)) / self_cost[j, j_prime]
+            ).sum()
+
+    scalar_hyperparam_close_in_cost = 0.0
     prob = cp.Problem(
         cp.Minimize(
             flow_term_cross
             + regularization_dict["scalar_hyperparam_self_emd"] * flow_term_self
             + regularization_dict["scalar_hyperparam_self_entropy_q"] * entropy_q
+            + scalar_hyperparam_close_in_cost * close_in_cost
         ),
         constraints + constraints_self,
     )
     start = time.time()
-    prob.solve(**kwargs, max_iters=1000)
+    prob.solve(**regularization_dict["cvxpy_solve_kwargs"])
     end = time.time()
     runtime = end - start
 
