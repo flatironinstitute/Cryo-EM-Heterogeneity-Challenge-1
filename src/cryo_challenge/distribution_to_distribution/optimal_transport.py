@@ -196,7 +196,9 @@ def optimal_q_emd_vec_regularized(
     flow = cp.Variable(L + L * R)
     q = flow[:L]
 
-    # split_q_in_half = True
+    split_q_in_half = (
+        False  # TODO: introduce this. makes sense even when compare to opt to ref
+    )
     R_self, L_self = self_cost.shape
     assert R_self == L_self, "self_cost must be square"
     assert L == L_self, "cost and self_cost must share a marginal"
@@ -268,9 +270,10 @@ def optimal_q_emd_vec_regularized(
     T = flow[L:].value.reshape(cost.shape)
     q_opt = T.sum(0)
 
-    T_self = None  # transport_plan_self.value.reshape(self_cost.shape)
-    # if not split_q_in_half:
-    #     assert np.allclose(q_opt, T_self.sum(0))
+    T_self = transport_plan_self.value.reshape(self_cost.shape)
+    if not split_q_in_half:
+        assert np.allclose(q_opt, T_self.sum(0))
+        assert np.allclose(q_sub, T_self.sum(1))
 
     return (
         q_opt,
