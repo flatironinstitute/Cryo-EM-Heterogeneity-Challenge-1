@@ -104,11 +104,13 @@ def run(config):
 
         n = cost_matrix.shape[1]
 
-        n_pool_microstate = config["n_pool_microstate"]
-        n_replicates = config["n_replicates"]
+        n_pool_ground_truth_microstates = config["replicate_params"][
+            "n_pool_ground_truth_microstates"
+        ]
+        n_replicates = config["replicate_params"]["n_replicates"]
 
         for replicate_idx in range(n_replicates):
-            replicate_fraction = config["replicate_fraction"]
+            replicate_fraction = config["replicate_params"]["replicate_fraction"]
             m_replicate = int(replicate_fraction * m)
             results_dict[metric]["replicates"][replicate_idx] = {}
 
@@ -121,7 +123,7 @@ def run(config):
             )  # p=prob_gt?
             idxs.sort()
             prob_gt_reduced = prob_gt[idxs] / prob_gt[idxs].sum()
-            m_reduce = m_replicate // n_pool_microstate
+            m_reduce = m_replicate // n_pool_ground_truth_microstates
             Window = np.zeros((m_reduce, m_replicate))
             for i, e in enumerate(np.array_split(np.arange(m_replicate), m_reduce)):
                 Window[i, e] = 1  # TODO: soft windowing
@@ -148,7 +150,7 @@ def run(config):
                     user_submitted_populations,
                     W_distance,
                     W_distance_self,
-                    config["regularization"],
+                    config["emd_regularization"],
                 )
             )
 

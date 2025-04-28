@@ -218,18 +218,22 @@ def optimal_q_emd_vec_regularized(p, q_sub, cost, self_cost, regularization_dict
     u[L:] = cost.flatten()
     u_self[:] = self_cost.flatten()
 
-    def make_constraints(flow, p, L, R, eps_q):
+    def make_constraints(flow, p, L, R, q_greater_than_constraint):
         q = flow[:L]
         return [
             cp.sum(flow[L:].reshape((L, R)), axis=1) == q,
             cp.sum(flow[L:].reshape((L, R)), axis=0) == p,
             cp.sum(q) == 1,
             flow >= 0,
-            q >= eps_q,
+            q >= q_greater_than_constraint,
         ]
 
     def make_constraints_self(
-        transport_plan_self, q_to_opt, q_ref, self_transport_fix_zero, eps_q
+        transport_plan_self,
+        q_to_opt,
+        q_ref,
+        self_transport_fix_zero,
+        q_greater_than_constraint,
     ):
         L = q_to_opt.size
         R = len(q_ref)
@@ -239,7 +243,7 @@ def optimal_q_emd_vec_regularized(p, q_sub, cost, self_cost, regularization_dict
             cp.sum(transport_plan_self.reshape((L, R)), axis=0) == q_ref,
             transport_plan_self >= 0,
             cp.sum(transport_plan_self) == 1,
-            q_to_opt >= eps_q,
+            q_to_opt >= q_greater_than_constraint,
         ]
 
         if self_transport_fix_zero:
@@ -248,10 +252,12 @@ def optimal_q_emd_vec_regularized(p, q_sub, cost, self_cost, regularization_dict
             constraints.append(diag_elements == 0)
         return constraints
 
-    eps_q = regularization_dict["epsilon_q"]
-    constraints = make_constraints(flow, p, L, R, eps_q)
+    q_greater_than_constraint = regularization_dict["q_greater_than_constraint"]
+    constraints = make_constraints(flow, p, L, R, q_greater_than_constraint)
 
-    constraints_self = make_constraints_self(transport_plan_self, q, q_sub, True, eps_q)
+    constraints_self = make_constraints_self(
+        transport_plan_self, q, q_sub, True, q_greater_than_constraint
+    )
     flow_term_cross = u.flatten().T @ flow
     flow_term_self = u_self.flatten().T @ transport_plan_self
     entropy_q = -cp.sum(cp.entr(q))

@@ -20,7 +20,7 @@ TolerantPositiveFloat = confloat(
 )  # numerical issues in CVXPY can cause negative values
 
 
-class DistToDistInputConfigRegularization(BaseModel, extra="forbid"):
+class DistToDistInputConfigEmdRegularization(BaseModel, extra="forbid"):
     cvxpy_solve_kwargs: dict = Field(
         description="Keyword arguments for the CVXPY solver.",
         default={},
@@ -37,7 +37,7 @@ class DistToDistInputConfigRegularization(BaseModel, extra="forbid"):
         default=0.0,
         description="Scalar hyperparameter for the weighted L2 regularization by the self cost matrix.",
     )
-    epsilon_q: PositiveFloat = Field(
+    q_greater_than_constraint: PositiveFloat = Field(
         description="Epsilon for numerical stability of the entropy regularization.",
         default=1e-6,
     )
@@ -49,6 +49,21 @@ class DistToDistInputConfigOptimalQKL(BaseModel, extra="forbid"):
     )
     break_atol: PositiveFloat = Field(
         description="Absolute tolerance for the optimization.",
+    )
+
+
+class DistToDistInputConfigReplicateParams(BaseModel, extra="forbid"):
+    n_replicates: PositiveInt = Field(
+        default=1,
+        description="Number of replicates to compute",
+    )
+
+    n_pool_ground_truth_microstates: PositiveInt = Field(
+        default=1,
+        description="Number of microstates to pool (low values less than 3-5 can cause problems for optimization convergence in CVXPY numerical solvers).",
+    )
+    replicate_fraction: PositiveFloat = Field(
+        description="Fraction of the data to use for replicates."
     )
 
 
@@ -75,29 +90,17 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
         description="Path to the ground truth metadata file",
     )
 
-    n_replicates: PositiveInt = Field(
-        default=1,
-        description="Number of replicates to compute",
+    replicate_params: dict = Field(
+        description="Dictionary of replicates to compute",
+        default=None,
     )
 
-    n_pool_microstate: PositiveInt = Field(
-        default=1,
-        description="Number of microstates to pool (low values less than 3-5 can cause problems for optimization convergence in CVXPY numerical solvers).",
-    )
-    replicate_fraction: PositiveFloat = Field(
-        description="Fraction of the data to use for replicates."
-    )
     cvxpy_solve_kwargs: dict = Field(
         description="Keyword arguments for the CVXPY solver.",
         default={},
     )
-    # Literal["ECOS", "CVXOPT", "CLARABEL", "GUROBI", "SCS", "MOSEK"] = (
-    #     Field(
-    #         default="ECOS",
-    #         description="CVXPY solver to use for optimization. See https://www.cvxpy.org/tutorial/solvers/index.html.",
-    #     )
-    # )
-    regularization: dict = Field(
+
+    emd_regularization: dict = Field(
         description="Parameters for the optimal q KL divergence.",
     )
     optimal_q_kl_params: dict = Field(
@@ -108,10 +111,10 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
         description="Path to the output file",
     )
 
-    @field_validator("regularization")
+    @field_validator("emd_regularization")
     @classmethod
     def validate_regularization(cls, params):
-        return dict(DistToDistInputConfigRegularization(**params).model_dump())
+        return dict(DistToDistInputConfigEmdRegularization(**params).model_dump())
 
     @field_validator("optimal_q_kl_params")
     @classmethod
@@ -135,6 +138,11 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
                 f"Solver {params['solver']} is not supported. Supported solvers are: ECOS, CVXOPT, CLARABEL, GUROBI, SCS, MOSEK."
             )
         return params
+
+    @field_validator("replicate_params")
+    @classmethod
+    def validate_replicates(cls, params):
+        return dict(DistToDistInputConfigReplicateParams(**params).model_dump())
 
 
 class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):
@@ -227,7 +235,7 @@ def _validate_metric(metric, metric_name, config):
     else:
         metric = dict(DistToDistResultsValidatorMetrics(**metric).model_dump())
         assert (
-            len(metric["replicates"]) == config["n_replicates"]
+            len(metric["replicates"]) == config["replicate_params"]["n_replicates"]
         ), f"Replicates in {metric_name} metric do not match the number of replicates in the config."
     return metric
 
