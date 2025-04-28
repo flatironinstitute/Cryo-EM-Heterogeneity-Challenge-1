@@ -212,7 +212,7 @@ def optimal_q_emd_vec_regularized(
     # else:
     #     q_row = q_col = flow[:L]
 
-    # transport_plan_self = cp.Variable(L_self * R_self)
+    transport_plan_self = cp.Variable(L_self * R_self)
     u = np.zeros(L + L * R)
     u_self = np.zeros(L_self * R_self)
     u[L:] = cost.flatten()
@@ -247,9 +247,9 @@ def optimal_q_emd_vec_regularized(
 
     constraints = make_constraints(flow, p, L, R)
 
-    constraints_self = []  # make_constraints_self(transport_plan_self, q, q_sub, True)
+    constraints_self = make_constraints_self(transport_plan_self, q, q_sub, True)
     flow_term_cross = u.flatten().T @ flow
-    flow_term_self = 1  # u_self.flatten().T @ transport_plan_self
+    flow_term_self = u_self.flatten().T @ transport_plan_self
     eps = regularization_dict["entropy_epsilon"]
     entropy_q = -cp.sum(cp.entr(q + eps))
     prob = cp.Problem(
