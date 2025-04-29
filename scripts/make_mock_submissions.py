@@ -45,8 +45,8 @@ def main():
 
         new_averaged_volumes = ground_truth["volumes"].reshape(new_shape).mean(axis=1)
         new_averaged_populations = (
-            ground_truth["populations"].reshape(n, -1).mean(axis=1)
-        )
+            ground_truth["populations"].reshape(n, -1).sum(axis=1)
+        )  # sum not mean since population needs to sum to 1
 
         id_label_titelized = args.output_label.replace("_", " ").title()
         torch.save(

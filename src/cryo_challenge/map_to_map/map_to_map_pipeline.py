@@ -78,7 +78,7 @@ def run(config):
     results_dict = {}
     results_dict["config"] = config
 
-    results_dict["user_submitted_populations"] = torch.tensor(
+    results_dict["user_submitted_populations"] = (
         submission[submission_metadata_key] / submission[submission_metadata_key].sum()
     )
 
@@ -92,6 +92,7 @@ def run(config):
         mmap=do_low_memory_mode,
         weights_only=False,
     )
+    # maps_gt_flat = torch.empty(len(metadata_gt), 224**3)
 
     computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
