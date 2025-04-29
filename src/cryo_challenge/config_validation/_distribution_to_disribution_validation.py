@@ -1,4 +1,4 @@
-from typing import Literal, List, Any, Optional, Union
+from typing import List, Any, Optional, Union
 from typing_extensions import Self
 from pydantic import (
     BaseModel,
@@ -71,21 +71,24 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     path_to_map_to_map_results: FilePath = Field(
         description="Path to the map-to-map results file",
     )
-    metrics: List[
-        Literal[
-            "fsc",
-            "corr",
-            "l2",
-            "bioem",
-            "res",
-            "zernike3d",
-            "gromov_wasserstein",
-            "procrustes_wasserstein",
-        ]
-    ] = Field(
-        description="List of metrics to compute",
+    # metrics: List[
+    #     Literal[
+    #         "fsc",
+    #         "corr",
+    #         "l2",
+    #         "bioem",
+    #         "res",
+    #         "zernike3d",
+    #         "gromov_wasserstein",
+    #         "procrustes_wasserstein",
+    #     ]
+    #     ] = Field(
+    #     description="List of metrics to compute",
+    # )
+    metrics: dict[str, dict] = Field(
+        default={},
+        description="Dictionary of metrics to compute. If None, the metric is not computed.",
     )
-
     path_to_ground_truth_metadata: FilePath = Field(
         description="Path to the ground truth metadata file",
     )
@@ -143,6 +146,25 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     @classmethod
     def validate_replicates(cls, params):
         return dict(DistToDistInputConfigReplicateParams(**params).model_dump())
+
+    @field_validator("metrics")
+    @classmethod
+    def validate_metrics(cls, params):
+        for metric_label, metric_params in params.items():
+            supported_metrics = [
+                "l2",
+                "bioem",
+                "res",
+                "fsc",
+                "corr",
+                "zernike3d",
+                "gromov_wasserstein",
+            ]
+            if metric_label not in supported_metrics:
+                raise ValueError(
+                    f"Metric {metric_label} is not supported. Supported metrics are: {supported_metrics}."
+                )
+        return params
 
 
 class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):

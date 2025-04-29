@@ -85,7 +85,7 @@ def run(config):
 
     assert np.isclose(user_submitted_populations.sum(), 1)
 
-    for metric in config["metrics"]:
+    for metric in config["metrics"].keys():
         results_dict[metric] = {}
         results_dict[metric]["replicates"] = {}
         cost_matrix_df = data[metric]["cost_matrix"]
@@ -97,9 +97,12 @@ def run(config):
 
         ## self for regularization
         cost_self = data[metric]["cost_matrix_self"].values
-        # W_distance_self = cost_self
-        cost_self_rank = np.apply_along_axis(rankdata, 1, cost_self)
-        W_distance_self = cost_self_rank
+        if config["metrics"][metric]["apply_rank_normalization"] is not None:
+            cost_self_rank = np.apply_along_axis(rankdata, 1, cost_self)
+            W_distance_self = cost_self_rank
+        else:
+            W_distance_self = cost_self
+
         results_dict[metric]["cost_self"] = W_distance_self
 
         n = cost_matrix.shape[1]
@@ -129,12 +132,12 @@ def run(config):
                 Window[i, e] = 1  # TODO: soft windowing
 
             cost = cost_matrix[idxs]
-            # W_distance = Window @ cost
 
-            cost_rank = np.apply_along_axis(rankdata, 1, cost)
-            # Wcost_rank = Window @ (cost_rank.max() - cost_rank)
-            # W_distance = Wcost_rank
-            W_distance = Window @ cost_rank
+            if config["metrics"][metric]["apply_rank_normalization"]:
+                cost_rank = np.apply_along_axis(rankdata, 1, cost)
+                W_distance = Window @ cost_rank
+            else:
+                W_distance = Window @ cost
 
             ## gt prob
             Wp = Window @ prob_gt_reduced
