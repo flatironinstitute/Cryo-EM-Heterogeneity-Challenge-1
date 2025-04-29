@@ -78,6 +78,11 @@ def run(config):
     results_dict = {}
     results_dict["config"] = config
 
+    if not torch.is_tensor(submission[submission_metadata_key]):
+        submission[submission_metadata_key] = torch.tensor(
+            submission[submission_metadata_key]
+        )
+
     results_dict["user_submitted_populations"] = (
         submission[submission_metadata_key] / submission[submission_metadata_key].sum()
     )
