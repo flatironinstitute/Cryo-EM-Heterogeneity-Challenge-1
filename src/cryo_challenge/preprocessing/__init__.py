@@ -11,6 +11,11 @@ from ._cropping_and_padding import (
     crop_or_pad_submission as crop_or_pad_submission,
     pad_submission_to_box_size as pad_submission_to_box_size,
 )
+from ._global_alignment import (
+    align_submission_to_reference as align_submission_to_reference,
+    threshold_submissions as threshold_submissions,
+    threshold_volume as threshold_volume,
+)
 
 from ._submission_dataset import (
     SubmissionPreprocessingDataset as SubmissionPreprocessingDataset,
