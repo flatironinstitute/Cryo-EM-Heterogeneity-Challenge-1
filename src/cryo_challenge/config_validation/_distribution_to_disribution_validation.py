@@ -254,24 +254,6 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
         else:
             return None
 
-    # def validate_metrics(cls, params):
-    #     for metric_label, metric_params in params.items():
-    #         supported_metrics = [
-    #             "l2",
-    #             "bioem",
-    #             "res",
-    #             "fsc",
-    #             "corr",
-    #             "zernike3d",
-    #             "gromov_wasserstein",
-    #             "procrustes_wasserstein",
-    #         ]
-    #         if metric_label not in supported_metrics:
-    #             raise ValueError(
-    #                 f"Metric {metric_label} is not supported. Supported metrics are: {supported_metrics}."
-    #             )
-    #     return dict(**params)
-
 
 class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):
     """
