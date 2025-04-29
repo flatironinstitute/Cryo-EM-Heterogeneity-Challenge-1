@@ -67,24 +67,120 @@ class DistToDistInputConfigReplicateParams(BaseModel, extra="forbid"):
     )
 
 
+class DistToDistInputConfigMetrics(BaseModel, extra="forbid"):
+    l2: Optional[dict] = Field(
+        default=None,
+        description="L2 metric parameters.",
+    )
+    bioem: Optional[dict] = Field(
+        default=None,
+        description="BioEM metric parameters.",
+    )
+    res: Optional[dict] = Field(
+        default=None,
+        description="RES metric parameters.",
+    )
+    fsc: Optional[dict] = Field(
+        default=None,
+        description="FSC metric parameters.",
+    )
+    corr: Optional[dict] = Field(
+        default=None,
+        description="Correlation metric parameters.",
+    )
+    zernike3d: Optional[dict] = Field(
+        default=None,
+        description="Zernike3D metric parameters.",
+    )
+    gromov_wasserstein: Optional[dict] = Field(
+        default=None,
+        description="Gromov-Wasserstein metric parameters.",
+    )
+    procrustes_wasserstein: Optional[dict] = Field(
+        default=None,
+        description="Procrustes-Wasserstein metric parameters.",
+    )
+
+    @field_validator("l2")
+    @classmethod
+    def validate_l2(cls, params):
+        if params is not None:
+            return dict(DistToDistInputConfigSingleMetricParams(**params).model_dump())
+        else:
+            return None
+
+    @field_validator("bioem")
+    @classmethod
+    def validate_bioem(cls, params):
+        if params is not None:
+            return dict(DistToDistInputConfigSingleMetricParams(**params).model_dump())
+        else:
+            return None
+
+    @field_validator("res")
+    @classmethod
+    def validate_res(cls, params):
+        if params is not None:
+            return dict(DistToDistInputConfigSingleMetricParams(**params).model_dump())
+        else:
+            return None
+
+    @field_validator("fsc")
+    @classmethod
+    def validate_fsc(cls, params):
+        if params is not None:
+            return dict(DistToDistInputConfigSingleMetricParams(**params).model_dump())
+        else:
+            return None
+
+    @field_validator("corr")
+    @classmethod
+    def validate_corr(cls, params):
+        if params is not None:
+            return dict(DistToDistInputConfigSingleMetricParams(**params).model_dump())
+        else:
+            return None
+
+    @field_validator("zernike3d")
+    @classmethod
+    def validate_zernike3d(cls, params):
+        if params is not None:
+            return dict(DistToDistInputConfigSingleMetricParams(**params).model_dump())
+        else:
+            return None
+
+    @field_validator("gromov_wasserstein")
+    @classmethod
+    def validate_gromov_wasserstein(cls, params):
+        if params is not None:
+            return dict(DistToDistInputConfigSingleMetricParams(**params).model_dump())
+        else:
+            return None
+
+    @field_validator("procrustes_wasserstein")
+    @classmethod
+    def validate_procrustes_wasserstein(cls, params):
+        if params is not None:
+            return dict(DistToDistInputConfigSingleMetricParams(**params).model_dump())
+        else:
+            return None
+
+
+class DistToDistInputConfigSingleMetricParams(BaseModel, extra="forbid"):
+    apply_rank_normalization: Optional[bool] = Field(
+        default=True,
+        description="Apply rank normalization to the cost matrix.",
+    )
+    metric_specific_params: Optional[dict] = Field(
+        default={},
+        description="Metric specific parameters.",
+    )
+
+
 class DistToDistInputConfig(BaseModel, extra="forbid"):
     path_to_map_to_map_results: FilePath = Field(
         description="Path to the map-to-map results file",
     )
-    # metrics: List[
-    #     Literal[
-    #         "fsc",
-    #         "corr",
-    #         "l2",
-    #         "bioem",
-    #         "res",
-    #         "zernike3d",
-    #         "gromov_wasserstein",
-    #         "procrustes_wasserstein",
-    #     ]
-    #     ] = Field(
-    #     description="List of metrics to compute",
-    # )
     metrics: dict[str, dict] = Field(
         default={},
         description="Dictionary of metrics to compute. If None, the metric is not computed.",
@@ -129,16 +225,17 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     def validate_cvxpy_solve_kwargs(cls, params):
         assert isinstance(params, dict), "cvxpy_solve_kwargs must be a dictionary."
         assert "solver" in params, "cvxpy_solve_kwargs must contain a 'solver' key."
-        if params["solver"] not in [
+        supported_solvers = [
             "ECOS",
             "CVXOPT",
             "CLARABEL",
             "GUROBI",
             "SCS",
             "MOSEK",
-        ]:
+        ]
+        if params["solver"] not in supported_solvers:
             raise ValueError(
-                f"Solver {params['solver']} is not supported. Supported solvers are: ECOS, CVXOPT, CLARABEL, GUROBI, SCS, MOSEK."
+                f"Solver {params['solver']} is not supported. Supported solvers are: {supported_solvers}."
             )
         return params
 
@@ -150,21 +247,30 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     @field_validator("metrics")
     @classmethod
     def validate_metrics(cls, params):
-        for metric_label, metric_params in params.items():
-            supported_metrics = [
-                "l2",
-                "bioem",
-                "res",
-                "fsc",
-                "corr",
-                "zernike3d",
-                "gromov_wasserstein",
-            ]
-            if metric_label not in supported_metrics:
-                raise ValueError(
-                    f"Metric {metric_label} is not supported. Supported metrics are: {supported_metrics}."
-                )
-        return params
+        if params is not None:
+            return dict(
+                DistToDistInputConfigMetrics(**params).model_dump(exclude_none=True)
+            )
+        else:
+            return None
+
+    # def validate_metrics(cls, params):
+    #     for metric_label, metric_params in params.items():
+    #         supported_metrics = [
+    #             "l2",
+    #             "bioem",
+    #             "res",
+    #             "fsc",
+    #             "corr",
+    #             "zernike3d",
+    #             "gromov_wasserstein",
+    #             "procrustes_wasserstein",
+    #         ]
+    #         if metric_label not in supported_metrics:
+    #             raise ValueError(
+    #                 f"Metric {metric_label} is not supported. Supported metrics are: {supported_metrics}."
+    #             )
+    #     return dict(**params)
 
 
 class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):
