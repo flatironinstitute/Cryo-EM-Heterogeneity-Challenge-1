@@ -15,7 +15,7 @@ data_params:
 metrics:
   zernike3d:
     gpuID: 0
-    tmpDir: tmp_zernike
+    tmpDir: tests/results/tmp_zernike
     thr: 20
     numProjections: 20 # projecions should be 20-100
   shared_params:

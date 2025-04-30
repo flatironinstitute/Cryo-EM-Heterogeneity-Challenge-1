@@ -9,6 +9,7 @@ from pydantic import (
     PositiveFloat,
     FiniteFloat,
     PositiveInt,
+    NonNegativeInt,
     FilePath,
     DirectoryPath,
     AfterValidator,
@@ -201,7 +202,7 @@ class MapToMapInputConfigMetricsProcrustesWasserstein(BaseModel, extra="forbid")
 
 
 class MapToMapInputConfigMetricsZernike3d(BaseModel, extra="forbid"):
-    gpuID: PositiveInt = Field(
+    gpuID: NonNegativeInt = Field(
         default=0,
         description="Identifier of GPU",
     )
