@@ -128,8 +128,7 @@ def run(config):
             "computed_assets": computed_assets,
         }
 
-        do_self = True
-        if do_self:
+        if config["metrics"][distance_label]["compute_self_metric"]:
             map_to_map_distance.distance_matrix_precomputation(
                 maps_user_flat, maps_user_flat
             )
@@ -177,8 +176,6 @@ def run(config):
             )
 
         results_dict[distance_label] = single_distance_results_dict
-    print("results_dict.keys()", results_dict.keys())
-    print("results_dict['config']", results_dict["config"])
 
     # Validate before saving
     results_dict = dict(

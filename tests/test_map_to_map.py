@@ -8,10 +8,14 @@ def test_run_map2map_pipeline_self():
         {"config": "tests/config_files/test_config_map_to_map_self.yaml"}
     )
     results_dict = run_map2map_pipeline.main(args)
-    for metric in ["fsc", "res", "corr", "l2", "bioem"]:
+    include_self = ["fsc", "corr", "l2"]
+    exlude_self = ["bioem", "res"]
+    for metric in include_self:
         assert metric in results_dict.keys()
         n_row_self, n_col_self = results_dict[metric]["cost_matrix_self"].values.shape
         assert n_row_self == n_col_self
+    for metric in exlude_self:
+        assert results_dict[metric]["cost_matrix_self"] is None
 
 
 def test_run_map2map_pipeline_procrustes():

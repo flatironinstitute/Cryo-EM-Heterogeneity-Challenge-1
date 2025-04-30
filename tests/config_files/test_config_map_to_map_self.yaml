@@ -13,19 +13,15 @@ data_params:
     apply_mask: true
     path_to_mask: tests/data/Ground_truth/test_mask_bool.mrc
 
-metrics_self:
-  - l2
-  - corr
-  - bioem
-  - fsc
-  - res
-
 metrics:
-  l2: {}
+  l2:
+    compute_self_metric: true
   corr: {}
-  bioem: {}
+  bioem:
+    compute_self_metric: false
   fsc: {}
-  res: {}
+  res:
+    compute_self_metric: false
   shared_params:
     low_memory:
       do: false
