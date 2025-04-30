@@ -6,7 +6,7 @@ import numpy as np
 def test_run_map2map_pipeline_procrustes():
     args = OmegaConf.create(
         {
-            "config": "tests/config_files//test_config_map_to_map_procrustes_wasserstein.yaml"
+            "config": "tests/config_files/test_config_map_to_map_procrustes_wasserstein.yaml"
         }
     )
     _ = run_map2map_pipeline.main(args)
@@ -71,7 +71,3 @@ def test_run_map2map_pipeline_low_memory():
                 results_dict_low_memory[metric]["cost_matrix"].values,
             )
     return
-
-
-if __name__ == "__main__":
-    test_run_map2map_pipeline_zernike()

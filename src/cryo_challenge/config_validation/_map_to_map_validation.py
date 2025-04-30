@@ -17,6 +17,7 @@ from pydantic import (
     model_validator,
 )
 import pandas
+import torch
 from torch import Tensor
 
 
@@ -458,8 +459,9 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
     @field_validator("user_submitted_populations")
     @classmethod
     def validate_user_submitted_populations(cls, user_submitted_populations):
-        assert (
-            user_submitted_populations.sum() == 1
+        assert torch.isclose(
+            torch.ones(1).to(user_submitted_populations.dtype),
+            user_submitted_populations.sum(),
         ), "User submitted populations do not sum to 1."
         return user_submitted_populations
 
