@@ -14,13 +14,13 @@ def main():
         "--fname",
         type=str,
         required=True,
-        help="Path to input .pt file. Maps need to be in the order you want to average them.",
+        help="Path to input .pt file. Requires preprocessing format with 'volumes' and 'populations' as keys. Averaging across neighbouring indices.",
     )
     parser.add_argument(
         "--output_label",
         type=str,
         required=True,
-        help="Path to input .pt file. Maps need to be in the order you want to average them.",
+        help="ice cream flavour with all lower cases and spaces as underscores.",
     )
     parser.add_argument(
         "--output_dir", type=str, required=True, help="Output directory"
@@ -35,6 +35,11 @@ def main():
     args = parser.parse_args()
 
     ground_truth = torch.load(args.fname, weights_only=False)
+    assert "volumes" in ground_truth.keys(), "Input file must contain 'volumes' key."
+    assert (
+        "populations" in ground_truth.keys()
+    ), "Input file must contain 'populations' key."
+
     n_pix = ground_truth["volumes"].shape[-1]
 
     for n in args.n_final_maps:
