@@ -384,11 +384,11 @@ class MapToMapResultsAllMetrics(BaseModel, extra="forbid"):
 
     cost_matrix: pandas.DataFrame = Field(
         default=None,
-        description="Cost matrix",
+        description="Cost matrix (ground truth versus submission)",
     )
     cost_matrix_self: pandas.DataFrame = Field(
         default=None,
-        description="Cost matrix",
+        description="Cost matrix (submission versus submission)",
     )
     user_submission_label: str = Field(
         default=None,
