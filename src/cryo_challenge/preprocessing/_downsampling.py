@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
 
-from ..utils._fourier import htn_center
+from ..fft._fourier import htn_center
 from ._cropping_and_padding import crop_volume_to_box_size
 
 
