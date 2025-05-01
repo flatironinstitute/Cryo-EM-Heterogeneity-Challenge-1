@@ -236,15 +236,18 @@ def compute_common_embedding(
             submissions_svd[label]["eigenvectors"].T
         ) * submissions_svd[label]["singular_values"][:, None]
 
+    eigenvectors -= torch.mean(eigenvectors, dim=0, keepdim=True)
     U, S, V = torch.linalg.svd(eigenvectors, full_matrices=False)
+    V = V.T
 
-    Z_common = (U @ torch.diag(S)).reshape(n_subs, shape_per_sub[0], -1)
     embeddings = {}
-
     for i, label in enumerate(labels):
-        Z_i_common = torch.einsum(
-            "ij, jk -> ik", submissions_svd[label]["u_matrices"], Z_common[i]
+        # (U_i S_i V_i^T) V_common <- this is what this does!
+        Z_i_common = submissions_svd[label]["u_matrices"] @ torch.diag(
+            submissions_svd[label]["singular_values"]
         )
+        Z_i_common = Z_i_common @ (submissions_svd[label]["eigenvectors"].T @ V)
+
         embeddings[labels[i]] = Z_i_common
 
     results = {
@@ -254,10 +257,9 @@ def compute_common_embedding(
     }
 
     if gt_svd is not None:
+        # (U_gt S_gt V_gt^T) V_common <- this is what this does!
         gt_proj = gt_svd["u_matrices"] @ torch.diag(gt_svd["singular_values"])
-        gt_proj = gt_proj @ (
-            gt_svd["eigenvectors"].T @ V.T
-        )  # (U_gt S_gt V_gt^T) V_common
+        gt_proj = gt_proj @ (gt_svd["eigenvectors"].T @ V)
 
         results["gt_embedding"] = gt_proj
 
