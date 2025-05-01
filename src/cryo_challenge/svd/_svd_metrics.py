@@ -88,7 +88,7 @@ def compute_pcv_matrix(submissions_svd: Dict, gt_svd: Optional[Dict] = None) -> 
 
     total = n_subs * (n_subs - 1) // 2
     with tqdm(total=total, desc="PCV sub vs sub") as pbar:
-        for i in tqdm(range(n_subs)):
+        for i in range(n_subs):
             for j in range(i + 1, n_subs):
                 pcv_j_on_i = compute_captured_variance(
                     submissions_svd[labels[i]]["eigenvectors"],
@@ -167,11 +167,11 @@ def compute_fsc_matrix_first_eigvecs(
 
     vols_for_comp = torch.stack(vols_for_comp)
 
-    distance_matrix = torch.zeros(
+    distance_matrix = torch.ones(
         (len(vols_for_comp), len(vols_for_comp)), dtype=torch.float32
     )
     total = len(vols_for_comp) * (len(vols_for_comp) - 1) // 2
-    with tqdm(total=total, desc="PCV sub vs sub") as pbar:
+    with tqdm(total=total, desc="FSC sub vs sub") as pbar:
         for i in range(len(vols_for_comp)):
             for j in range(i + 1, len(vols_for_comp)):
                 distance_matrix[i, j] = get_fsc_metric(

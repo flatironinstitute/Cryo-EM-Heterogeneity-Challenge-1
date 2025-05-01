@@ -117,7 +117,6 @@ def compute_fourier_shell_correlation(
     fourier_volume_2: Tensor,
     radial_frequency_grid: Tensor,
     voxel_size: float = 1.0,
-    threshold: float = 0.5,
     *,
     minimum_frequency: float = 0.0,
     maximum_frequency: float = math.sqrt(2) / 2,
@@ -166,16 +165,15 @@ def compute_fourier_shell_correlation(
         f"Volume 1 shape: {fourier_volume_1.shape}, Volume 2 shape: {fourier_volume_2.shape}"
     )
 
-    fsc_curve, frequency_bins, frequency_threshold = _compute_fourier_correlation(
+    fsc_curve, frequency_bins = _compute_fourier_correlation(
         fourier_volume_1,
         fourier_volume_2,
         radial_frequency_grid,
         voxel_size,
-        threshold=threshold,
         minimum_frequency=minimum_frequency,
         maximum_frequency=maximum_frequency,
     )
-    return fsc_curve, frequency_bins, frequency_threshold
+    return fsc_curve, frequency_bins
 
 
 def _compute_binned_radial_average(
@@ -241,7 +239,6 @@ def _compute_fourier_correlation(
     fourier_array_2: Tensor,
     radial_frequency_grid: (Tensor),
     grid_spacing: float,
-    threshold: float,
     minimum_frequency: float,
     maximum_frequency: float,
 ) -> tuple[Tensor, Tensor, Tensor]:
@@ -258,26 +255,8 @@ def _compute_fourier_correlation(
         radial_frequency_grid,
         frequency_bins,
     )
-    # Find where FSC/FRC drops below the specified threshold
-    # TODO: Add van heel criterion.
-    where_below_threshold = torch.where(
-        correlation_curve < threshold, 0, 1
-    )  # 0s when below, 1s, when above
-    # ... find minimum index where we flip from 0 to 1
-    where_is_crossing = torch.diff(where_below_threshold)
-    # ... make an array that has a value of its index when we have a crossing, and a dummy
-    # value otherwise
-    arr_size = where_is_crossing.numel()
-    arr_indices = torch.arange(arr_size, dtype=int)
-    dummy_index = arr_size + 100
-    indices_at_0_to_1_flips = torch.where(
-        where_is_crossing == -1, arr_indices, dummy_index
-    )
-    # ... get minimum of array
-    threshold_crossing_index = torch.amin(indices_at_0_to_1_flips) + 1
-    frequency_threshold = frequency_bins[threshold_crossing_index]
 
-    return correlation_curve, frequency_bins, frequency_threshold
+    return correlation_curve, frequency_bins
 
 
 def _make_radial_frequency_bins(
