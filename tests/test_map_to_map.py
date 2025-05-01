@@ -3,10 +3,25 @@ from cryo_challenge.commands import run_map2map_pipeline
 import numpy as np
 
 
+def test_run_map2map_pipeline_self():
+    args = OmegaConf.create(
+        {"config": "tests/config_files/test_config_map_to_map_self.yaml"}
+    )
+    results_dict = run_map2map_pipeline.main(args)
+    include_self = ["fsc", "corr", "l2"]
+    exlude_self = ["bioem", "res"]
+    for metric in include_self:
+        assert metric in results_dict.keys()
+        n_row_self, n_col_self = results_dict[metric]["cost_matrix_self"].values.shape
+        assert n_row_self == n_col_self
+    for metric in exlude_self:
+        assert results_dict[metric]["cost_matrix_self"] is None
+
+
 def test_run_map2map_pipeline_procrustes():
     args = OmegaConf.create(
         {
-            "config": "tests/config_files//test_config_map_to_map_procrustes_wasserstein.yaml"
+            "config": "tests/config_files/test_config_map_to_map_procrustes_wasserstein.yaml"
         }
     )
     _ = run_map2map_pipeline.main(args)
@@ -71,7 +86,3 @@ def test_run_map2map_pipeline_low_memory():
                 results_dict_low_memory[metric]["cost_matrix"].values,
             )
     return
-
-
-if __name__ == "__main__":
-    test_run_map2map_pipeline_zernike()

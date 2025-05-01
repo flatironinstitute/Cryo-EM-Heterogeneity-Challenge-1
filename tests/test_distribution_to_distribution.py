@@ -7,3 +7,7 @@ def test_run_distribution2distribution_pipeline():
         {"config": "tests/config_files/test_config_distribution_to_distribution.yaml"}
     )
     run_distribution2distribution_pipeline.main(args)
+
+
+if __name__ == "__main__":
+    test_run_distribution2distribution_pipeline()

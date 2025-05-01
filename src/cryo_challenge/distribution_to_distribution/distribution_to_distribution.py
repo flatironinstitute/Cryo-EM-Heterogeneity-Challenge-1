@@ -1,11 +1,14 @@
 import pandas as pd
 import numpy as np
 import pickle
-from scipy.stats import rankdata
 import torch
 import ot
+from scipy.stats import rankdata
 
-from .optimal_transport import optimal_q_emd_vec
+from .optimal_transport import optimal_q_emd_vec, optimal_q_emd_vec_regularized
+from ..config_validation._distribution_to_disribution_validation import (
+    DistToDistResultsValidator,
+)
 
 
 def sort_by_transport(cost):
@@ -82,7 +85,7 @@ def run(config):
 
     assert np.isclose(user_submitted_populations.sum(), 1)
 
-    for metric in config["metrics"]:
+    for metric in config["metrics"].keys():
         results_dict[metric] = {}
         results_dict[metric]["replicates"] = {}
         cost_matrix_df = data[metric]["cost_matrix"]
@@ -92,13 +95,25 @@ def run(config):
         m = len(cost_matrix_df)
         cost_matrix = cost_matrix_df.values
 
+        ## self for regularization
+        cost_self = data[metric]["cost_matrix_self"].values
+        if config["metrics"][metric]["apply_rank_normalization"] is not None:
+            cost_self_rank = np.apply_along_axis(rankdata, 1, cost_self)
+            W_distance_self = cost_self_rank
+        else:
+            W_distance_self = cost_self
+
+        results_dict[metric]["cost_self"] = W_distance_self
+
         n = cost_matrix.shape[1]
 
-        n_pool_microstate = config["n_pool_microstate"]
-        n_replicates = config["n_replicates"]
+        n_pool_ground_truth_microstates = config["replicate_params"][
+            "n_pool_ground_truth_microstates"
+        ]
+        n_replicates = config["replicate_params"]["n_replicates"]
 
         for replicate_idx in range(n_replicates):
-            replicate_fraction = config["replicate_fraction"]
+            replicate_fraction = config["replicate_params"]["replicate_fraction"]
             m_replicate = int(replicate_fraction * m)
             results_dict[metric]["replicates"][replicate_idx] = {}
 
@@ -111,16 +126,18 @@ def run(config):
             )  # p=prob_gt?
             idxs.sort()
             prob_gt_reduced = prob_gt[idxs] / prob_gt[idxs].sum()
-            m_reduce = m_replicate // n_pool_microstate
+            m_reduce = m_replicate // n_pool_ground_truth_microstates
             Window = np.zeros((m_reduce, m_replicate))
             for i, e in enumerate(np.array_split(np.arange(m_replicate), m_reduce)):
                 Window[i, e] = 1  # TODO: soft windowing
 
             cost = cost_matrix[idxs]
-            cost_rank = np.apply_along_axis(rankdata, 1, cost)
-            # Wcost_rank = Window @ (cost_rank.max() - cost_rank)
-            # W_distance = Wcost_rank
-            W_distance = Window @ cost_rank
+
+            if config["metrics"][metric]["apply_rank_normalization"]:
+                cost_rank = np.apply_along_axis(rankdata, 1, cost)
+                W_distance = Window @ cost_rank
+            else:
+                W_distance = Window @ cost
 
             ## gt prob
             Wp = Window @ prob_gt_reduced
@@ -128,8 +145,18 @@ def run(config):
             # EMD
             ## opt
             q_opt, T, flow, prob, runtime = optimal_q_emd_vec(
-                Wp, W_distance, solver=config["cvxpy_solver"], verbose=True
+                Wp, W_distance, cvxpy_solve_kwargs=config["cvxpy_solve_kwargs"]
             )
+            q_opt_reg, T_reg, T_self, flow_reg, prob_reg, runtime_reg = (
+                optimal_q_emd_vec_regularized(
+                    Wp,
+                    user_submitted_populations,
+                    W_distance,
+                    W_distance_self,
+                    config["emd_regularization"],
+                )
+            )
+
             results_dict[metric]["replicates"][replicate_idx]["EMD"] = {
                 "q_opt": q_opt,
                 "EMD_opt": prob.value,
@@ -137,6 +164,13 @@ def run(config):
                 "flow_opt": flow,
                 "prob_opt": prob,
                 "runtime_opt": runtime,
+                "q_opt_reg": q_opt_reg,
+                "EMD_opt_reg": prob_reg.value,
+                "transport_plan_opt_reg": T_reg,
+                "transport_plan_opt_self": T_self,
+                "flow_opt_reg": flow_reg,
+                "prob_opt_reg": prob_reg,
+                "runtime_opt_reg": runtime_reg,
             }
             ## submission
             (
@@ -208,7 +242,8 @@ def run(config):
                 {"klpq_submitted": klpq, "klqp_submitted": klqp}
             )
 
-    # results_dict = dict(DistToDistResultsValidator(**results_dict).model_dump())
+    print(results_dict.keys())
+    results_dict = dict(DistToDistResultsValidator(**results_dict).model_dump())
     with open(config["path_to_output_file"], "wb") as f:
         pickle.dump(results_dict, f)
 
