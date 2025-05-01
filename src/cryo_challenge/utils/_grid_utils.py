@@ -1,6 +1,7 @@
 import torch
 from torch import Tensor
 from typing import Optional, Tuple
+from functools import partial
 
 
 def _make1d_real_space(size, dx):
@@ -27,7 +28,9 @@ def _make_coordinates_or_frequencies_1d(
         if outputs_rfftfreqs is None:
             raise ValueError("Internal error in `cryojax.coordinates`.")
         else:
-            make_1d_fn = _make1d_fourier_space
+            make_1d_fn = partial(
+                _make1d_fourier_space, outputs_rfftfreqs=outputs_rfftfreqs
+            )
 
     return make_1d_fn(size, grid_spacing)
 

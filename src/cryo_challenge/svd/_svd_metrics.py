@@ -2,7 +2,11 @@ import torch
 from torch import Tensor
 from typing import Optional, Dict
 from tqdm import tqdm
+import math
 
+from ..utils._fourier_statistics import compute_fourier_shell_correlation
+from ..utils._grid_utils import make_radial_frequency_grid
+from ..fft._fourier import rfftn
 # from ._svd_utils import sort_distance_matrix_with_ref_label
 # from ..map_to_map.map_to_map_distance import fourier_shell_correlation
 
@@ -122,43 +126,66 @@ def compute_pcv_matrix(submissions_svd: Dict, gt_svd: Optional[Dict] = None) -> 
     return results
 
 
-### FSC Distance
-# def compute_fsc_matrix_first_eigvecs(
-#     submissions_svd: Dict[str, Tensor],
-#     gt_svd: Optional[Dict[str, Tensor]] = None,
-# ) -> Dict:
-#     def get_fsc_metric(vol1, vol2):
-#         fsc = fourier_shell_correlation(x=vol1, y=vol2, normalize=True)
-#         return torch.abs(fsc)
+## FSC Distance
+def compute_fsc_matrix_first_eigvecs(
+    submissions_svd: Dict[str, Tensor],
+    gt_svd: Optional[Dict[str, Tensor]] = None,
+) -> Dict:
+    box_size = submissions_svd[list(submissions_svd.keys())[0]]["eigenvectors"].shape[0]
+    box_size = int(round(box_size ** (1 / 3)))
+    radial_frequency_grid = make_radial_frequency_grid(
+        shape=(box_size, box_size, box_size)
+    )
 
-#     vols_for_comp = [
-#         submissions_svd[sub]["eigenvectors"][:, 0] for sub in submissions_svd
-#     ]
-#     labels = [label for label in submissions_svd]
+    def get_fsc_metric(vol1, vol2):
+        fsc = compute_fourier_shell_correlation(
+            vol1,
+            vol2,
+            radial_frequency_grid=radial_frequency_grid,
+            voxel_size=1,
+            minimum_frequency=0.0,
+            maximum_frequency=math.sqrt(2) / 2,
+        )[0]
+        return torch.mean(torch.abs(fsc))
 
-#     if gt_svd is not None:
-#         vols_for_comp.append(gt_svd["eigenvectors"][:, 0])
-#         labels.append("Ground Truth")
+    vols_for_comp = []
+    labels = []
+    for label in submissions_svd:
+        vol = (
+            submissions_svd[label]["eigenvectors"][:, 0]
+            .reshape(box_size, box_size, box_size)
+            .clone()
+        )
+        vols_for_comp.append(rfftn(vol))
+        labels.append(label)
 
-#     vols_for_comp = torch.stack(vols_for_comp)
+    if gt_svd is not None:
+        vols_for_comp.append(
+            rfftn(gt_svd["eigenvectors"][:, 0].reshape(box_size, box_size, box_size))
+        )
+        labels.append("Ground Truth")
 
-#     distance_matrix_func = torch.vmap(
-#         torch.vmap(get_fsc_metric, in_dims=(None, 0)), in_dims=(0, None)
-#     )
+    vols_for_comp = torch.stack(vols_for_comp)
 
-#     distance_matrix = distance_matrix_func(vols_for_comp, vols_for_comp)
+    distance_matrix = torch.zeros(
+        (len(vols_for_comp), len(vols_for_comp)), dtype=torch.float32
+    )
+    total = len(vols_for_comp) * (len(vols_for_comp) - 1) // 2
+    with tqdm(total=total, desc="PCV sub vs sub") as pbar:
+        for i in range(len(vols_for_comp)):
+            for j in range(i + 1, len(vols_for_comp)):
+                distance_matrix[i, j] = get_fsc_metric(
+                    vols_for_comp[i], vols_for_comp[j]
+                )
+                distance_matrix[j, i] = distance_matrix[i, j]
+                pbar.update(1)
 
-#     if gt_svd is not None:
-#         distance_matrix, labels = sort_distance_matrix_with_ref_label(
-#             distance_matrix, labels, ref_label="Ground Truth"
-#         )
+    results = {
+        "dist_matrix": distance_matrix,
+        "labels": labels,
+    }
 
-#     results = {
-#         "dist_matrix": distance_matrix,
-#         "labels": labels,
-#     }
-
-#     return results
+    return results
 
 
 ## Compute common embedding ###

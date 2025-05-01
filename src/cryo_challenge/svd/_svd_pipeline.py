@@ -5,6 +5,7 @@ import logging
 
 from ._svd_metrics import (
     compute_pcv_matrix,
+    compute_fsc_matrix_first_eigvecs,
     compute_common_embedding,
     project_to_gt_embedding,
 )
@@ -91,9 +92,10 @@ def run_svd_with_ref(config: SVDInputConfig):
         gt_svd=gt_svd,
     )
     logging.info("... done")
-    # fsc_dist_mtx_results = compute_fsc_matrix_first_eigvecs(
-    #     submissions_data, gt_data
-    # )
+
+    logging.info("Computing FSC Distance Matrix")
+    fsc_dist_mtx_results = compute_fsc_matrix_first_eigvecs(submissions_svd, gt_svd)
+    logging.info("... done")
 
     logging.info("Computing Common Embedding")
     common_embedding_results = compute_common_embedding(submissions_svd, gt_svd)
@@ -105,7 +107,7 @@ def run_svd_with_ref(config: SVDInputConfig):
 
     results = {
         "capvar_distance_matrix_results": cap_var_dist_mtx_results,
-        # "fsc_distance_matrix_results": fsc_dist_mtx_results,
+        "fsc_distance_matrix_results": fsc_dist_mtx_results,
         "common_embedding_results": common_embedding_results,
         "gt_embedding_results": gt_embedding_results,
     }
@@ -194,9 +196,12 @@ def run_svd_noref(config: dict):
         gt_svd=None,
     )
     logging.info("... done")
-    # fsc_dist_mtx_results = compute_fsc_matrix_first_eigvecs(
-    #     submissions_data, gt_data
-    # )
+
+    logging.info("Computing FSC Distance Matrix")
+    fsc_dist_mtx_results = compute_fsc_matrix_first_eigvecs(
+        submissions_svd, gt_svd=None
+    )
+    logging.info("... done")
 
     logging.info("Computing Common Embedding")
     common_embedding_results = compute_common_embedding(
@@ -206,7 +211,7 @@ def run_svd_noref(config: dict):
 
     results = {
         "capvar_distance_matrix_results": cap_var_dist_mtx_results,
-        # "fsc_distance_matrix_results": fsc_dist_mtx_results,
+        "fsc_distance_matrix_results": fsc_dist_mtx_results,
         "common_embedding_results": common_embedding_results,
     }
 

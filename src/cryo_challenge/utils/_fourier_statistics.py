@@ -113,8 +113,9 @@ def compute_radially_averaged_powerspectrum(
 
 
 def compute_fourier_shell_correlation(
-    volume_1: Tensor,
-    volume_2: Tensor,
+    fourier_volume_1: Tensor,
+    fourier_volume_2: Tensor,
+    radial_frequency_grid: Tensor,
     voxel_size: float = 1.0,
     threshold: float = 0.5,
     *,
@@ -125,12 +126,14 @@ def compute_fourier_shell_correlation(
 
     **Arguments:**
 
-    - `volume_1`:
+    - `fourier_volume_1`:
         A volume in fourier space. It should be from the output of `cryo_challenge.fft.rfftn` (e.g.
         the zero-frequency component should be in the corner).
-    - `volume_2`:
-        A volume in fourier space. See documentation for `volume_1`
+    - `fourier_volume_2`:
+        A volume in fourier space. See documentation for `fourier_volume_1`
         for conventions.
+    - `radial_frequency_grid`:
+        The radial frequency coordinate system of the fourier_volume.
     - `voxel_size`:
         The voxel size of the volumes. If `radial_frequency_grid` is passed
         in inverse angstroms, this argument must be included.
@@ -158,17 +161,14 @@ def compute_fourier_shell_correlation(
         and the `radial_frequency_grid` argument is given in inverse angstroms.
     """  # noqa: E501
 
-    assert volume_1.shape == volume_2.shape, (
+    assert fourier_volume_1.shape == fourier_volume_2.shape, (
         "The two volumes must have the same shape. "
-        f"Volume 1 shape: {volume_1.shape}, Volume 2 shape: {volume_2.shape}"
-    )
-    radial_frequency_grid = make_radial_frequency_grid(
-        volume_1.shape, voxel_size=voxel_size
+        f"Volume 1 shape: {fourier_volume_1.shape}, Volume 2 shape: {fourier_volume_2.shape}"
     )
 
     fsc_curve, frequency_bins, frequency_threshold = _compute_fourier_correlation(
-        volume_1,
-        volume_2,
+        fourier_volume_1,
+        fourier_volume_2,
         radial_frequency_grid,
         voxel_size,
         threshold=threshold,
