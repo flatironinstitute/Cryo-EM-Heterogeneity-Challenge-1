@@ -161,7 +161,7 @@ def optimal_q_emd(p, cost, constraints=None, **kwargs):
     return q_opt, T, flow, prob, runtime
 
 
-def optimal_q_emd_vec(p, cost, constraints=None, **kwargs):
+def optimal_q_emd_vec(p, cost, constraints=None, cvxpy_solve_kwargs={}):
     R, L = cost.shape
 
     flow = cp.Variable(L + L * R)
@@ -180,13 +180,130 @@ def optimal_q_emd_vec(p, cost, constraints=None, **kwargs):
     constraints = make_constraints(flow, p, L, R)
     prob = cp.Problem(cp.Minimize(u.flatten().T @ flow), constraints)
     start = time.time()
-    prob.solve(**kwargs)
+    prob.solve(**cvxpy_solve_kwargs)
     end = time.time()
     runtime = end - start
     T = flow[L:].value.reshape(cost.shape)
     q_opt = T.sum(0)
 
     return q_opt, T, flow, prob, runtime
+
+
+def optimal_q_emd_vec_regularized(p, q_sub, cost, self_cost, regularization_dict):
+    R, L = cost.shape
+    flow = cp.Variable(L + L * R)
+    q = flow[:L]
+
+    split_q_in_half = (
+        False  # TODO: introduce this. makes sense even when compare to opt to ref
+    )
+    R_self, L_self = self_cost.shape
+    assert R_self == L_self, "self_cost must be square"
+    assert L == L_self, "cost and self_cost must share a marginal"
+    # if split_q_in_half:
+    #     idx_half_set_1 = np.arange(0, L_self, 2)
+    #     idx_half_set_2 = idx_half_set_1 + 1
+    #     self_cost_subset = self_cost[idx_half_set_1][:, idx_half_set_2]
+    #     self_cost = self_cost_subset
+    #     L_self = R_self = len(idx_half_set_1)
+    #     q = flow[:L]
+    #     q_row = q[idx_half_set_1]
+    #     q_col = q[idx_half_set_2]
+    # else:
+    #     q_row = q_col = flow[:L]
+
+    transport_plan_self = cp.Variable(L_self * R_self)
+    u = np.zeros(L + L * R)
+    u_self = np.zeros(L_self * R_self)
+    u[L:] = cost.flatten()
+    u_self[:] = self_cost.flatten()
+
+    def make_constraints(flow, p, L, R, q_greater_than_constraint):
+        q = flow[:L]
+        return [
+            cp.sum(flow[L:].reshape((L, R)), axis=1) == q,
+            cp.sum(flow[L:].reshape((L, R)), axis=0) == p,
+            cp.sum(q) == 1,
+            flow >= 0,
+            q >= q_greater_than_constraint,
+        ]
+
+    def make_constraints_self(
+        transport_plan_self,
+        q_to_opt,
+        q_ref,
+        self_transport_fix_zero,
+        q_greater_than_constraint,
+    ):
+        L = q_to_opt.size
+        R = len(q_ref)
+        assert L == R, "self_cost must be square"
+        constraints = [
+            cp.sum(transport_plan_self.reshape((L, R)), axis=1) == q_to_opt,
+            cp.sum(transport_plan_self.reshape((L, R)), axis=0) == q_ref,
+            transport_plan_self >= 0,
+            cp.sum(transport_plan_self) == 1,
+            q_to_opt >= q_greater_than_constraint,
+        ]
+
+        if self_transport_fix_zero:
+            transport_plan_self_asmatrix = cp.reshape(transport_plan_self, (L, R))
+            diag_elements = cp.diag(transport_plan_self_asmatrix)
+            constraints.append(diag_elements == 0)
+        return constraints
+
+    q_greater_than_constraint = regularization_dict["q_greater_than_constraint"]
+    constraints = make_constraints(flow, p, L, R, q_greater_than_constraint)
+
+    constraints_self = make_constraints_self(
+        transport_plan_self, q, q_sub, True, q_greater_than_constraint
+    )
+    flow_term_cross = u.flatten().T @ flow
+    flow_term_self = u_self.flatten().T @ transport_plan_self
+    entropy_q = -cp.sum(cp.entr(q))
+
+    T_preopt = flow[L:].reshape(cost.shape)
+
+    close_in_cost = 0
+    for j in range(L):
+        for j_prime in range(L):
+            Tj = T_preopt[:, j]
+            Tj_prime = T_preopt[:, j_prime]
+            close_in_cost += (
+                cp.square(cp.abs(Tj - Tj_prime)) / self_cost[j, j_prime]
+            ).sum()
+
+    prob = cp.Problem(
+        cp.Minimize(
+            flow_term_cross
+            + regularization_dict["scalar_hyperparam_self_emd"] * flow_term_self
+            + regularization_dict["scalar_hyperparam_self_entropy_q"] * entropy_q
+            + regularization_dict["scalar_hyperparam_weighted_l2_in_cost"]
+            * close_in_cost
+        ),
+        constraints + constraints_self,
+    )
+    start = time.time()
+    prob.solve(**regularization_dict["cvxpy_solve_kwargs"])
+    end = time.time()
+    runtime = end - start
+
+    T = flow[L:].value.reshape(cost.shape)
+    q_opt = T.sum(0)
+
+    T_self = transport_plan_self.value.reshape(self_cost.shape)
+    if not split_q_in_half:
+        assert np.allclose(q_opt, T_self.sum(0))
+        assert np.allclose(q_sub, T_self.sum(1))
+
+    return (
+        q_opt,
+        T,
+        T_self,
+        flow,
+        prob,
+        runtime,
+    )
 
 
 def main():
@@ -198,8 +315,23 @@ def main():
             [1 / 2, 0],
         ]
     )
-    q_opt, T, _, _, _ = optimal_q_emd_vec(p, cost, solver=cp.GUROBI, verbose=True)
-    print(q_opt)
+    q_opt, T, _, _, _ = optimal_q_emd_vec(p, cost, solver=cp.CVXOPT, verbose=True)
+
+    cost = np.array(
+        [
+            [0, 1],
+            [1 / 2, 0],
+            [1 / 2, 0],
+        ]
+    )
+    q_opt_reg, T_reg, _, _, _ = optimal_q_emd_vec_regularized(
+        p, cost, self_cost=-np.eye(2), solver=cp.CVXOPT, verbose=True
+    )
+
+    print("q_opt", q_opt)
+    print("q_opt_reg", q_opt_reg)
+    print("T", T)
+    print("T_reg", T_reg)
 
 
 if __name__ == "__main__":

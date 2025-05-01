@@ -10,20 +10,25 @@ data_params:
     path_to_volumes: tests/data/Ground_truth/test_maps_gt_flat_10.pt
     path_to_metadata: tests/data/Ground_truth/test_metadata_10.csv
   mask_params:
-    apply_mask: false
+    apply_mask: true
     path_to_mask: tests/data/Ground_truth/test_mask_bool.mrc
+
 metrics:
-  zernike3d:
-    gpuID: 0
-    tmpDir: tests/results/tmp_zernike
-    thr: 20
-    numProjections: 20 # projecions should be 20-100
+  l2:
+    compute_self_metric: true
+  corr: {}
+  bioem:
+    compute_self_metric: false
+  fsc: {}
+  res:
+    compute_self_metric: false
   shared_params:
-    chunk_size_submission: 4
-    chunk_size_gt: 5
     low_memory:
       do: false
+    chunk_size_submission: 4
+    chunk_size_gt: 5
     normalize_params:
       do: true
       method: median_zscore
+
 path_to_output_file: tests/results/test_map_to_map_distance_matrix_submission_0.pkl

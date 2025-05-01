@@ -9,6 +9,7 @@ from pydantic import (
     PositiveFloat,
     FiniteFloat,
     PositiveInt,
+    NonNegativeInt,
     FilePath,
     DirectoryPath,
     AfterValidator,
@@ -132,7 +133,7 @@ class MapToMapInputConfigData(BaseModel, extra="forbid"):
         return dict(MapToMapInputConfigDataMask(**mask_params).model_dump())
 
 
-class MapToMapInputConfigAnalysisNormalize(BaseModel, extra="forbid"):
+class MapToMapInputConfigNormalize(BaseModel, extra="forbid"):
     do: bool = Field(
         default=False,
         description="Whether to normalize the volumes",
@@ -143,19 +144,7 @@ class MapToMapInputConfigAnalysisNormalize(BaseModel, extra="forbid"):
     )
 
 
-class MapToMapInputConfigAnalysisLowMemory(BaseModel, extra="forbid"):
-    do: bool = Field(
-        default=False,
-        description="Whether to use low memory mode",
-    )
-
-    chunk_size: PositiveInt = Field(
-        default=1,
-        description="Chunk size for low memory mode",
-    )
-
-
-class MapToMapInputConfigAnalysisGromovWasserstein(BaseModel, extra="forbid"):
+class MapToMapInputConfigMetricsGromovWasserstein(BaseModel, extra="forbid"):
     top_k: PositiveInt = Field(
         default=1,
         description="Number of voxels to use (ranked according to highest mass)",
@@ -185,9 +174,13 @@ class MapToMapInputConfigAnalysisGromovWasserstein(BaseModel, extra="forbid"):
     local_directory: Optional[DirectoryPath] = Field(
         default=None, description="directory for dask.distributed.Client"
     )
+    compute_self_metric: Optional[bool] = Field(
+        default=True,
+        description="Whether to compute the self metric",
+    )
 
 
-class MapToMapInputConfigAnalysisProcrustesWasserstein(BaseModel, extra="forbid"):
+class MapToMapInputConfigMetricsProcrustesWasserstein(BaseModel, extra="forbid"):
     downsample_box_size: PositiveInt = Field(
         default=32,
         description="Final box size of downsampled volume.",
@@ -202,10 +195,14 @@ class MapToMapInputConfigAnalysisProcrustesWasserstein(BaseModel, extra="forbid"
     tol: PositiveFloat = Field(
         description="Stopping tolerance (absolute difference of objective between iterations).",
     )
+    compute_self_metric: Optional[bool] = Field(
+        default=True,
+        description="Whether to compute the self metric",
+    )
 
 
-class MapToMapInputConfigAnalysisZernike3d(BaseModel, extra="forbid"):
-    gpuID: PositiveInt = Field(
+class MapToMapInputConfigMetricsZernike3d(BaseModel, extra="forbid"):
+    gpuID: NonNegativeInt = Field(
         default=0,
         description="Identifier of GPU",
     )
@@ -219,9 +216,13 @@ class MapToMapInputConfigAnalysisZernike3d(BaseModel, extra="forbid"):
     numProjections: PositiveInt = Field(
         description="Number of projections. Suggested 20-100.",
     )
+    compute_self_metric: Optional[bool] = Field(
+        default=True,
+        description="Whether to compute the self metric",
+    )
 
 
-class MapToMapInputConfigAnalysisL2BioemCorr(BaseModel, extra="forbid"):
+class MapToMapInputConfigMetricsL2BioemCorr(BaseModel, extra="forbid"):
     chunk_size_submission: PositiveInt = Field(
         default=20,
         description="Batch size of the submission volumes",
@@ -237,6 +238,17 @@ class MapToMapInputConfigAnalysisL2BioemCorr(BaseModel, extra="forbid"):
     low_memory: Optional[Dict] = Field(
         default=None,
         description="Parameters for the low memory mode",
+    )
+    compute_self_metric: Optional[bool] = Field(
+        default=True,
+        description="Whether to compute the self metric",
+    )
+
+
+class MapToMapInputConfigMetricsFscRes(BaseModel, extra="forbid"):
+    compute_self_metric: Optional[bool] = Field(
+        default=True,
+        description="Whether to compute the self metric",
     )
 
 
@@ -266,6 +278,15 @@ class MapToMapInputConfigSharedParams(BaseModel, extra="forbid"):
                 MapToMapInputConfigLowMemory(**low_memory_params).model_dump()
             )
         return low_memory_params
+
+    @field_validator("normalize_params")
+    @classmethod
+    def validate_normalize_params(cls, normalize_params):
+        if normalize_params is not None:
+            normalize_params = dict(
+                MapToMapInputConfigNormalize(**normalize_params).model_dump()
+            )
+        return normalize_params
 
 
 class MapToMapInputConfigLowMemory(BaseModel, extra="forbid"):
@@ -330,7 +351,7 @@ class MapToMapInputConfigMetrics(BaseModel):
     def validate_l2_params(cls, l2_params):
         if l2_params is not None:
             l2_params = dict(
-                MapToMapInputConfigAnalysisL2BioemCorr(**l2_params).model_dump()
+                MapToMapInputConfigMetricsL2BioemCorr(**l2_params).model_dump()
             )
         return l2_params
 
@@ -339,7 +360,7 @@ class MapToMapInputConfigMetrics(BaseModel):
     def validate_corr_params(cls, corr_params):
         if corr_params is not None:
             corr_params = dict(
-                MapToMapInputConfigAnalysisL2BioemCorr(**corr_params).model_dump()
+                MapToMapInputConfigMetricsL2BioemCorr(**corr_params).model_dump()
             )
         return corr_params
 
@@ -348,15 +369,55 @@ class MapToMapInputConfigMetrics(BaseModel):
     def validate_bioem_params(cls, bioem_params):
         if bioem_params is not None:
             bioem_params = dict(
-                MapToMapInputConfigAnalysisL2BioemCorr(**bioem_params).model_dump()
+                MapToMapInputConfigMetricsL2BioemCorr(**bioem_params).model_dump()
             )
         return bioem_params
+
+    @field_validator("fsc")
+    @classmethod
+    def validate_fsc_params(cls, params):
+        if params is not None:
+            params = dict(MapToMapInputConfigMetricsFscRes(**params).model_dump())
+        return params
+
+    @field_validator("res")
+    @classmethod
+    def validate_res_params(cls, params):
+        if params is not None:
+            params = dict(MapToMapInputConfigMetricsFscRes(**params).model_dump())
+        return params
+
+    @field_validator("procrustes_wasserstein")
+    @classmethod
+    def validate_procrustes_wasserstein_params(cls, params):
+        if params is not None:
+            params = dict(
+                MapToMapInputConfigMetricsProcrustesWasserstein(**params).model_dump()
+            )
+        return params
+
+    @field_validator("gromov_wasserstein")
+    @classmethod
+    def validate_gromov_wasserstein_params(cls, params):
+        if params is not None:
+            params = dict(
+                MapToMapInputConfigMetricsGromovWasserstein(**params).model_dump()
+            )
+        return params
+
+    @field_validator("zernike3d")
+    @classmethod
+    def validate_zernike3d_params(cls, params):
+        if params is not None:
+            params = dict(MapToMapInputConfigMetricsZernike3d(**params).model_dump())
+        return params
 
 
 class MapToMapInputConfig(BaseModel, extra="forbid"):
     data_params: dict = Field(
         description="Parameters for loading the submission, ground truth and mask",
     )
+
     metrics: Dict[str, Dict] = Field(
         description="Dictionary of metrics to compute and their parameters, including shared parameters",
     )
@@ -374,25 +435,27 @@ class MapToMapInputConfig(BaseModel, extra="forbid"):
 
 
 class MapToMapResultsAllMetrics(BaseModel, extra="forbid"):
-    """
-    Validate the output dictionary of each map-to-map distance matrix computation.
-
-    cost_matrix: pandas.core.frame.DataFrame
-    user_submission_label: str
-    computed_assets: dict
-    """
+    """Validate the output dictionary of each map-to-map distance matrix computation."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     cost_matrix: pandas.DataFrame = Field(
         default=None,
-        description="Cost matrix",
+        description="Cost matrix (ground truth versus submission)",
+    )
+    cost_matrix_self: pandas.DataFrame = Field(
+        default=None,
+        description="Cost matrix (submission versus submission)",
     )
     user_submission_label: str = Field(
         default=None,
         description="User submission label",
     )
     computed_assets: dict = Field(
+        default=None,
+        description="Computed assets",
+    )
+    computed_assets_self: dict = Field(
         default=None,
         description="Computed assets",
     )

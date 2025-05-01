@@ -75,8 +75,9 @@ def run(config):
         config["data_params"]["ground_truth_params"]["path_to_metadata"]
     )
 
-    results_dict = {}
+    self_results_dict, results_dict = {}, {}
     results_dict["config"] = config
+    self_results_dict["config"] = config
 
     if not torch.is_tensor(submission[submission_metadata_key]):
         submission[submission_metadata_key] = torch.tensor(
@@ -127,9 +128,54 @@ def run(config):
             "computed_assets": computed_assets,
         }
 
+        if config["metrics"][distance_label]["compute_self_metric"]:
+            map_to_map_distance.distance_matrix_precomputation(
+                maps_user_flat, maps_user_flat
+            )
+            cost_matrix = map_to_map_distance.get_distance_matrix(
+                maps_user_flat,
+                maps_user_flat,
+                global_store_of_running_results=self_results_dict,
+            )
+            computed_assets_self = map_to_map_distance.get_computed_assets(
+                maps_user_flat,
+                maps_user_flat,
+                global_store_of_running_results=self_results_dict,
+            )
+
+            computed_assets_self.update(computed_assets_self)
+
+            cost_matrix_df = pd.DataFrame(
+                cost_matrix,
+                columns=None,
+                index=results_dict["user_submitted_populations"].tolist(),
+            )
+
+            self_single_distance_results_dict = {
+                "cost_matrix_self": cost_matrix_df,
+                "computed_assets": computed_assets_self,
+            }
+
+            self_single_distance_results_dict_nooverwrite = {
+                "cost_matrix_self": cost_matrix_df,
+                "computed_assets_self": computed_assets_self,
+            }
+
+            self_results_dict[distance_label] = self_single_distance_results_dict
+
+            single_distance_results_dict.update(
+                self_single_distance_results_dict_nooverwrite
+            )
+
+        if (
+            "metrics_self" in config.keys()
+            and distance_label not in config["metrics_self"]
+        ):
+            single_distance_results_dict.update(
+                {"user_submission_label": user_submission_label}
+            )
+
         results_dict[distance_label] = single_distance_results_dict
-    print("results_dict.keys()", results_dict.keys())
-    print("results_dict['config']", results_dict["config"])
 
     # Validate before saving
     results_dict = dict(
