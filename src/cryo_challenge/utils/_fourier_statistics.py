@@ -1,3 +1,9 @@
+"""
+These functions are ported from the cryoJAX package
+
+https://github.com/mjo22/cryojax
+"""
+
 import torch
 from torch import Tensor
 import math
@@ -165,6 +171,8 @@ def compute_fourier_shell_correlation(
         f"Volume 1 shape: {fourier_volume_1.shape}, Volume 2 shape: {fourier_volume_2.shape}"
     )
 
+    assert fourier_volume_1.ndim == 3, "The two volumes must be 3D. "
+
     fsc_curve, frequency_bins = _compute_fourier_correlation(
         fourier_volume_1,
         fourier_volume_2,
@@ -245,7 +253,7 @@ def _compute_fourier_correlation(
     # Compute FSC/FRC radially averaged 1D profile
     correlation_map = (
         (fourier_array_1 * fourier_array_2.conj())
-        / torch.sqrt(torch.abs(fourier_array_1) ** 2 * torch.abs(fourier_array_2) ** 2)
+        / (torch.abs(fourier_array_1) * torch.abs(fourier_array_2))
     ).real
     frequency_bins = _make_radial_frequency_bins(
         fourier_array_1.shape, minimum_frequency, maximum_frequency, grid_spacing

@@ -7,12 +7,9 @@ import math
 from ..utils._fourier_statistics import compute_fourier_shell_correlation
 from ..utils._grid_utils import make_radial_frequency_grid
 from ..fft._fourier import rfftn
-# from ._svd_utils import sort_distance_matrix_with_ref_label
-# from ..map_to_map.map_to_map_distance import fourier_shell_correlation
+
 
 ### Compare subspaces for each submission ###
-
-
 def compute_captured_variance(
     eigvecs_test_subspace: Tensor,
     eigvecs_ref_subspace: Tensor,
@@ -27,6 +24,11 @@ def compute_captured_variance(
     where ||.||_F is the Frobenius norm. $V$ corresponds to the eigenvectors of the covariance matrix
     obtained from the test subspace (`eigevts_test_subspace`), and $U$ corresponds to the eigenvectors of the covariance matrix
     obtained from the reference subspace (`eigevts_ref_subspace`). $S$ are the singular values associated with $U$.
+
+    This metric was introduced in the paper:
+
+    "Cryo-EM heterogeneity analysis using regularized covariance estimation and kernel regression"
+    by Marc Guilles and Amit Singer: https://doi.org/10.1073/pnas.2419140122
 
     **Arguments:**
         eigvecs_test_subspace: Tensor[n_eigv, n_eigv]

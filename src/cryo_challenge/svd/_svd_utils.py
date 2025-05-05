@@ -51,15 +51,14 @@ def compute_svd_of_submission(
 
         vols_norm = irfftn(vols_norm).reshape(vols_norm.shape[0], -1)
 
+    vols_norm = vols_norm - vols_norm.mean(dim=0, keepdim=True)
+    vols_norm = vols_norm / (vols_norm.shape[0] - 1)
+
     if svd_max_rank is not None:
-        u, s, v = torch.svd_lowrank(
-            vols_norm - vols_norm.mean(dim=0, keepdim=True), q=svd_max_rank
-        )
+        u, s, v = torch.svd_lowrank(vols_norm, q=svd_max_rank)
 
     else:
-        u, s, v = torch.linalg.svd(
-            vols_norm - vols_norm.mean(dim=0, keepdim=True), full_matrices=False
-        )
+        u, s, v = torch.linalg.svd(vols_norm, full_matrices=False)
         v = v.T  # set eigenvectors to low_rank format
 
     return {

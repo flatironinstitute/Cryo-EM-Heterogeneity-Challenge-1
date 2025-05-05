@@ -5,7 +5,6 @@ import os
 from pathlib import PurePath
 from pydantic import (
     BaseModel,
-    PositiveFloat,
     NonNegativeInt,
     PositiveInt,
     FilePath,
@@ -39,7 +38,7 @@ class SVDInputConfigNormalize(BaseModel, extra="forbid"):
         default=None,
         description="Downsampled box size. If None, no downsampling is applied.",
     )
-    threshold_percentile: Optional[PositiveFloat] = Field(
+    threshold_percentile: Optional[Annotated[float, Field(ge=0.0, le=100.0)]] = Field(
         default=None,
         description="Threshold percentile. If None, no thresholding is applied.",
     )
