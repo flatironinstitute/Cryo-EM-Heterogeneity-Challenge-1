@@ -4,6 +4,7 @@ from . import (
     map_to_map as map_to_map,
     distribution_to_distribution as distribution_to_distribution,
     svd as svd,
+    utils as utils,
 )
 
 __all__ = ["__version__"]

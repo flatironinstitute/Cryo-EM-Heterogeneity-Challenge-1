@@ -5,16 +5,19 @@ path_to_submissions: tests/data/dataset_2_submissions/
 
 dtype: float32
 svd_max_rank: 5
-voxel_size: 1.0 # voxel size of the input maps
+continue_from_previous: True
+
 normalize_params: # optional, if not given there will be no normalization
-  mask_path: tests/data/Ground_truth/test_mask_dilated_wide.mrc
+  path_to_mask: tests/data/Ground_truth/test_mask_dilated_wide.mrc
   downsample_box_size: 16
+  normalize_power_spectrum: True
 
 gt_params: # optional, if provided there will be extra results
   path_to_gt_volumes: tests/data/Ground_truth/test_maps_gt_flat_10.pt
   skip_vols: 1
 
 output_params:
-  output_file: tests/results/svd/svd_result.pt
-  save_svd_data: True
+  path_to_output_dir: tests/results/svd/
+  keep_prep_submissions_for_svd: False
   generate_plots: False
+  overwrite: True
