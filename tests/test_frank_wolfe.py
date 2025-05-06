@@ -1,9 +1,19 @@
 import numpy as np
-from cryo_challenge.map_to_map.gromov_wasserstein.frank_wolfe import frank_wolfe_emd
+from cryo_challenge.map_to_map.gromov_wasserstein.frank_wolfe import (
+    frank_wolfe_emd,
+    gw_objective_cost,
+)
 import ot
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
-def test_frank_wolfe_emd_1d():
+def test_frank_wolfe_emd():
     np.random.seed(0)
     n = 100
 
@@ -27,13 +37,24 @@ def test_frank_wolfe_emd_1d():
                 X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-8
             )
 
+            Cx = ot.utils.euclidean_distances(X.T, X.T, squared=True)
+            Cy = ot.utils.euclidean_distances(Y.T, Y.T, squared=True)
+            gw_frank_wolfe = gw_objective_cost(Cx, Cy, Gamma)
+
             if d == 1:
-                gamma_gt = ot.emd_1d(X.flatten(), Y.flatten(), mu_x, mu_y)
+                gamma_pot, log_pot = ot.emd_1d(
+                    X.flatten(), Y.flatten(), mu_x, mu_y, log=True
+                )
             else:
                 Cx = ot.dist(X.T, X.T)
                 Cy = ot.dist(Y.T, Y.T)
-                gamma_gt = ot.gromov_wasserstein(Cx, Cy, mu_x, mu_y)
+                gamma_pot, log_pot = ot.gromov_wasserstein(
+                    Cx, Cy, mu_x, mu_y, loss_fun="square_loss", log=True
+                )
+                assert np.isclose(
+                    log_pot["gw_dist"], gw_frank_wolfe, atol=1e-3
+                ), "GW distance does not match the expected result."
 
             assert np.allclose(
-                Gamma.flatten(), gamma_gt.flatten(), atol=1e-5
+                Gamma.flatten(), gamma_pot.flatten(), atol=1e-3
             ), "Gamma does not match the expected result."

@@ -3,7 +3,7 @@ import ot
 from collections import defaultdict
 
 
-def objective(X, Y, Gamma, L):
+def objective_no_constant_term(X, Y, Gamma, L):
     # Compute 2 * X * Gamma * Y^T
     Z = 2 * X @ Gamma @ Y.T
     frob_sq = np.sum(Z**2)  # ||·||_F^2
@@ -11,7 +11,29 @@ def objective(X, Y, Gamma, L):
     return -frob_sq - inner_product
 
 
+def gw_objective_cost(Cx, Cy, Gamma):
+    """
+    Compute the Gromov-Wasserstein objective given distance matrices Cx, Cy and transport plan Gamma.
+    Args:
+        Cx: np.ndarray, shape (n, n), pairwise distance matrix for X
+        Cy: np.ndarray, shape (m, m), pairwise distance matrix for Y
+        Gamma: np.ndarray, shape (n, m), transport plan
+    Returns:
+        obj: float, GW objective value
+    """
+    term = (
+        (Cx[:, :, None, None] - Cy[None, None, :, :]) ** 2
+        * Gamma[:, None, :, None]
+        * Gamma[None, :, None, :]
+    )
+    return np.sum(term)
+
+
 def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
+    """
+    Frank-Wolfe algorithm for Gromov-wasserstein optimal transport using the Earth Mover's Distance (EMD).
+
+    """
     lx, nx = X.shape
     ly, ny = Y.shape
     assert nx == ny
@@ -33,7 +55,7 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
 
     # log
     log = defaultdict(list)
-    log["objective"].append(objective(X, Y, Gamma0, L))
+    log["objective"].append(objective_no_constant_term(X, Y, Gamma0, L))
     log["Gamma"].append(Gamma0)
     for t in range(num_iters):
         print("iter", t)
@@ -63,7 +85,7 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
         # print('objective:', objective(X, Y, Gamma_t_plus_1, L))
 
         # Update Gamma_t
-        log["objective"].append(objective(X, Y, Gamma_t_plus_1, L))
+        log["objective"].append(objective_no_constant_term(X, Y, Gamma_t_plus_1, L))
         log["Gamma"].append(Gamma_t_plus_1)
         log["eta"].append(0)
         log["Gamma_t"].append(Gamma_t_plus_1)
