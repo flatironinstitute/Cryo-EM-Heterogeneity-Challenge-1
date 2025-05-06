@@ -18,8 +18,8 @@ def test_frank_wolfe_emd_1d():
             mu_x = mu_x / np.sum(mu_x)
             mu_y = np.ones(Y.shape[1]) - np.arange(Y.shape[1]) * non_uniform_factor
             mu_y = mu_y / np.sum(mu_y)
-            assert np.alltrue(mu_x >= 0)
-            assert np.alltrue(mu_y >= 0)
+            assert np.all(mu_x >= 0)
+            assert np.all(mu_y >= 0)
             Gamma0 = np.outer(mu_x, mu_y)
             num_iters = 100
 
