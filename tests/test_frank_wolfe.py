@@ -1,15 +1,8 @@
+import ot
 import numpy as np
 from cryo_challenge.map_to_map.gromov_wasserstein.frank_wolfe import (
     frank_wolfe_emd,
     gw_objective_cost,
-)
-import ot
-import logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 
