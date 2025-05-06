@@ -35,6 +35,18 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
 
     Objective extended from https://openreview.net/forum?id=l9MbuqzlZt to include non-uniform marginals mu_x and mu_y.
 
+    $$
+    \min_{\Gamma \in \Pi} -\|2X \Gamma Y^\top\|_F^2 - \langle L, \Gamma \rangle + c_0
+
+    \begin{aligned}
+    L &= 2 (\mu_y^\top \mathbf{1}_y) \, m_x m_y^\top - 4 m_x \mu_y Y^\top Y - 4 X^\top X \mu_x m_y \\
+    \nabla_{\Gamma_t} f(\Gamma_t) &= -8 X^\top X \Gamma_t Y^\top Y - L \\
+    S_t &= \arg\min_{S \in \Pi} \langle \Gamma_t, \nabla_\Gamma f(\Gamma) \rangle \\
+    \eta_t &= \frac{-8 \, \mathrm{tr}[(S_t - \Gamma_t)^\top X^\top X \Gamma_t Y^\top Y] - \mathrm{tr}[L^\top (S_t - \Gamma_t)]}{8 \, \mathrm{tr}[(S_t - \Gamma_t)^\top X^\top X (S_t - \Gamma_t) Y^\top Y]} \\
+    \Gamma_{t+1} &= (1 - \eta_t)\Gamma_t + \eta_t S_t
+    \end{aligned}
+    $$
+
     """
     lx, nx = X.shape
     ly, ny = Y.shape
