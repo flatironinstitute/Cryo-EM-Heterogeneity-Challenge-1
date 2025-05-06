@@ -12,22 +12,28 @@ def test_frank_wolfe_emd_1d():
         scale_noise = 0.1
         noise = scale_noise * np.random.randn(*X.shape)
         Y = X + noise
-        mu_x = np.ones(X.shape[1]) / X.shape[1]
-        mu_y = np.ones(Y.shape[1]) / Y.shape[1]
-        Gamma0 = np.outer(mu_x, mu_y)
-        num_iters = 100
 
-        Gamma, log = frank_wolfe_emd(
-            X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-8
-        )
+        for non_uniform_factor in [0, 0.5 / n]:
+            mu_x = np.ones(X.shape[1]) + np.arange(X.shape[1]) * non_uniform_factor
+            mu_x = mu_x / np.sum(mu_x)
+            mu_y = np.ones(Y.shape[1]) - np.arange(Y.shape[1]) * non_uniform_factor
+            mu_y = mu_y / np.sum(mu_y)
+            assert np.alltrue(mu_x >= 0)
+            assert np.alltrue(mu_y >= 0)
+            Gamma0 = np.outer(mu_x, mu_y)
+            num_iters = 100
 
-        if d == 1:
-            gamma_gt = ot.emd_1d(X.flatten(), Y.flatten(), mu_x, mu_y)
-        else:
-            Cx = ot.dist(X.T, X.T)
-            Cy = ot.dist(Y.T, Y.T)
-            gamma_gt = ot.gromov_wasserstein(Cx, Cy, mu_x, mu_y)
+            Gamma, log = frank_wolfe_emd(
+                X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-8
+            )
 
-        assert np.allclose(
-            Gamma.flatten(), gamma_gt.flatten(), atol=1e-3
-        ), "Gamma does not match the expected result."
+            if d == 1:
+                gamma_gt = ot.emd_1d(X.flatten(), Y.flatten(), mu_x, mu_y)
+            else:
+                Cx = ot.dist(X.T, X.T)
+                Cy = ot.dist(Y.T, Y.T)
+                gamma_gt = ot.gromov_wasserstein(Cx, Cy, mu_x, mu_y)
+
+            assert np.allclose(
+                Gamma.flatten(), gamma_gt.flatten(), atol=1e-5
+            ), "Gamma does not match the expected result."
