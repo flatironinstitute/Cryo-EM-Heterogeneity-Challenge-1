@@ -4,7 +4,7 @@ from collections import defaultdict
 
 
 def objective_no_constant_term(X, Y, Gamma, L):
-    # Compute 2 * X * Gamma * Y^T
+    """Compute 2 * X * Gamma * Y^T"""
     Z = 2 * X @ Gamma @ Y.T
     frob_sq = np.sum(Z**2)  # ||·||_F^2
     inner_product = np.sum(L * Gamma)  # <L, Gamma>
@@ -32,6 +32,8 @@ def gw_objective_cost(Cx, Cy, Gamma):
 def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
     """
     Frank-Wolfe algorithm for Gromov-wasserstein optimal transport using the Earth Mover's Distance (EMD).
+
+    Objective extended from https://openreview.net/forum?id=l9MbuqzlZt to include non-uniform marginals mu_x and mu_y.
 
     """
     lx, nx = X.shape
@@ -69,20 +71,18 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
 
         # Line search
         diff = S - Gamma_t
-        numerator = -8 * np.trace(diff.T @ XtX @ Gamma_t @ YtY) - np.trace(L.T @ diff)
-        denominator = 8 * np.trace(diff.T @ XtX @ diff @ YtY)
-        eta = np.clip(numerator / denominator, 0, 1) if denominator > 1e-12 else 0
+        numerator = -8 * np.sum((XtX @ diff) * (Gamma_t @ YtY)) - np.sum(L * diff)
+        numerator_ = -8 * np.trace(diff.T @ XtX @ Gamma_t @ YtY) - np.trace(L.T @ diff)
 
-        # print('eta', eta)
-        # print('Gamma_t', Gamma_t)
-        # print('S', S)
+        assert np.allclose(numerator_, numerator)
+        denominator_ = 8 * np.trace(diff.T @ XtX @ diff @ YtY)
+        denominator = 8 * np.sum((XtX @ diff) * (diff @ YtY))
+        assert np.allclose(denominator_, denominator)
+
+        eta = np.clip(numerator / denominator, 0, 1) if denominator > 1e-12 else 0
 
         # Update
         Gamma_t_plus_1 = eta * Gamma_t + (1 - eta) * S
-        # print('Gamma_t+1:', Gamma_t_plus_1)
-        # print('Gamma_t - Gamma_t+1:', Gamma_t_plus_1 - Gamma_t)
-        # print('||Gamma_t - Gamma_t+1||_F:', np.linalg.norm(Gamma_t_plus_1 - Gamma_t))
-        # print('objective:', objective(X, Y, Gamma_t_plus_1, L))
 
         # Update Gamma_t
         log["objective"].append(objective_no_constant_term(X, Y, Gamma_t_plus_1, L))
@@ -100,17 +100,3 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
             break
 
     return Gamma_t_plus_1, log
-
-
-def main():
-    # Example usage
-    X = np.random.rand(10, 5)
-    noise = 0
-    Y = X + noise
-    mu_x = np.ones(X.shape[1]) / X.shape[1]
-    mu_y = np.ones(Y.shape[1]) / Y.shape[1]
-    Gamma0 = np.outer(mu_x, mu_y)
-    num_iters = 100
-
-    Gamma, log = frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters)
-    print("Final coupling:", Gamma)
