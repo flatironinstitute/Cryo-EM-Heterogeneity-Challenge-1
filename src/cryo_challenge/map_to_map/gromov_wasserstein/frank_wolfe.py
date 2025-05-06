@@ -72,13 +72,7 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
         # Line search
         diff = S - Gamma_t
         numerator = -8 * np.sum((XtX @ diff) * (Gamma_t @ YtY)) - np.sum(L * diff)
-        numerator_ = -8 * np.trace(diff.T @ XtX @ Gamma_t @ YtY) - np.trace(L.T @ diff)
-
-        assert np.allclose(numerator_, numerator)
-        denominator_ = 8 * np.trace(diff.T @ XtX @ diff @ YtY)
         denominator = 8 * np.sum((XtX @ diff) * (diff @ YtY))
-        assert np.allclose(denominator_, denominator)
-
         eta = np.clip(numerator / denominator, 0, 1) if denominator > 1e-12 else 0
 
         # Update
