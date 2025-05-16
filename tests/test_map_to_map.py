@@ -28,9 +28,11 @@ def test_run_map2map_pipeline_procrustes():
     return
 
 
-def test_run_map2map_pipeline_gw():
+def test_run_map2map_pipeline_gromov_wasserstein():
     args = OmegaConf.create(
-        {"config": "tests/config_files/test_config_map_to_map_gw.yaml"}
+        {
+            "config": "tests/config_files/test_config_map_to_map_gromov_wasserstein_python_ot.yaml"
+        }
     )
     results_dict = run_map2map_pipeline.main(args)
     assert "gromov_wasserstein" in results_dict.keys()
@@ -86,3 +88,7 @@ def test_run_map2map_pipeline_low_memory():
                 results_dict_low_memory[metric]["cost_matrix"].values,
             )
     return
+
+
+if __name__ == "__main__":
+    test_run_map2map_pipeline_gromov_wasserstein()

@@ -679,10 +679,11 @@ class GromovWassersteinDistance(MapToMapDistance):
             normalize=False,
         )
 
-        if extra_params["slurm"]:
+        if extra_params["dask"]["slurm"]:
             job_id = os.environ["SLURM_JOB_ID"]
             scheduler_file = os.path.join(
-                extra_params["scheduler_file_dir"], f"scheduler-{job_id}.json"
+                extra_params["dask"]["scheduler_file_directory"],
+                f"scheduler-{job_id}.json",
             )
 
             with SLURMRunner(
@@ -690,28 +691,54 @@ class GromovWassersteinDistance(MapToMapDistance):
             ) as runner:
                 # The runner object contains the scheduler address and can be passed directly to a client
                 with Client(runner) as client:
+                    if extra_params["solver"] == "python_ot":
+                        distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+                            marginals_i=marginals_i,
+                            marginals_j=marginals_j,
+                            pairwise_distances_i=pairwise_distances_i,
+                            pairwise_distances_j=pairwise_distances_j,
+                            scheduler=extra_params["dask"]["scheduler"],
+                            elementwise_not_rowwise=extra_params[
+                                "elementwise_not_rowwise"
+                            ],
+                            gw_distance_function_key=extra_params["python_ot_params"][
+                                "gw_distance_function_key"
+                            ],
+                            tol_abs=extra_params["python_ot_params"]["tol_abs"],
+                            tol_rel=extra_params["python_ot_params"]["tol_rel"],
+                            max_iter=extra_params["python_ot_params"]["max_iter"],
+                            verbose=extra_params["python_ot_params"]["verbose"],
+                            loss_fun=extra_params["python_ot_params"]["loss_fun"],
+                        )
+                    else:
+                        raise NotImplementedError(
+                            f"Method {extra_params['solver']} not implemented for SLURM."
+                        )
+
+        else:
+            local_directory = extra_params["dask"]["local_directory"]
+            with Client(local_directory=local_directory) as client:
+                if extra_params["solver"] == "python_ot":
                     distance_matrix_dask_gw = get_distance_matrix_dask_gw(
                         marginals_i=marginals_i,
                         marginals_j=marginals_j,
                         pairwise_distances_i=pairwise_distances_i,
                         pairwise_distances_j=pairwise_distances_j,
-                        scheduler=extra_params["scheduler"],
-                        element_wise=extra_params["element_wise"],
-                        gw_distance_function_key="gromov_wasserstein2",
+                        scheduler=extra_params["dask"]["scheduler"],
+                        elementwise_not_rowwise=extra_params["elementwise_not_rowwise"],
+                        gw_distance_function_key=extra_params["python_ot_params"][
+                            "gw_distance_function_key"
+                        ],
+                        tol_abs=extra_params["python_ot_params"]["tol_abs"],
+                        tol_rel=extra_params["python_ot_params"]["tol_rel"],
+                        max_iter=extra_params["python_ot_params"]["max_iter"],
+                        verbose=extra_params["python_ot_params"]["verbose"],
+                        loss_fun=extra_params["python_ot_params"]["loss_fun"],
                     )
-
-        else:
-            local_directory = extra_params["local_directory"]
-            with Client(local_directory=local_directory) as client:
-                distance_matrix_dask_gw = get_distance_matrix_dask_gw(
-                    marginals_i=marginals_i,
-                    marginals_j=marginals_j,
-                    pairwise_distances_i=pairwise_distances_i,
-                    pairwise_distances_j=pairwise_distances_j,
-                    scheduler=extra_params["scheduler"],
-                    element_wise=extra_params["element_wise"],
-                    gw_distance_function_key="gromov_wasserstein2",
-                )
+                else:
+                    raise NotImplementedError(
+                        f"Method {extra_params['solver']} not implemented for local directory."
+                    )
         assert isinstance(client, type(client))
 
         self.stored_computed_assets = {"gromov_wasserstein": distance_matrix_dask_gw}

@@ -3,7 +3,7 @@ import ot
 from collections import defaultdict
 
 
-def objective_no_constant_term(X, Y, Gamma, L):
+def _objective_no_constant_term(X, Y, Gamma, L):
     """Compute 2 * X * Gamma * Y^T"""
     Z = 2 * X @ Gamma @ Y.T
     frob_sq = np.sum(Z**2)  # ||·||_F^2
@@ -29,7 +29,7 @@ def gw_objective_cost(Cx, Cy, Gamma):
     return np.sum(term)
 
 
-def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
+def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iters, Gamma_atol, log=None):
     """
     Frank-Wolfe algorithm for Gromov-wasserstein optimal transport using the Earth Mover's Distance (EMD).
 
@@ -68,10 +68,11 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
     Gamma_t_plus_1 = Gamma0
 
     # log
-    log = defaultdict(list)
-    log["objective"].append(objective_no_constant_term(X, Y, Gamma0, L))
-    log["Gamma"].append(Gamma0)
-    for t in range(num_iters):
+    if log is not None:
+        log = defaultdict(list)
+        log["objective"].append(_objective_no_constant_term(X, Y, Gamma0, L))
+        log["Gamma"].append(Gamma0)
+    for t in range(max_iters):
         print("iter", t)
         # Gradient
         Gamma_t = Gamma_t_plus_1
@@ -90,19 +91,24 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-6):
         # Update
         Gamma_t_plus_1 = eta * Gamma_t + (1 - eta) * S
 
-        # Update Gamma_t
-        log["objective"].append(objective_no_constant_term(X, Y, Gamma_t_plus_1, L))
-        log["Gamma"].append(Gamma_t_plus_1)
-        log["eta"].append(0)
-        log["Gamma_t"].append(Gamma_t_plus_1)
-        log["S"].append(Gamma_t_plus_1)
-        log["diff"].append(np.zeros_like(Gamma_t_plus_1))
-        log["numerator"].append(0)
-        log["denominator"].append(0)
-        log["Gamma_t_plus_1"].append(Gamma_t_plus_1)
+        objective_value = _objective_no_constant_term(X, Y, Gamma_t_plus_1, L)
+
+        if log is not None:
+            log["objective"].append(objective_value)
+            log["Gamma"].append(Gamma_t_plus_1)
+            log["eta"].append(0)
+            log["Gamma_t"].append(Gamma_t_plus_1)
+            log["S"].append(Gamma_t_plus_1)
+            log["diff"].append(np.zeros_like(Gamma_t_plus_1))
+            log["numerator"].append(0)
+            log["denominator"].append(0)
+            log["Gamma_t_plus_1"].append(Gamma_t_plus_1)
 
         if np.linalg.norm(Gamma_t_plus_1 - Gamma_t) < Gamma_atol:
             print("Converged")
             break
 
-    return Gamma_t_plus_1, log
+    if t == max_iters - 1:
+        print("Max iterations reached")
+
+    return Gamma_t_plus_1, mx, my, objective_value, log

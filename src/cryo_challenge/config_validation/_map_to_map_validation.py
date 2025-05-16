@@ -159,24 +159,84 @@ class MapToMapInputConfigMetricsGromovWasserstein(BaseModel, extra="forbid"):
     cost_scale_factor: FiniteFloat = Field(
         description="multiplicative scaling factor for the cost (before exponentiation)"
     )
-    element_wise: bool = Field(
-        description="dask parralelization: whether to call dask.compute on each map-to-map computation, or naively loop through each (80) submitted maps row-wise"
+    elementwise_not_rowwise: bool = Field(
+        default=False,
+        description="dask parralelization: whether to call dask.compute on each map-to-map computation, or naively loop through each submitted maps row-wise",
     )
-    slurm: bool = Field(
-        description="parallelization configuration: whether to use dask_hpc_runner.SlurmRunner as a runner for dask.Client(runner)"
-    )
-
-    scheduler: Optional[str] = Field(
+    dask: Optional[dict] = Field(
         default=None,
-        description="string argument to dask.compute",
+        description="Dask configuration for parallelization",
     )
+    # slurm: bool = Field(
+    #     description="parallelization configuration: whether to use dask_hpc_runner.SlurmRunner as a runner for dask.Client(runner)"
+    # )
 
-    local_directory: Optional[DirectoryPath] = Field(
-        default=None, description="directory for dask.distributed.Client"
+    # scheduler: Optional[str] = Field(
+    #     default=None,
+    #     description="string argument to dask.compute",
+    # )
+
+    # local_directory: Optional[DirectoryPath] = Field(
+    #     default=None, description="directory for dask.distributed.Client"
+    # )
+    solver: Literal["python_ot", "frank_wolfe"] = Field(
+        default="python_ot",
+        description="Solver to use for the Gromov-Wasserstein distance",
+    )
+    python_ot_params: Optional[dict] = Field(
+        default=None,
+        description="Parameters for the python_ot solver",
     )
     compute_self_metric: Optional[bool] = Field(
         default=True,
         description="Whether to compute the self metric",
+    )
+
+    @field_validator("dask")
+    @classmethod
+    def validate_dask_params(cls, dask_params):
+        if dask_params is not None:
+            dask_params = dict(
+                MapToMapInputConfigDaskParams(**dask_params).model_dump()
+            )
+        return dask_params
+
+    @field_validator("python_ot_params")
+    @classmethod
+    def validate_python_ot_params(cls, python_ot_params):
+        if python_ot_params is not None:
+            python_ot_params = dict(
+                MapToMapInputConfigPythonOTParams(**python_ot_params).model_dump()
+            )
+        return python_ot_params
+
+
+class MapToMapInputConfigDaskParams(BaseModel, extra="forbid"):
+    scheduler: Optional[str] = Field(
+        default=None, description="string argument to dask.compute(scheduler=...)"
+    )
+    local_directory: Optional[DirectoryPath] = Field(
+        default="/tmp", description="directory for dask.distributed.Client"
+    )
+    scheduler_file_directory: Optional[DirectoryPath] = Field(
+        default=None,
+        description="directory for dask_jobqueue.slurm.SLURMRunner(scheduler_file=dask_jobqueue.slurm.SLURMRunner + scheduler-job_id.json)",
+    )
+    slurm: bool = Field(
+        default=False, description="Whether to use dask_jobqueue.slurm.SLURMRunner"
+    )
+
+
+class MapToMapInputConfigPythonOTParams(BaseModel, extra="forbid"):
+    gw_distance_function_key: Literal["gromov_wasserstein2"] = Field(
+        default="gromov_wasserstein2", description="Key for the GW distance function"
+    )
+    tol_abs: float = Field(default=1e-18, description="Absolute tolerance")
+    tol_rel: float = Field(default=1e-18, description="Relative tolerance")
+    max_iter: int = Field(default=10000, description="Maximum number of iterations")
+    verbose: bool = Field(default=False, description="Verbosity flag")
+    loss_fun: Literal["square_loss", "kl_loss"] = Field(
+        default="square_loss", description="Loss function"
     )
 
 

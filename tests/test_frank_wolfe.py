@@ -51,3 +51,8 @@ def test_frank_wolfe_emd():
             assert np.allclose(
                 Gamma.flatten(), gamma_pot.flatten(), atol=1e-3
             ), "Gamma does not match the expected result."
+
+
+if __name__ == "__main__":
+    test_frank_wolfe_emd()
+    print("All tests passed.")

@@ -4,14 +4,12 @@ import torch
 import ot
 import numpy as np
 from dask import delayed, compute
-from dask.distributed import Client
 from dask.diagnostics import ProgressBar
-from dask_jobqueue.slurm import SLURMRunner
+from dataclasses import dataclass
 
 from cryo_challenge.preprocessing._downsampling import downsample_volume
 from cryo_challenge.map_to_map.gromov_wasserstein.frank_wolfe import (
     frank_wolfe_emd,
-    gw_objective_cost,
 )
 
 precision = 128
@@ -328,12 +326,17 @@ def get_distance_matrix_dask_gw(
     pairwise_distances_i,
     pairwise_distances_j,
     scheduler,
-    element_wise,
+    elementwise_not_rowwise,
     gw_distance_function_key,
+    tol_abs,
+    tol_rel,
+    max_iter,
+    verbose,
+    loss_fun,
 ):
     # TODO: dask.array.from_array for marginals and pairwise_distances
 
-    if element_wise:
+    if elementwise_not_rowwise:
         print("element wise")
         distance_matrix_dask_gw = get_distance_matrix_dask_element_wise(
             marginals_i=marginals_i,
@@ -343,12 +346,12 @@ def get_distance_matrix_dask_gw(
             distance_function=gw_distance_wrapper_element_wise,
             gw_distance_function=gw_distance_function_d[gw_distance_function_key],
             scheduler=scheduler,
-            tol_abs=1e-14,
-            tol_rel=1e-14,
-            max_iter=10000,
+            tol_abs=tol_abs,
+            tol_rel=tol_rel,
+            max_iter=max_iter,
             symmetric=True,
-            verbose=False,
-            loss_fun="square_loss",
+            verbose=verbose,
+            loss_fun=loss_fun,
         )
     else:
         print("row wise")
@@ -360,12 +363,12 @@ def get_distance_matrix_dask_gw(
             distance_function=gw_distance_wrapper_row_wise,
             gw_distance_function=gw_distance_function_d[gw_distance_function_key],
             scheduler=scheduler,
-            tol_abs=1e-18,
-            tol_rel=1e-18,
-            max_iter=10000,
+            tol_abs=float(tol_abs),
+            tol_rel=float(tol_rel),
+            max_iter=max_iter,
             symmetric=True,
-            verbose=False,
-            loss_fun="square_loss",
+            verbose=verbose,
+            loss_fun=loss_fun,
         )
     return distance_matrix_dask_gw
 
@@ -446,30 +449,44 @@ def get_distance_matrix_gw_via_fw(
     sparse_coordinates_sets_j,
     pairwise_distances_i,
     pairwise_distances_j,
+    max_iters,
+    Gamma_atol,
 ):
     n_i = len(marginals_i)
     n_j = len(marginals_j)
     distance_matrix_gw = torch.empty((n_i, n_j), dtype=torch_dtype)
+    ones_i = np.ones_like(marginals_i[0])
+    ones_j = np.ones_like(marginals_j[0])
     for i in range(n_i):
+        mu_x = marginals_i[i]
         for j in range(n_j):
-            # Compute the cost matrix
-            #
+            mu_y = marginals_j[j]
+
             Gamma0 = np.outer(marginals_i[i], marginals_j[j])
 
             # Compute the optimal transport plan using Frank-Wolfe algorithm
-            Gamma, log = frank_wolfe_emd(
-                sparse_coordinates_sets_i[i],
-                sparse_coordinates_sets_j[j],
+            Gamma, mx, my, objective_no_constant_term, log = frank_wolfe_emd(
+                sparse_coordinates_sets_i[i].T,
+                sparse_coordinates_sets_j[j].T,
                 Gamma0,
                 marginals_i[i],
                 marginals_j[j],
-                num_iters=30,
-                Gamma_atol=1e-6,
+                max_iters=max_iters,
+                Gamma_atol=Gamma_atol,
             )
             Cx = pairwise_distances_i[i] ** 2
             Cy = pairwise_distances_j[j] ** 2
-            gw_frank_wolfe = gw_objective_cost(Cx, Cy, Gamma)
-            distance_matrix_gw[i, j] = gw_frank_wolfe
+            if np.allclose(mu_x, ones_i) and np.allclose(mu_y, ones_j):
+                c0 = np.sum(Cx**2) + np.sum(Cy**2) - 2 * np.sum(mx) * np.sum(my)
+            else:
+                c0 = (
+                    (np.outer(mu_x, mu_y) * Cx**2).sum()
+                    + (np.outer(mu_x, mu_y) * Cy**2).sum()
+                    - 2 * mu_y.dot(my) * mu_x.dot(mx)
+                )
+
+            full_objective = objective_no_constant_term + c0
+            distance_matrix_gw[i, j] = full_objective.item()
 
     return distance_matrix_gw
 
@@ -508,13 +525,15 @@ def run_fw(args):
         normalize,
     )
 
-    distance_matrix_dask_gw = get_distance_matrix_gw_via_fw(
+    distance_matrix = get_distance_matrix_gw_via_fw(
         marginals_i,
         marginals_j,
         sparse_coordinates_sets_i,
         sparse_coordinates_sets_j,
         pairwise_distances_i**2,
         pairwise_distances_j**2,
+        max_iters=args.max_iters,
+        Gamma_atol=args.Gamma_atol,
     )
 
     np.save(
@@ -522,9 +541,9 @@ def run_fw(args):
             args.outdir,
             f"gw_weighted_voxel_fw_topk{top_k}_ds{box_size}_float{precision}_exponent{exponent}_{len(volumes_i)}x{len(volumes_j)}_23.npy",
         ),
-        distance_matrix_dask_gw,
+        distance_matrix,
     )
-    return distance_matrix_dask_gw
+    return distance_matrix
 
 
 def main(args):
@@ -605,20 +624,41 @@ def main(args):
         return distance_matrix_dask_gw
 
 
+# if __name__ == "__main__":
+#     args = parse_args()
+#     if args.slurm:
+#         job_id = os.environ["SLURM_JOB_ID"]
+#         with SLURMRunner(
+#             scheduler_file=args.scheduler_file,
+#         ) as runner:
+#             # The runner object contains the scheduler address and can be passed directly to a client
+#             with Client(runner) as client:
+#                 get_distance_matrix_dask_gw = main(args)
+
+#     else:
+#         with Client(local_directory=args.local_directory) as client:
+#             get_distance_matrix_dask_gw = main(args)
+
+#     # linter thinks client is unused, so need to do something with client as a workaround
+#     assert isinstance(client, type(client))
+
 if __name__ == "__main__":
-    args = parse_args()
-    if args.slurm:
-        job_id = os.environ["SLURM_JOB_ID"]
-        with SLURMRunner(
-            scheduler_file=args.scheduler_file,
-        ) as runner:
-            # The runner object contains the scheduler address and can be passed directly to a client
-            with Client(runner) as client:
-                get_distance_matrix_dask_gw = main(args)
 
-    else:
-        with Client(local_directory=args.local_directory) as client:
-            get_distance_matrix_dask_gw = main(args)
+    @dataclass
+    class Args:
+        n_i: int = 4
+        n_j: int = 4
+        box_size: int = 20
+        top_k: int = 500
+        exponent: float = 1.0
+        cost_scale_factor: float = 1.0
+        scheduler: str = None
+        element_wise: bool = False
+        skip_normalize: bool = False
+        max_iters: int = 100
+        Gamma_atol: float = 1e-6
+        outdir: str = "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/map_to_map/gromov_wasserstein/output/"
+        fname: str = "/mnt/home/smbp/ceph/smbpchallenge/preprocessing_submissions/mock_submissions/submission_mint_chocolate_chip_4.pt"
 
-    # linter thinks client is unused, so need to do something with client as a workaround
-    assert isinstance(client, type(client))
+    args = Args()
+    run_fw(args)
