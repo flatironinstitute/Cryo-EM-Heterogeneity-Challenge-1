@@ -187,6 +187,10 @@ class MapToMapInputConfigMetricsGromovWasserstein(BaseModel, extra="forbid"):
         default=None,
         description="Parameters for the python_ot solver",
     )
+    frank_wolfe_params: Optional[dict] = Field(
+        default=None,
+        description="Parameters for the frank_wolfe solver",
+    )
     compute_self_metric: Optional[bool] = Field(
         default=True,
         description="Whether to compute the self metric",
@@ -204,11 +208,22 @@ class MapToMapInputConfigMetricsGromovWasserstein(BaseModel, extra="forbid"):
     @field_validator("python_ot_params")
     @classmethod
     def validate_python_ot_params(cls, python_ot_params):
+        # TODO: assert that the solver is python_ot
         if python_ot_params is not None:
             python_ot_params = dict(
                 MapToMapInputConfigPythonOTParams(**python_ot_params).model_dump()
             )
         return python_ot_params
+
+    @field_validator("frank_wolfe_params")
+    @classmethod
+    def validate_frank_wolfe_params(cls, frank_wolfe_params):
+        # TODO: assert that the solver is frank_wolfe
+        if frank_wolfe_params is not None:
+            frank_wolfe_params = dict(
+                MapToMapInputConfigFrankWolfeParams(**frank_wolfe_params).model_dump()
+            )
+        return frank_wolfe_params
 
 
 class MapToMapInputConfigDaskParams(BaseModel, extra="forbid"):
@@ -238,6 +253,11 @@ class MapToMapInputConfigPythonOTParams(BaseModel, extra="forbid"):
     loss_fun: Literal["square_loss", "kl_loss"] = Field(
         default="square_loss", description="Loss function"
     )
+
+
+class MapToMapInputConfigFrankWolfeParams(BaseModel, extra="forbid"):
+    max_iter: int = Field(default=100, description="Maximum number of iterations")
+    gamma_atol: float = Field(default=1e-6, description="Tolerance for convergence")
 
 
 class MapToMapInputConfigMetricsProcrustesWasserstein(BaseModel, extra="forbid"):

@@ -5,7 +5,6 @@ import ot
 import numpy as np
 from dask import delayed, compute
 from dask.diagnostics import ProgressBar
-from dataclasses import dataclass
 
 from cryo_challenge.preprocessing._downsampling import downsample_volume
 from cryo_challenge.map_to_map.gromov_wasserstein.frank_wolfe import (
@@ -449,8 +448,8 @@ def get_distance_matrix_gw_via_fw(
     sparse_coordinates_sets_j,
     pairwise_distances_i,
     pairwise_distances_j,
-    max_iters,
-    Gamma_atol,
+    max_iter,
+    gamma_atol,
 ):
     n_i = len(marginals_i)
     n_j = len(marginals_j)
@@ -471,8 +470,8 @@ def get_distance_matrix_gw_via_fw(
                 Gamma0,
                 marginals_i[i],
                 marginals_j[j],
-                max_iters=max_iters,
-                Gamma_atol=Gamma_atol,
+                max_iter=max_iter,
+                gamma_atol=gamma_atol,
             )
             Cx = pairwise_distances_i[i] ** 2
             Cy = pairwise_distances_j[j] ** 2
@@ -532,8 +531,8 @@ def run_fw(args):
         sparse_coordinates_sets_j,
         pairwise_distances_i**2,
         pairwise_distances_j**2,
-        max_iters=args.max_iters,
-        Gamma_atol=args.Gamma_atol,
+        max_iter=args.max_iter,
+        gamma_atol=args.gamma_atol,
     )
 
     np.save(
@@ -642,23 +641,23 @@ def main(args):
 #     # linter thinks client is unused, so need to do something with client as a workaround
 #     assert isinstance(client, type(client))
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    @dataclass
-    class Args:
-        n_i: int = 4
-        n_j: int = 4
-        box_size: int = 20
-        top_k: int = 500
-        exponent: float = 1.0
-        cost_scale_factor: float = 1.0
-        scheduler: str = None
-        element_wise: bool = False
-        skip_normalize: bool = False
-        max_iters: int = 100
-        Gamma_atol: float = 1e-6
-        outdir: str = "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/map_to_map/gromov_wasserstein/output/"
-        fname: str = "/mnt/home/smbp/ceph/smbpchallenge/preprocessing_submissions/mock_submissions/submission_mint_chocolate_chip_4.pt"
+#     @dataclass
+#     class Args:
+#         n_i: int = 4
+#         n_j: int = 4
+#         box_size: int = 20
+#         top_k: int = 500
+#         exponent: float = 1.0
+#         cost_scale_factor: float = 1.0
+#         scheduler: str = None
+#         element_wise: bool = False
+#         skip_normalize: bool = False
+#         max_iter: int = 100
+#         gamma_atol: float = 1e-6
+#         outdir: str = "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/map_to_map/gromov_wasserstein/output/"
+#         fname: str = "/mnt/home/smbp/ceph/smbpchallenge/preprocessing_submissions/mock_submissions/submission_mint_chocolate_chip_4.pt"
 
-    args = Args()
-    run_fw(args)
+#     args = Args()
+#     run_fw(args)

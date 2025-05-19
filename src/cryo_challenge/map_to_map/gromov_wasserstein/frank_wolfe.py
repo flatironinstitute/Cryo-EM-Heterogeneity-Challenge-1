@@ -29,7 +29,7 @@ def gw_objective_cost(Cx, Cy, Gamma):
     return np.sum(term)
 
 
-def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iters, Gamma_atol, log=None):
+def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iter, gamma_atol, log=None):
     """
     Frank-Wolfe algorithm for Gromov-wasserstein optimal transport using the Earth Mover's Distance (EMD).
 
@@ -72,7 +72,7 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iters, Gamma_atol, log=None):
         log = defaultdict(list)
         log["objective"].append(_objective_no_constant_term(X, Y, Gamma0, L))
         log["Gamma"].append(Gamma0)
-    for t in range(max_iters):
+    for t in range(max_iter):
         print("iter", t)
         # Gradient
         Gamma_t = Gamma_t_plus_1
@@ -104,11 +104,11 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iters, Gamma_atol, log=None):
             log["denominator"].append(0)
             log["Gamma_t_plus_1"].append(Gamma_t_plus_1)
 
-        if np.linalg.norm(Gamma_t_plus_1 - Gamma_t) < Gamma_atol:
+        if np.linalg.norm(Gamma_t_plus_1 - Gamma_t) < gamma_atol:
             print("Converged")
             break
 
-    if t == max_iters - 1:
+    if t == max_iter - 1:
         print("Max iterations reached")
 
     return Gamma_t_plus_1, mx, my, objective_value, log
