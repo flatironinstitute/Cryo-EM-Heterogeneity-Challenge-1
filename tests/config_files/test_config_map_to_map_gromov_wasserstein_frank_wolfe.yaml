@@ -1,0 +1,35 @@
+data_params:
+  box_size: 16
+  voxel_size: 30.044
+  submission_params:
+    path_to_submission_file: tests/data/dataset_2_submissions/submission_1000.pt
+    volume_key: volumes
+    metadata_key: populations
+    label_key: id
+  ground_truth_params:
+    path_to_volumes: tests/data/Ground_truth/test_maps_gt_flat_10.pt
+    path_to_metadata: tests/data/Ground_truth/test_metadata_10.csv
+  mask_params:
+    apply_mask: false
+    path_to_mask: tests/data/Ground_truth/test_mask_bool.mrc
+metrics:
+  gromov_wasserstein:
+    top_k: 10
+    downsample_box_size: 4
+    exponent: 1.0
+    cost_scale_factor: 1.0
+    elementwise_not_rowwise: false
+    solver: frank_wolfe
+    frank_wolfe_params:
+      max_iter: 100
+      gamma_atol: 0.000001
+
+  shared_params:
+    chunk_size_submission: 4
+    chunk_size_gt: 5
+    low_memory:
+      do: false
+    normalize_params:
+      do: true
+      method: median_zscore
+path_to_output_file: tests/results/test_map_to_map_distance_matrix_submission_0.pkl
