@@ -33,4 +33,4 @@ jobs:
 
       - name: Test with pytest
         run: |
-          pytest tests/test_preprocessing.py tests/test_procrustes_wasserstein.py tests/test_frank_wolfe.py tests/test_map_to_map.py tests/test_distribution_to_distribution.py
+          pytest tests
