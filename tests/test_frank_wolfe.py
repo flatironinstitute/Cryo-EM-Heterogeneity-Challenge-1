@@ -24,10 +24,10 @@ def test_frank_wolfe_emd():
             assert np.all(mu_x >= 0)
             assert np.all(mu_y >= 0)
             Gamma0 = np.outer(mu_x, mu_y)
-            num_iters = 100
+            num_iter = 100
 
             Gamma, log = frank_wolfe_emd(
-                X, Y, Gamma0, mu_x, mu_y, num_iters, Gamma_atol=1e-8
+                X, Y, Gamma0, mu_x, mu_y, num_iter, gamma_atol=1e-8
             )
 
             Cx = ot.utils.euclidean_distances(X.T, X.T, squared=True)
