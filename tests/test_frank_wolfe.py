@@ -26,8 +26,15 @@ def test_frank_wolfe_emd():
             Gamma0 = np.outer(mu_x, mu_y)
             num_iter = 100
 
-            Gamma, log = frank_wolfe_emd(
-                X, Y, Gamma0, mu_x, mu_y, num_iter, gamma_atol=1e-8
+            Gamma, mx, my, objective_value, log = frank_wolfe_emd(
+                X,
+                Y,
+                Gamma0,
+                mu_x,
+                mu_y,
+                num_iter,
+                gamma_atol=1e-8,
+                log=True,
             )
 
             Cx = ot.utils.euclidean_distances(X.T, X.T, squared=True)
