@@ -12,9 +12,9 @@ from dask_jobqueue.slurm import SLURMRunner
 import torch.multiprocessing as mp
 
 from .gromov_wasserstein.gw_weighted_voxels import (
-    get_distance_matrix_dask_gw,
     get_distance_matrix_gw_via_fw,
-)  # TODO: rename get_distance_matrix_dask_gw to python_ot
+    get_distance_matrix_gw_python_ot_dask,
+)
 from .gromov_wasserstein.gw_weighted_voxels import (
     setup_volume_and_distance,
 )
@@ -709,7 +709,7 @@ class GromovWassersteinDistance(MapToMapDistance):
                 # The runner object contains the scheduler address and can be passed directly to a client
                 with Client(runner) as client:
                     if extra_params["solver"] == "python_ot":
-                        distance_matrix_gw = get_distance_matrix_dask_gw(
+                        distance_matrix_gw = get_distance_matrix_gw_python_ot_dask(
                             marginals_i=marginals_i,
                             marginals_j=marginals_j,
                             pairwise_distances_i=pairwise_distances_i,
@@ -736,7 +736,7 @@ class GromovWassersteinDistance(MapToMapDistance):
             local_directory = extra_params["dask"]["local_directory"]
             with Client(local_directory=local_directory) as client:
                 if extra_params["solver"] == "python_ot":
-                    distance_matrix_gw = get_distance_matrix_dask_gw(
+                    distance_matrix_gw = get_distance_matrix_gw_python_ot_dask(
                         marginals_i=marginals_i,
                         marginals_j=marginals_j,
                         pairwise_distances_i=pairwise_distances_i,

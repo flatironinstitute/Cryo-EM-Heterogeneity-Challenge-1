@@ -43,7 +43,7 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iter, gamma_atol, log=None):
     \nabla_{\Gamma_t} f(\Gamma_t) &= -8 X^\top X \Gamma_t Y^\top Y - L \\
     S_t &= \arg\min_{S \in \Pi} \langle \Gamma_t, \nabla_\Gamma f(\Gamma) \rangle \\
     \eta_t &= \frac{-8 \, \mathrm{tr}[(S_t - \Gamma_t)^\top X^\top X \Gamma_t Y^\top Y] - \mathrm{tr}[L^\top (S_t - \Gamma_t)]}{8 \, \mathrm{tr}[(S_t - \Gamma_t)^\top X^\top X (S_t - \Gamma_t) Y^\top Y]} \\
-    \Gamma_{t+1} &= (1 - \eta_t)\Gamma_t + \eta_t S_t
+    \Gamma_{t+1} &= \eta_t\Gamma_t + (1-\eta_t) S_t
     \end{aligned}
     $$
 

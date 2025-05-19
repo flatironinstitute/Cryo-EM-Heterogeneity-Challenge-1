@@ -319,7 +319,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_distance_matrix_dask_gw(
+def get_distance_matrix_gw_python_ot_dask(
     marginals_i,
     marginals_j,
     pairwise_distances_i,
@@ -491,6 +491,32 @@ def get_distance_matrix_gw_via_fw(
 
 
 def run_fw(args):
+    """
+    Remarks:
+    Use as:
+
+    if __name__ == "__main__":
+
+        @dataclass
+        class Args:
+            n_i: int = 4
+            n_j: int = 4
+            box_size: int = 20
+            top_k: int = 500
+            exponent: float = 1.0
+            cost_scale_factor: float = 1.0
+            scheduler: str = None
+            element_wise: bool = False
+            skip_normalize: bool = False
+            max_iter: int = 100
+            gamma_atol: float = 1e-6
+            outdir: str = "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/map_to_map/gromov_wasserstein/output/"
+            fname: str = "/mnt/home/smbp/ceph/smbpchallenge/preprocessing_submissions/mock_submissions/submission_mint_chocolate_chip_4.pt"
+
+        args = Args()
+        run_fw(args)
+
+    """
     n_i = args.n_i
     n_j = args.n_j
     box_size = args.box_size
@@ -546,6 +572,31 @@ def run_fw(args):
 
 
 def main(args):
+    """
+
+    Remarks:
+    Use as:
+
+    if __name__ == "__main__":
+
+        args = parse_args()
+        if args.slurm:
+            job_id = os.environ["SLURM_JOB_ID"]
+            with SLURMRunner(
+                scheduler_file=args.scheduler_file,
+            ) as runner:
+                # The runner object contains the scheduler address and can be passed directly to a client
+                with Client(runner) as client:
+                    get_distance_matrix_dask_gw = main(args)
+
+        else:
+            with Client(local_directory=args.local_directory) as client:
+                get_distance_matrix_dask_gw = main(args)
+
+        # linter thinks client is unused, so need to do something with client as a workaround
+        assert isinstance(client, type(client))
+
+    """
     n_i = args.n_i
     n_j = args.n_j
     box_size = args.box_size
@@ -603,7 +654,7 @@ def main(args):
         return distance_matrix_dask_gw
 
     else:
-        distance_matrix_dask_gw = get_distance_matrix_dask_gw(
+        distance_matrix_dask_gw = get_distance_matrix_gw_python_ot_dask(
             marginals_i,
             marginals_j,
             pairwise_distances_i,
@@ -621,43 +672,3 @@ def main(args):
             distance_matrix_dask_gw,
         )
         return distance_matrix_dask_gw
-
-
-# if __name__ == "__main__":
-#     args = parse_args()
-#     if args.slurm:
-#         job_id = os.environ["SLURM_JOB_ID"]
-#         with SLURMRunner(
-#             scheduler_file=args.scheduler_file,
-#         ) as runner:
-#             # The runner object contains the scheduler address and can be passed directly to a client
-#             with Client(runner) as client:
-#                 get_distance_matrix_dask_gw = main(args)
-
-#     else:
-#         with Client(local_directory=args.local_directory) as client:
-#             get_distance_matrix_dask_gw = main(args)
-
-#     # linter thinks client is unused, so need to do something with client as a workaround
-#     assert isinstance(client, type(client))
-
-# if __name__ == "__main__":
-
-#     @dataclass
-#     class Args:
-#         n_i: int = 4
-#         n_j: int = 4
-#         box_size: int = 20
-#         top_k: int = 500
-#         exponent: float = 1.0
-#         cost_scale_factor: float = 1.0
-#         scheduler: str = None
-#         element_wise: bool = False
-#         skip_normalize: bool = False
-#         max_iter: int = 100
-#         gamma_atol: float = 1e-6
-#         outdir: str = "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/map_to_map/gromov_wasserstein/output/"
-#         fname: str = "/mnt/home/smbp/ceph/smbpchallenge/preprocessing_submissions/mock_submissions/submission_mint_chocolate_chip_4.pt"
-
-#     args = Args()
-#     run_fw(args)
