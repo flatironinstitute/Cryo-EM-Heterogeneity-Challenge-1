@@ -72,9 +72,10 @@ def run(config):
         data = pickle.load(f)
 
     user_submitted_populations = data["user_submitted_populations"]  # .numpy()
-    id = torch.load(data["config"]["data"]["submission"]["fname"], weights_only=False)[
-        "id"
-    ]
+    id = torch.load(
+        data["config"]["data_params"]["submission_params"]["path_to_submission_file"],
+        weights_only=False,
+    )["id"]
 
     results_dict = {}
     results_dict["config"] = config
