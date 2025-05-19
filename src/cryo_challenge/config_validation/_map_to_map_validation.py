@@ -167,18 +167,6 @@ class MapToMapInputConfigMetricsGromovWasserstein(BaseModel, extra="forbid"):
         default=None,
         description="Dask configuration for parallelization",
     )
-    # slurm: bool = Field(
-    #     description="parallelization configuration: whether to use dask_hpc_runner.SlurmRunner as a runner for dask.Client(runner)"
-    # )
-
-    # scheduler: Optional[str] = Field(
-    #     default=None,
-    #     description="string argument to dask.compute",
-    # )
-
-    # local_directory: Optional[DirectoryPath] = Field(
-    #     default=None, description="directory for dask.distributed.Client"
-    # )
     solver: Literal["python_ot", "frank_wolfe"] = Field(
         default="python_ot",
         description="Solver to use for the Gromov-Wasserstein distance",
