@@ -91,4 +91,4 @@ def test_run_map2map_pipeline_low_memory():
 
 
 if __name__ == "__main__":
-    test_run_map2map_pipeline_gromov_wasserstein()
+    test_run_map2map_pipeline_self()
