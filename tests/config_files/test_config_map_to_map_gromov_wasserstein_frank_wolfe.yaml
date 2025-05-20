@@ -24,10 +24,6 @@ metrics:
       max_iter: 100
       gamma_atol: 0.000001
 
-    dask:
-      scheduler: null
-      local_directory: /tmp
-      slurm: false
   shared_params:
     chunk_size_submission: 4
     chunk_size_gt: 5

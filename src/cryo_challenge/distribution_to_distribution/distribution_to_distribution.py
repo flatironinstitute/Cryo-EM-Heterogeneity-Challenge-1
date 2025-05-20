@@ -72,16 +72,17 @@ def run(config):
         data = pickle.load(f)
 
     user_submitted_populations = data["user_submitted_populations"]  # .numpy()
-    id = torch.load(data["config"]["data"]["submission"]["fname"], weights_only=False)[
-        "id"
-    ]
+    submission_id = torch.load(
+        data["config"]["data_params"]["submission_params"]["path_to_submission_file"],
+        weights_only=False,
+    )["id"]
 
     results_dict = {}
     results_dict["config"] = config
     results_dict["user_submitted_populations"] = torch.tensor(
         user_submitted_populations
     )
-    results_dict["id"] = id
+    results_dict["id"] = submission_id
 
     assert np.isclose(user_submitted_populations.sum(), 1)
 
