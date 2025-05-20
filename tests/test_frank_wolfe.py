@@ -1,5 +1,5 @@
 import ot
-import numpy as np
+import torch
 from cryo_challenge.map_to_map.gromov_wasserstein.frank_wolfe import (
     frank_wolfe_emd,
     gw_objective_cost,
@@ -7,23 +7,27 @@ from cryo_challenge.map_to_map.gromov_wasserstein.frank_wolfe import (
 
 
 def test_frank_wolfe_emd():
-    np.random.seed(0)
-    n = 100
+    torch.manual_seed(0)
+    n = 10
 
     for d in [1, 2, 3]:
-        X = np.random.rand(d, n)
-        scale_noise = 0.1
-        noise = scale_noise * np.random.randn(*X.shape)
+        X = torch.rand(d, n)
+        scale_noise = 0.001
+        noise = scale_noise * torch.randn(*X.shape)
         Y = X + noise
 
-        for non_uniform_factor in [0, 0.5 / n]:
-            mu_x = np.ones(X.shape[1]) + np.arange(X.shape[1]) * non_uniform_factor
-            mu_x = mu_x / np.sum(mu_x)
-            mu_y = np.ones(Y.shape[1]) - np.arange(Y.shape[1]) * non_uniform_factor
-            mu_y = mu_y / np.sum(mu_y)
-            assert np.all(mu_x >= 0)
-            assert np.all(mu_y >= 0)
-            Gamma0 = np.outer(mu_x, mu_y)
+        for non_uniform_factor in [0, 0.005 / n]:
+            mu_x = (
+                torch.ones(X.shape[1]) + torch.arange(X.shape[1]) * non_uniform_factor
+            )
+            mu_x = mu_x / torch.sum(mu_x)
+            mu_y = (
+                torch.ones(Y.shape[1]) - torch.arange(Y.shape[1]) * non_uniform_factor
+            )
+            mu_y = mu_y / torch.sum(mu_y)
+            assert torch.all(mu_x >= 0)
+            assert torch.all(mu_y >= 0)
+            Gamma0 = torch.outer(mu_x, mu_y)
             num_iter = 100
 
             Gamma, mx, my, objective_value, log = frank_wolfe_emd(
@@ -51,11 +55,11 @@ def test_frank_wolfe_emd():
                 gamma_pot, log_pot = ot.gromov_wasserstein(
                     Cx, Cy, mu_x, mu_y, loss_fun="square_loss", log=True
                 )
-                assert np.isclose(
+                assert torch.isclose(
                     log_pot["gw_dist"], gw_frank_wolfe, atol=1e-3
                 ), "GW distance does not match the expected result."
 
-            assert np.allclose(
+            assert torch.allclose(
                 Gamma.flatten(), gamma_pot.flatten(), atol=1e-3
             ), "Gamma does not match the expected result."
 

@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 import ot
 from collections import defaultdict
 
@@ -6,8 +6,8 @@ from collections import defaultdict
 def _objective_no_constant_term(X, Y, Gamma, L):
     """Compute 2 * X * Gamma * Y^T"""
     Z = 2 * X @ Gamma @ Y.T
-    frob_sq = np.sum(Z**2)  # ||·||_F^2
-    inner_product = np.sum(L * Gamma)  # <L, Gamma>
+    frob_sq = torch.sum(Z**2)  # ||·||_F^2
+    inner_product = torch.sum(L * Gamma)  # <L, Gamma>
     return -frob_sq - inner_product
 
 
@@ -26,7 +26,7 @@ def gw_objective_cost(Cx, Cy, Gamma):
         * Gamma[:, None, :, None]
         * Gamma[None, :, None, :]
     )
-    return np.sum(term)
+    return torch.sum(term)
 
 
 def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iter, gamma_atol, log=None):
@@ -54,13 +54,13 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iter, gamma_atol, log=None):
     XtX = X.T @ X
     YtY = Y.T @ Y
 
-    mx = (np.linalg.norm(X, axis=0) ** 2).reshape(-1, 1)
-    my = (np.linalg.norm(Y, axis=0) ** 2).reshape(-1, 1)
-    vec_1xy = np.ones_like(mx)
+    mx = (torch.linalg.norm(X, axis=0) ** 2).reshape(-1, 1)
+    my = (torch.linalg.norm(Y, axis=0) ** 2).reshape(-1, 1)
+    vec_1xy = torch.ones_like(mx)
 
-    L = 2 * mu_y.dot(vec_1xy) * np.outer(mx, my)
-    L -= 4 * np.outer(mx, mu_y) @ Y.T @ Y
-    L -= 4 * X.T @ X @ np.outer(mu_x, my)
+    L = 2 * mu_y.dot(vec_1xy.flatten()) * torch.outer(mx.flatten(), my.flatten())
+    L -= 4 * torch.outer(mx.flatten(), mu_y.flatten()) @ Y.T @ Y
+    L -= 4 * X.T @ X @ torch.outer(mu_x.flatten(), my.flatten())
 
     assert Gamma0.shape == L.shape
 
@@ -84,9 +84,9 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iter, gamma_atol, log=None):
 
         # Line search
         diff = S - Gamma_t
-        numerator = -8 * np.sum((XtX @ diff) * (Gamma_t @ YtY)) - np.sum(L * diff)
-        denominator = 8 * np.sum((XtX @ diff) * (diff @ YtY))
-        eta = np.clip(numerator / denominator, 0, 1) if denominator > 1e-12 else 0
+        numerator = -8 * torch.sum((XtX @ diff) * (Gamma_t @ YtY)) - torch.sum(L * diff)
+        denominator = 8 * torch.sum((XtX @ diff) * (diff @ YtY))
+        eta = torch.clip(numerator / denominator, 0, 1) if denominator > 1e-12 else 0
 
         # Update
         Gamma_t_plus_1 = eta * Gamma_t + (1 - eta) * S
@@ -99,12 +99,12 @@ def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iter, gamma_atol, log=None):
             log["eta"].append(0)
             log["Gamma_t"].append(Gamma_t_plus_1)
             log["S"].append(Gamma_t_plus_1)
-            log["diff"].append(np.zeros_like(Gamma_t_plus_1))
+            log["diff"].append(torch.zeros_like(Gamma_t_plus_1))
             log["numerator"].append(0)
             log["denominator"].append(0)
             log["Gamma_t_plus_1"].append(Gamma_t_plus_1)
 
-        if np.linalg.norm(Gamma_t_plus_1 - Gamma_t) < gamma_atol:
+        if torch.linalg.norm(Gamma_t_plus_1 - Gamma_t) < gamma_atol:
             print("Converged")
             break
 
