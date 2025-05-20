@@ -454,14 +454,14 @@ def get_distance_matrix_gw_via_fw(
     n_i = len(marginals_i)
     n_j = len(marginals_j)
     distance_matrix_gw = torch.empty((n_i, n_j), dtype=torch_dtype)
-    ones_i = np.ones_like(marginals_i[0])
-    ones_j = np.ones_like(marginals_j[0])
+    ones_i = torch.ones_like(marginals_i[0])
+    ones_j = torch.ones_like(marginals_j[0])
     for i in range(n_i):
         mu_x = marginals_i[i]
         for j in range(n_j):
             mu_y = marginals_j[j]
 
-            Gamma0 = np.outer(marginals_i[i], marginals_j[j])
+            Gamma0 = torch.outer(marginals_i[i], marginals_j[j])
 
             # Compute the optimal transport plan using Frank-Wolfe algorithm
             Gamma, mx, my, objective_no_constant_term, log = frank_wolfe_emd(
@@ -473,14 +473,20 @@ def get_distance_matrix_gw_via_fw(
                 max_iter=max_iter,
                 gamma_atol=gamma_atol,
             )
+            mx = mx.flatten()
+            my = my.flatten()
             Cx = pairwise_distances_i[i] ** 2
             Cy = pairwise_distances_j[j] ** 2
-            if np.allclose(mu_x, ones_i) and np.allclose(mu_y, ones_j):
-                c0 = np.sum(Cx**2) + np.sum(Cy**2) - 2 * np.sum(mx) * np.sum(my)
+            if torch.allclose(mu_x, ones_i) and torch.allclose(mu_y, ones_j):
+                c0 = (
+                    torch.sum(Cx**2)
+                    + torch.sum(Cy**2)
+                    - 2 * torch.sum(mx) * torch.sum(my)
+                )
             else:
                 c0 = (
-                    (np.outer(mu_x, mu_y) * Cx**2).sum()
-                    + (np.outer(mu_x, mu_y) * Cy**2).sum()
+                    (torch.outer(mu_x, mu_y) * Cx**2).sum()
+                    + (torch.outer(mu_x, mu_y) * Cy**2).sum()
                     - 2 * mu_y.dot(my) * mu_x.dot(mx)
                 )
 

@@ -684,12 +684,12 @@ class GromovWassersteinDistance(MapToMapDistance):
 
         if extra_params["solver"] == "frank_wolfe":
             distance_matrix_gw = get_distance_matrix_gw_via_fw(
-                marginals_i,
-                marginals_j,
-                sparse_coordinates_sets_i,
-                sparse_coordinates_sets_j,
-                pairwise_distances_i**2,
-                pairwise_distances_j**2,
+                torch.from_numpy(marginals_i),
+                torch.from_numpy(marginals_j),
+                torch.from_numpy(sparse_coordinates_sets_i),
+                torch.from_numpy(sparse_coordinates_sets_j),
+                torch.from_numpy(pairwise_distances_i) ** 2,
+                torch.from_numpy(pairwise_distances_j) ** 2,
                 max_iter=extra_params["frank_wolfe_params"]["max_iter"],
                 gamma_atol=extra_params["frank_wolfe_params"]["gamma_atol"],
             )
