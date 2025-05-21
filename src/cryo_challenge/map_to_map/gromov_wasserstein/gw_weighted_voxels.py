@@ -11,7 +11,7 @@ from cryo_challenge.map_to_map.gromov_wasserstein.frank_wolfe import (
     frank_wolfe_emd,
 )
 
-precision = 128
+precision = 64
 if precision == 32:
     numpy_dtype = np.float32
     torch_dtype = torch.float32
