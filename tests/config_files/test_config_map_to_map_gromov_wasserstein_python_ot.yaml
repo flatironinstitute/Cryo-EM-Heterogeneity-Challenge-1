@@ -18,10 +18,19 @@ metrics:
     downsample_box_size: 4
     exponent: 1.0
     cost_scale_factor: 1.0
-    scheduler: null
-    element_wise: false
-    local_directory: /tmp
-    slurm: false
+    elementwise_not_rowwise: false
+    solver: python_ot
+    python_ot_params:
+      gw_distance_function_key: gromov_wasserstein2
+      tol_abs: 1e-18
+      tol_rel: 1e-18
+      max_iter: 10000
+      verbose: false
+      loss_fun: square_loss
+    dask:
+      scheduler: null
+      local_directory: /tmp
+      slurm: false
   shared_params:
     chunk_size_submission: 4
     chunk_size_gt: 5
