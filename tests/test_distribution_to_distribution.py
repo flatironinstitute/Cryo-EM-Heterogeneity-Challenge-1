@@ -18,3 +18,8 @@ def test_run_distribution_to_distribution_regularization():
         }
     )
     run_distribution_to_distribution_pipeline.main(args)
+
+
+if __name__ == "__main__":
+    test_run_distribution_to_distribution_no_regularization()
+    test_run_distribution_to_distribution_regularization()
