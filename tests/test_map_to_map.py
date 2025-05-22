@@ -60,7 +60,10 @@ def test_run_map2map_pipeline_zernike3d():
         print(
             "External test failed. Skipping test. Fails when running in CI if external dependencies are not installed. Or if the dependency is installed it is a bug in the pipeline"
         )
-        # assert False, 'only activate this assert for local testing. otherwise can fail silently'
+        pytest.skip(
+            "Skipping test. Fails in CI if external dependencies are not installed. "
+            "If the dependency is installed, this indicates a bug in the pipeline."
+        )
     return
 
 
