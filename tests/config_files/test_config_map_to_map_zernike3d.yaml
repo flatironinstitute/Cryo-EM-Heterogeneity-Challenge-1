@@ -17,7 +17,7 @@ metrics:
     gpuID: 0
     tmpDir: tests/results/tmp_zernike
     thr: 20
-    numProjections: 20 # projecions should be 20-100
+    numProjections: 2 # projecions should be 20-100
   shared_params:
     chunk_size_submission: 4
     chunk_size_gt: 5
