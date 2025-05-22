@@ -104,39 +104,20 @@ def run(config):
         print(f"Computing {distance_label} distance")
         assert distance_label in config["metrics"].keys()
         logger.info(f"cost matrix: {distance_label}")
-        shape_gt = maps_gt_flat.shape
-        shape_user = maps_user_flat.shape
+
         map_to_map_distance.distance_matrix_precomputation(
-            maps_gt_flat.reshape(
-                shape_gt[0],
-                -1,
-            ),
-            maps_user_flat.reshape(
-                shape_user[0],
-                -1,
-            ),
+            maps_gt_flat,
+            maps_user_flat,
         )
 
         cost_matrix = map_to_map_distance.get_distance_matrix(
-            maps_gt_flat.reshape(
-                shape_gt[0],
-                -1,
-            ),
-            maps_user_flat.reshape(
-                shape_user[0],
-                -1,
-            ),
+            maps_gt_flat,
+            maps_user_flat,
             global_store_of_running_results=results_dict,
         )
         computed_assets = map_to_map_distance.get_computed_assets(
-            maps_gt_flat.reshape(
-                shape_gt[0],
-                -1,
-            ),
-            maps_user_flat.reshape(
-                shape_user[0],
-                -1,
-            ),
+            maps_gt_flat,
+            maps_user_flat,
             global_store_of_running_results=results_dict,
         )
         computed_assets.update(computed_assets)
@@ -153,22 +134,22 @@ def run(config):
 
         if config["metrics"][distance_label]["compute_self_metric"]:
             if distance_label == "zernike3d":
-                config["metrics"][distance_label]["tmpDir"] = (
-                    config["metrics"][distance_label]["tmpDir"] + "_self"
-                )
+                config["metrics"][distance_label]["tmpDir"] = config["metrics"][
+                    distance_label
+                ]["tmpDirSelf"]
 
             map_to_map_distance.distance_matrix_precomputation(
-                maps_user_flat.clone().reshape((-1,) + shape_gt[1:]),
-                maps_user_flat.reshape((-1,) + shape_user[1:]),
+                maps_user_flat,
+                maps_user_flat,
             )
             cost_matrix = map_to_map_distance.get_distance_matrix(
-                maps_user_flat.clone().reshape((-1,) + shape_gt[1:]),
-                maps_user_flat.reshape((-1,) + shape_user[1:]),
+                maps_user_flat,
+                maps_user_flat,
                 global_store_of_running_results=self_results_dict,
             )
             computed_assets_self = map_to_map_distance.get_computed_assets(
-                maps_user_flat.clone().reshape((-1,) + shape_gt[1:]),
-                maps_user_flat.reshape((-1,) + shape_user[1:]),
+                maps_user_flat,
+                maps_user_flat,
                 global_store_of_running_results=self_results_dict,
             )
 

@@ -278,6 +278,10 @@ class MapToMapInputConfigMetricsZernike3d(BaseModel, extra="forbid"):
         default="tmp_zernike",
         description="Name of directory to store intermediate files",
     )
+    tmpDirSelf: str = Field(
+        default="tmp_zernike_self",
+        description="(Another) name of directory to store intermediate files. Cannot be the same as tmpDir.",
+    )
     thr: PositiveInt = Field(
         description="Number of threads to use for the computation",
     )
@@ -292,6 +296,15 @@ class MapToMapInputConfigMetricsZernike3d(BaseModel, extra="forbid"):
         description="Number of epochs for the optimization",
         default=40,
     )
+
+    # check tmpDirSelf different that tmpDir post init
+    @model_validator(mode="after")
+    def check_tmpDirSelf_different_than_tmpDir(self) -> Self:
+        if self.tmpDirSelf == self.tmpDir:
+            raise ValueError(
+                "tmpDirSelf cannot be the same as tmpDir. Please choose a different name."
+            )
+        return self
 
 
 class MapToMapInputConfigMetricsL2BioemCorr(BaseModel, extra="forbid"):
