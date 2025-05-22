@@ -15,8 +15,8 @@ data_params:
 metrics:
   zernike3d:
     gpuID: 0
-    tmpDir: tests/results/tmp_zernike_enough
-    tmpDirSelf: tests/results/tmp_zernike_enough_self
+    tmpDir: tests/results/tmp_zernike_test
+    tmpDirSelf: tests/results/tmp_zernike_test_self
     thr: 20
     numProjections: 2 # projecions should be 20-100
     epochs: 1 # should be 40

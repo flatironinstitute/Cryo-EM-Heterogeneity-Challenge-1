@@ -468,7 +468,7 @@ class Zernike3DDistance(MapToMapDistance):
             os.mkdir(outputPath)
 
         # Prepare data to call external
-        targets_paths = os.path.join(outputPath, "target_maps.npy")
+        targets_path = os.path.join(outputPath, "target_maps.npy")
         targets_shape = (
             len(target_maps),
             self.config["data_params"]["box_size"],
@@ -482,8 +482,8 @@ class Zernike3DDistance(MapToMapDistance):
             self.config["data_params"]["box_size"] ** 3,
         )
         reference_maps = reference_maps.reshape(references_shape)
-        if not os.path.isfile(targets_paths):
-            np.save(targets_paths, target_maps)
+        if not os.path.isfile(targets_path):
+            np.save(targets_path, target_maps)
         if not os.path.isfile(references_path):
             np.save(references_path, reference_maps)
 
@@ -520,7 +520,7 @@ class Zernike3DDistance(MapToMapDistance):
             f'eval "$({condabin_path} shell.bash hook)" &&'
             f" conda activate flexutils-tensorflow && "
             f"compute_distance_matrix_zernike3deep.py --references_file {references_path} "
-            f"--targets_file {targets_paths} --out_path {outputPath} --gpu {gpuID} --numProjections {numProjections} "
+            f"--targets_file {targets_path} --out_path {outputPath} --gpu {gpuID} --numProjections {numProjections} "
             f"--epochs {epochs} "
             f"--thr {thr}",
             shell=True,
