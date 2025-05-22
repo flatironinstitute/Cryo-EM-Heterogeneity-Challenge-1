@@ -10,15 +10,6 @@ replicate_params:
 cvxpy_solve_kwargs:
   solver: ECOS
   verbose: True
-emd_regularization:
-  cvxpy_solve_kwargs:
-    solver: SCS
-    max_iters: 100000
-    verbose: True
-  scalar_hyperparam_self_emd: 1.0
-  scalar_hyperparam_self_entropy_q: 1.0
-  scalar_hyperparam_weighted_l2_in_cost: 1.0
-  q_greater_than_constraint: 0.000001
 optimal_q_kl_params:
   n_iter: 100000
   break_atol: 0.0001

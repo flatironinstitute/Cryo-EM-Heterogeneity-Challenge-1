@@ -199,8 +199,9 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
         default={},
     )
 
-    emd_regularization: dict = Field(
+    emd_regularization: Optional[dict] = Field(
         description="Parameters for the optimal q KL divergence.",
+        default=None,
     )
     optimal_q_kl_params: dict = Field(
         description="Parameters for the optimal q KL divergence.",
@@ -213,7 +214,10 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     @field_validator("emd_regularization")
     @classmethod
     def validate_regularization(cls, params):
-        return dict(DistToDistInputConfigEmdRegularization(**params).model_dump())
+        if params is not None:
+            return dict(DistToDistInputConfigEmdRegularization(**params).model_dump())
+        else:
+            return None
 
     @field_validator("optimal_q_kl_params")
     @classmethod
@@ -279,13 +283,13 @@ class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):
     flow_opt: Any
     prob_opt: Any
     runtime_opt: float
-    q_opt_reg: List[PositiveFloat]
-    EMD_opt_reg: float
-    transport_plan_opt_reg: List[List[float]]
+    q_opt_reg: Union[List[PositiveFloat], None]
+    EMD_opt_reg: Union[float, None]
+    transport_plan_opt_reg: Union[List[List[float]], None]
     transport_plan_opt_self: Optional[Union[List[List[float]], None]]
     flow_opt_reg: Any
     prob_opt_reg: Any
-    runtime_opt_reg: float
+    runtime_opt_reg: Union[float, None]
     EMD_submitted: float
     transport_plan_submitted: List[List[float]]
 

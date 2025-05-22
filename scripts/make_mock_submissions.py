@@ -91,12 +91,12 @@ def main():
                 ground_truth["populations"].reshape(n, -1).sum(axis=1)
             )  # sum not mean since population needs to sum to 1
 
-            id_label_titelized = args.output_label.replace("_", " ").title()
+            id_label_titleized = args.output_label.replace("_", " ").title()
             torch.save(
                 {
                     "volumes": new_averaged_volumes,
                     "populations": new_averaged_populations,
-                    "id": f"{id_label_titelized} {n}",
+                    "id": f"{id_label_titleized} {n}",
                 },
                 output_fname,
             )
