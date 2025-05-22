@@ -195,7 +195,7 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     )
 
     cvxpy_solve_kwargs: dict = Field(
-        description="Keyword arguments for the CVXPY solver.",
+        description="Keyword arguments for the CVXPY solver, which is solver dependent. For available options see https://www.cvxpy.org/version/1.2/tutorial/advanced/index.html (search for 'Here is the complete list of solver options.') ",
         default={},
     )
 

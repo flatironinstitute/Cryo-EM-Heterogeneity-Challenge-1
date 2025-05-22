@@ -248,7 +248,6 @@ def run(config):
                 {"klpq_submitted": klpq, "klqp_submitted": klqp}
             )
 
-    print(results_dict.keys())
     results_dict = dict(DistToDistResultsValidator(**results_dict).model_dump())
     with open(config["path_to_output_file"], "wb") as f:
         pickle.dump(results_dict, f)
