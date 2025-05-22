@@ -112,5 +112,5 @@ exclude_lines = [
 [project.scripts]
 run_preprocessing = "cryo_challenge.commands.run_preprocessing:main_as_cli"
 run_map_to_map_pipeline = "cryo_challenge.commands.run_map2map_pipeline:main_as_cli"
-run_distribution_to_distribution_pipeline = "cryo_challenge.commands.run_distribution2distribution_pipeline:main_as_cli"
+run_distribution_to_distribution_pipeline = "cryo_challenge.commands.run_distribution_to_distribution_pipeline:main_as_cli"
 run_svd_pipeline = "cryo_challenge.commands.run_svd_pipeline:main_as_cli"

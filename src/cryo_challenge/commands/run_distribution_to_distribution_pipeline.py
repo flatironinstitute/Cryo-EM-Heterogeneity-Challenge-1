@@ -7,7 +7,7 @@ import os
 import yaml
 
 from ..distribution_to_distribution.distribution_to_distribution import run
-from ..config_validation._distribution_to_disribution_validation import (
+from ..config_validation._distribution_to_distribution_validation import (
     DistToDistInputConfig,
 )
 

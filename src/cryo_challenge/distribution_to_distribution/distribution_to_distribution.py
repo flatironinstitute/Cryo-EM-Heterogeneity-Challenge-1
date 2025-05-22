@@ -6,7 +6,7 @@ import ot
 from scipy.stats import rankdata
 
 from .optimal_transport import optimal_q_emd_vec, optimal_q_emd_vec_regularized
-from ..config_validation._distribution_to_disribution_validation import (
+from ..config_validation._distribution_to_distribution_validation import (
     DistToDistResultsValidator,
 )
 
@@ -71,7 +71,7 @@ def run(config):
     with open(config["path_to_map_to_map_results"], "rb") as f:
         data = pickle.load(f)
 
-    user_submitted_populations = data["user_submitted_populations"]  # .numpy()
+    user_submitted_populations = data["user_submitted_populations"]
     submission_id = torch.load(
         data["config"]["data_params"]["submission_params"]["path_to_submission_file"],
         weights_only=False,
@@ -148,15 +148,20 @@ def run(config):
             q_opt, T, flow, prob, runtime = optimal_q_emd_vec(
                 Wp, W_distance, cvxpy_solve_kwargs=config["cvxpy_solve_kwargs"]
             )
-            q_opt_reg, T_reg, T_self, flow_reg, prob_reg, runtime_reg = (
-                optimal_q_emd_vec_regularized(
-                    Wp,
-                    user_submitted_populations,
-                    W_distance,
-                    W_distance_self,
-                    config["emd_regularization"],
+            if config["emd_regularization"] is None:
+                q_opt_reg = T_reg = T_self = flow_reg = prob_reg = runtime_reg = None
+                EMD_opt_reg = None
+            else:
+                q_opt_reg, T_reg, T_self, flow_reg, prob_reg, runtime_reg = (
+                    optimal_q_emd_vec_regularized(
+                        Wp,
+                        user_submitted_populations,
+                        W_distance,
+                        W_distance_self,
+                        config["emd_regularization"],
+                    )
                 )
-            )
+                EMD_opt_reg = prob_reg.value
 
             results_dict[metric]["replicates"][replicate_idx]["EMD"] = {
                 "q_opt": q_opt,
@@ -166,7 +171,7 @@ def run(config):
                 "prob_opt": prob,
                 "runtime_opt": runtime,
                 "q_opt_reg": q_opt_reg,
-                "EMD_opt_reg": prob_reg.value,
+                "EMD_opt_reg": EMD_opt_reg,
                 "transport_plan_opt_reg": T_reg,
                 "transport_plan_opt_self": T_self,
                 "flow_opt_reg": flow_reg,
