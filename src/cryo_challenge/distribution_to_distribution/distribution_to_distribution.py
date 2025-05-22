@@ -6,7 +6,7 @@ import ot
 from scipy.stats import rankdata
 
 from .optimal_transport import optimal_q_emd_vec, optimal_q_emd_vec_regularized
-from ..config_validation._distribution_to_disribution_validation import (
+from ..config_validation._distribution_to_distribution_validation import (
     DistToDistResultsValidator,
 )
 

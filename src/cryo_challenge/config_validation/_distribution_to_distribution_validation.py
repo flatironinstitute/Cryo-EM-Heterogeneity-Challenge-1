@@ -200,7 +200,7 @@ class DistToDistInputConfig(BaseModel, extra="forbid"):
     )
 
     emd_regularization: Optional[dict] = Field(
-        description="Parameters for the optimal q KL divergence.",
+        description="Parameters for the optimal EMD.",
         default=None,
     )
     optimal_q_kl_params: dict = Field(
