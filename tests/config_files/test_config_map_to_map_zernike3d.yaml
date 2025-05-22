@@ -15,9 +15,10 @@ data_params:
 metrics:
   zernike3d:
     gpuID: 0
-    tmpDir: tests/results/tmp_zernike
+    tmpDir: tests/results/tmp_zernike_reshape_finally
     thr: 20
     numProjections: 2 # projecions should be 20-100
+    epochs: 1 # should be 40
   shared_params:
     chunk_size_submission: 4
     chunk_size_gt: 5

@@ -454,11 +454,14 @@ class Zernike3DDistance(MapToMapDistance):
     """
 
     @override
-    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+    def get_distance_matrix(
+        self, target_maps, reference_maps, global_store_of_running_results
+    ):
         gpuID = self.config["metrics"]["zernike3d"]["gpuID"]
         outputPath = self.config["metrics"]["zernike3d"]["tmpDir"]
         thr = self.config["metrics"]["zernike3d"]["thr"]
         numProjections = self.config["metrics"]["zernike3d"]["numProjections"]
+        epochs = self.config["metrics"]["zernike3d"]["epochs"]
 
         # Create output directory
         if not os.path.isdir(outputPath):
@@ -466,11 +469,23 @@ class Zernike3DDistance(MapToMapDistance):
 
         # Prepare data to call external
         targets_paths = os.path.join(outputPath, "target_maps.npy")
+        targets_shape = (
+            len(target_maps),
+            self.config["data_params"]["box_size"],
+            self.config["data_params"]["box_size"],
+            self.config["data_params"]["box_size"],
+        )
+        target_maps = target_maps.reshape(targets_shape)
         references_path = os.path.join(outputPath, "reference_maps.npy")
+        references_shape = (
+            len(reference_maps),
+            self.config["data_params"]["box_size"] ** 3,
+        )
+        reference_maps = reference_maps.reshape(references_shape)
         if not os.path.isfile(targets_paths):
-            np.save(targets_paths, maps1)
+            np.save(targets_paths, target_maps)
         if not os.path.isfile(references_path):
-            np.save(references_path, maps2)
+            np.save(references_path, reference_maps)
 
         # Check conda is in PATH (otherwise abort as external software is not installed)
         try:
@@ -505,7 +520,8 @@ class Zernike3DDistance(MapToMapDistance):
             f'eval "$({condabin_path} shell.bash hook)" &&'
             f" conda activate flexutils-tensorflow && "
             f"compute_distance_matrix_zernike3deep.py --references_file {references_path} "
-            f"--targets_file {targets_paths} --out_path {outputPath} --gpu {gpuID} --num_projections {numProjections} "
+            f"--targets_file {targets_paths} --out_path {outputPath} --gpu {gpuID} --numProjections {numProjections} "
+            f"--epochs {epochs} "
             f"--thr {thr}",
             shell=True,
         )

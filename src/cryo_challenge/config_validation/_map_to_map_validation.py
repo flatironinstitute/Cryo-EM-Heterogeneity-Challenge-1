@@ -288,6 +288,10 @@ class MapToMapInputConfigMetricsZernike3d(BaseModel, extra="forbid"):
         default=True,
         description="Whether to compute the self metric",
     )
+    epochs: PositiveInt = Field(
+        description="Number of epochs for the optimization",
+        default=40,
+    )
 
 
 class MapToMapInputConfigMetricsL2BioemCorr(BaseModel, extra="forbid"):
