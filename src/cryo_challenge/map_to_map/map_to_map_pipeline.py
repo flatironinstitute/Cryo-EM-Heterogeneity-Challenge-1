@@ -134,6 +134,7 @@ def run(config):
 
         if config["metrics"][distance_label]["compute_self_metric"]:
             if distance_label == "zernike3d":
+                temporary_tmp_dir = config["metrics"][distance_label]["tmpDir"]
                 config["metrics"][distance_label]["tmpDir"] = config["metrics"][
                     distance_label
                 ]["tmpDirSelf"]
@@ -152,6 +153,11 @@ def run(config):
                 maps_user_flat,
                 global_store_of_running_results=self_results_dict,
             )
+            if distance_label == "zernike3d":
+                config["metrics"][distance_label]["tmpDirSelf"] = config["metrics"][
+                    distance_label
+                ]["tmpDir"]
+                config["metrics"][distance_label]["tmpDir"] = temporary_tmp_dir
 
             computed_assets_self.update(computed_assets_self)
 

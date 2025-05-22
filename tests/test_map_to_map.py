@@ -48,7 +48,7 @@ def test_run_map2map_pipeline_gromov_wasserstein():
     return
 
 
-def test_run_map2map_pipeline_zernike():
+def test_run_map2map_pipeline_zernike3d():
     try:
         args = OmegaConf.create(
             {"config": "tests/config_files/test_config_map_to_map_zernike3d.yaml"}
@@ -58,8 +58,9 @@ def test_run_map2map_pipeline_zernike():
     except Exception as e:
         print(e)
         print(
-            "External test failed. Skipping test. Fails when running in CI if external dependencies are not installed."
+            "External test failed. Skipping test. Fails when running in CI if external dependencies are not installed. Or if the dependency is installed it is a bug in the pipeline"
         )
+        # assert False, 'only activate this assert for local testing. otherwise can fail silently'
     return
 
 
