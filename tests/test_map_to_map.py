@@ -1,6 +1,7 @@
 from omegaconf import OmegaConf
 from cryo_challenge.commands import run_map2map_pipeline
 import numpy as np
+import pytest
 
 
 def test_run_map2map_pipeline_self():
@@ -57,9 +58,6 @@ def test_run_map2map_pipeline_zernike3d():
         assert "zernike3d" in results_dict.keys()
     except Exception as e:
         print(e)
-        print(
-            "External test failed. Skipping test. Fails when running in CI if external dependencies are not installed. Or if the dependency is installed it is a bug in the pipeline"
-        )
         pytest.skip(
             "Skipping test. Fails in CI if external dependencies are not installed. "
             "If the dependency is installed, this indicates a bug in the pipeline."
