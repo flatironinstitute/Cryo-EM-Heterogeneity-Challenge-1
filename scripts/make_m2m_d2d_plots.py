@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from typing import List, Dict, Union
 import yaml
+import argparse
 
 from cryo_challenge.ploting.plotting_utils import COLORS
 from cryo_challenge.map_to_map.map_to_map_pipeline import AVAILABLE_MAP2MAP_DISTANCES
@@ -282,7 +283,18 @@ def distribution_to_distribution(config):
 
 
 if __name__ == "__main__":
-    path_to_config = "/mnt/home/smbp/ceph/smbpchallenge/plotting_round1_and_round2/config_plotting_fsc_20250527.yaml"
+    parser = argparse.ArgumentParser(
+        description="Make map to map and distribution to distribution plots."
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to the config file for plotting.",
+    )
+    args = parser.parse_args()
+    path_to_config = args.config
+
     with open(path_to_config, "r") as file:
         config = yaml.safe_load(file)
     config = PlottingConfig.from_dict(config)
