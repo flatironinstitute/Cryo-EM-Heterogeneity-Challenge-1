@@ -9,6 +9,7 @@ import yaml
 import argparse
 import glob
 from natsort import natsorted
+import warnings
 
 from cryo_challenge.ploting.plotting_utils import COLORS, argsort_labels_manually
 from cryo_challenge.map_to_map.map_to_map_pipeline import AVAILABLE_MAP2MAP_DISTANCES
@@ -33,7 +34,6 @@ def plot_map_to_map_distances(
     figsize=None,
     suptitle=None,
     dpi=None,
-    do_sort=True,
     vmin=None,
     vmax=None,
 ):
@@ -61,11 +61,12 @@ def plot_map_to_map_distances(
     else:
         pass
 
-    fig, axis = plt.subplots(
+    fig, axes = plt.subplots(
         nrows=nrows,
         ncols=n_plts // nrows,
         **kwargs,
     )
+
     if suptitle is None:
         fig.suptitle("d_{:}".format(metric), y=0.95, fontsize=larger_fontsize)
     elif isinstance(suptitle, str):
@@ -73,31 +74,57 @@ def plot_map_to_map_distances(
     else:
         raise ValueError("suptitle must be a string or None")
 
-    for idx, (anonymous_label, data) in enumerate(data_d.items()):
+    available_labels = np.array(list(data_d.keys()))
+    ordered_labels = available_labels[argsort_labels_manually(available_labels)]
+
+    for idx, anonymous_label in enumerate(ordered_labels):
+        data = data_d[anonymous_label]
         map2map_dist_matrix = data[metric]["cost_matrix"].iloc[gt_ordering].values
-        # if do_sort:
-        #     map2map_dist_matrix, _, _ = sort_by_transport(map2map_dist_matrix)
 
         if do_vmin_adjust and map2map_dist_matrix.min() < vmin:
             vmin = map2map_dist_matrix.min()
         if do_vmax_adjust and map2map_dist_matrix.max() > vmax:
             vmax = map2map_dist_matrix.max()
 
-        ax = axis[idx // ncols, idx % ncols].imshow(
-            map2map_dist_matrix, aspect="auto", cmap="Blues_r", vmin=vmin, vmax=vmax
+        ax = axes[idx // ncols, idx % ncols].imshow(
+            map2map_dist_matrix, aspect="auto", cmap="gray", vmin=vmin, vmax=vmax
         )
+        for spine in axes[idx // ncols, idx % ncols].spines.values():
+            ice_cream_no_version = [
+                colour for colour in COLORS.keys() if anonymous_label.startswith(colour)
+            ]
+            single = ice_cream_no_version[
+                np.argmax([len(single) for single in ice_cream_no_version])
+            ]
+            if len(ice_cream_no_version) > 1:
+                warnings.warn(
+                    f"Multiple ice cream flavours found that auto-match the label {anonymous_label}: {ice_cream_no_version}. Choosing the longest one: {single}",
+                    UserWarning,
+                )
+            spine.set_edgecolor(COLORS[single])
+            spine.set_linewidth(10)  # Optional: set thickness
 
-        axis[idx // ncols, idx % ncols].tick_params(
+        axes[idx // ncols, idx % ncols].tick_params(
             axis="both", labelsize=smaller_fontsize
         )
         cbar = fig.colorbar(ax)
         cbar.ax.tick_params(labelsize=smaller_fontsize)
         plot_panel_label = anonymous_label
-        axis[idx // ncols, idx % ncols].set_title(
+        axes[idx // ncols, idx % ncols].set_title(
             plot_panel_label, fontsize=smaller_fontsize
         )
+        if idx // ncols == nrows - 1 and idx % ncols == 0:
+            axes[idx // ncols, idx % ncols].set_xlabel("Submission index", fontsize=30)
+            axes[idx // ncols, idx % ncols].set_ylabel(
+                "Ground truth index", fontsize=30
+            )
+        else:
+            axes[idx // ncols, idx % ncols].set_xlabel("")
+            axes[idx // ncols, idx % ncols].set_ylabel("")
+            axes[idx // ncols, idx % ncols].set_xticks([])
+            axes[idx // ncols, idx % ncols].set_yticks([])
 
-    return fig, axis
+    return fig, axes
 
 
 def get_m2m_distances(fnames, map2map_distance):
@@ -131,7 +158,6 @@ def map_to_map(config):
     gt_ordering = metadata_df.index.tolist()
     data_d = get_m2m_distances(config.map2map_results, config.map_to_map_distance)
     nrows, ncols = 5, 5
-    do_sort = False
     vmax = None
     fig, axis = plot_map_to_map_distances(
         data_d,
@@ -139,8 +165,7 @@ def map_to_map(config):
         config.map_to_map_distance,
         nrows,
         ncols,
-        suptitle=f"{config.map_to_map_distance} distance | do_sort={do_sort} | vmax={vmax}",
-        do_sort=do_sort,
+        suptitle=f"{config.map_to_map_distance} distance | vmax={vmax}",
         vmax=vmax,
     )
 
@@ -266,7 +291,6 @@ def plot_q_opt_distances(
             labelleft=False,
             labelbottom=False,
         )
-        ax.set_xticks([])
         for spine in ax.spines.values():
             spine.set_visible(False)
 
@@ -470,6 +494,6 @@ if __name__ == "__main__":
         config = yaml.safe_load(file)
     config = PlottingConfig.from_dict(config)
     assert config.map_to_map_distance in AVAILABLE_MAP2MAP_DISTANCES.keys()
-    # map_to_map(config)
+    map_to_map(config)
     distribution_to_distribution_optimal_probability(config)
-    # distribution_to_distribution_optimal_emd(config)
+    distribution_to_distribution_optimal_emd(config)
