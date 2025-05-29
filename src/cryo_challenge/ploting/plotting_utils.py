@@ -26,6 +26,7 @@ COLORS = {
     "Bubble Gum": "#ffb000",
 }
 
+
 PLOT_SETUP = {
     "Salted Caramel": {"category": "1", "marker": "o"},
     "Neapolitan": {"category": "1", "marker": "v"},
@@ -44,3 +45,41 @@ PLOT_SETUP = {
     "Bubble Gum": {"category": "5", "marker": "v"},
     "Mint Chocolate Chip": {"category": "5", "marker": "^"},
 }
+
+
+def argsort_labels_manually(labels):
+    ordered_possible_labels = [
+        "Coffee 1",
+        "Pina Colada 1",
+        "Cookie Dough 1",
+        "Cookie Dough 2",
+        "Cherry 1",
+        "Cherry 2",
+        "Chocolate Chip 2",
+        "Chocolate Chip 1",
+        "Chocolate 2",
+        "Chocolate 1",
+        "Rocky Road 3",
+        "Rocky Road 2",
+        "Rocky Road 1",
+        "Black Raspberry 2",
+        "Black Raspberry 1",
+        "Vanilla 2",
+        "Vanilla 1",
+        "Mango 1",
+        "Salted Caramel 3",
+        "Salted Caramel 2",
+        "Salted Caramel 1",
+        "Peanut Butter 2",
+        "Peanut Butter 1",
+        "Neapolitan 2",
+        "Neapolitan 1",
+        "Ground Truth",
+        "Mint Chocolate Chip 1",
+        "Bubble Gum 1",
+    ]
+
+    sort_dict = {label: i for i, label in enumerate(ordered_possible_labels)}
+
+    indices = np.array([sort_dict[label] for label in labels])
+    return np.argsort(indices)

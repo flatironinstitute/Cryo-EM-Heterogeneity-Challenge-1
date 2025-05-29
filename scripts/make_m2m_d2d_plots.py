@@ -7,8 +7,10 @@ from dataclasses_json import dataclass_json
 from typing import List, Dict, Union
 import yaml
 import argparse
+import glob
+from natsort import natsorted
 
-from cryo_challenge.ploting.plotting_utils import COLORS
+from cryo_challenge.ploting.plotting_utils import COLORS, argsort_labels_manually
 from cryo_challenge.map_to_map.map_to_map_pipeline import AVAILABLE_MAP2MAP_DISTANCES
 
 
@@ -153,13 +155,18 @@ def map_to_map(config):
 def plot_q_opt_distances(
     dist2dist_results_d, metric, suptitle, nrows, ncols, window_size, COLORS=None
 ):
+    available_labels = np.array(list(dist2dist_results_d.keys()))
+    ordered_labels = available_labels[argsort_labels_manually(available_labels)]
+
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(50, 50))
 
     fig.suptitle(suptitle, fontsize=30, y=0.95)
     alpha = 1
     linewidth = 3
 
-    for idx_fname, (_, data) in enumerate(dist2dist_results_d.items()):
+    for idx_fname, label in enumerate(ordered_labels):
+        data = dist2dist_results_d[label]
+
         axes[idx_fname // ncols, idx_fname % ncols].plot(
             data["user_submitted_populations"],
             color="black",
@@ -236,7 +243,7 @@ def plot_q_opt_distances(
                 alpha=0.5,  # Transparency
             )
 
-        if idx_fname // ncols == 0 and idx_fname % ncols == 0:
+        if idx_fname // ncols == nrows - 1 and idx_fname % ncols == 0:
             axes[idx_fname // ncols, idx_fname % ncols].set_xlabel(
                 "Submission index", fontsize=30
             )
@@ -250,10 +257,23 @@ def plot_q_opt_distances(
             axis="both", labelsize=20
         )
 
+    for ax in axes.flat:
+        ax.tick_params(
+            left=False,
+            bottom=False,
+            right=False,
+            top=False,
+            labelleft=False,
+            labelbottom=False,
+        )
+        ax.set_xticks([])
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
     return fig, axes
 
 
-def distribution_to_distribution(config):
+def distribution_to_distribution_optimal_probability(config):
     fname = config.dist2dist_results["pkl_fnames"][0]
 
     with open(fname, "rb") as f:
@@ -282,6 +302,156 @@ def distribution_to_distribution(config):
     )
 
 
+def wragle_pkl_to_dataframe(pkl_globs, metric):
+    fnames = []
+    for fname_glob in pkl_globs:
+        fnames.extend(glob.glob(fname_glob))
+
+    fnames = natsorted(fnames)
+
+    df_list = []
+    n_replicates = 30  # TODO: automate
+
+    for fname in fnames:
+        with open(fname, "rb") as f:
+            data = pickle.load(f)
+
+        df_list.append(
+            pd.DataFrame(
+                {
+                    "EMD_opt": [
+                        data[metric]["replicates"][i]["EMD"]["EMD_opt"]
+                        for i in range(n_replicates)
+                    ],
+                    "EMD_submitted": [
+                        data[metric]["replicates"][i]["EMD"]["EMD_submitted"]
+                        for i in range(n_replicates)
+                    ],
+                    "klpq_opt": [
+                        data[metric]["replicates"][i]["KL"]["klpq_opt"]
+                        for i in range(n_replicates)
+                    ],
+                    "klqp_opt": [
+                        data[metric]["replicates"][i]["KL"]["klqp_opt"]
+                        for i in range(n_replicates)
+                    ],
+                    "klpq_submitted": [
+                        data[metric]["replicates"][i]["KL"]["klpq_submitted"]
+                        for i in range(n_replicates)
+                    ],
+                    "klqp_submitted": [
+                        data[metric]["replicates"][i]["KL"]["klqp_submitted"]
+                        for i in range(n_replicates)
+                    ],
+                    "id": data["id"],
+                    "n_pool_ground_truth_microstates": data["config"][
+                        "replicate_params"
+                    ]["n_pool_ground_truth_microstates"],
+                }
+            )
+        )
+
+    df = pd.concat(df_list)
+    df["EMD_opt_norm"] = df["EMD_opt"] / df["n_pool_ground_truth_microstates"]
+    df["EMD_submitted_norm"] = (
+        df["EMD_submitted"] / df["n_pool_ground_truth_microstates"]
+    )
+
+    return df
+
+
+def get_d2d_emd_opt_results(pkl_globs, map_to_map_distance):
+    df_fsc = wragle_pkl_to_dataframe(pkl_globs, map_to_map_distance)
+    df = df_fsc[
+        ["id", "EMD_opt", "EMD_submitted", "EMD_opt_norm", "EMD_submitted_norm"]
+    ]
+    df_average = df.groupby(["id"]).mean().reset_index()
+    df_std = (
+        df.groupby(["id"])
+        .std()
+        .reset_index()
+        .filter(["EMD_opt_norm", "EMD_submitted_norm", "id"])
+        .rename(
+            columns={
+                "EMD_opt_norm": "EMD_opt_norm_std",
+                "EMD_submitted_norm": "EMD_submitted_norm_std",
+            }
+        )
+    )
+
+    df_average_and_error = pd.merge(df_average, df_std, on="id")
+
+    def match_color(id, COLORS):
+        for possible_id in COLORS.keys():
+            if id.startswith(possible_id):
+                return COLORS[possible_id]
+        return "black"
+
+    match_color("Mint Chocolate Chip 1", COLORS)
+
+    df_average_and_error["colours"] = df_average_and_error["id"].apply(
+        lambda x: match_color(x, COLORS)
+    )
+
+    sorted_idx = argsort_labels_manually(df_average_and_error.id.tolist())
+    df_sorted = df_average_and_error.iloc[sorted_idx]
+    return df_sorted
+
+
+def distribution_to_distribution_optimal_emd(config):
+    df_sorted = get_d2d_emd_opt_results(
+        config.dist2dist_results["pkl_globs"], config.map_to_map_distance
+    )  # TODO: skip this step if already done
+    df_sorted.to_csv(
+        config.output_paths["distribution_to_distribution"]["optimal_emd_data_outpath"]
+    )
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    # Set position for each bar
+    indices = np.arange(len(df_sorted))
+    bar_width = 0.4
+
+    # Plot EMD_opt
+    _ = ax.barh(
+        indices - bar_width / 2,
+        df_sorted["EMD_opt"],
+        height=bar_width,
+        color=df_sorted["colours"],
+        label="EMD_opt",
+        alpha=0.5,
+    )
+
+    # Plot EMD_submitted
+    _ = ax.barh(
+        indices + bar_width / 2,
+        df_sorted["EMD_submitted"],
+        height=bar_width,
+        color=df_sorted["colours"],
+        label="EMD_submitted",
+    )
+
+    # Set y-axis to show ID labels
+    ax.set_yticks(indices)
+    ax.set_yticklabels(df_sorted["id"])
+
+    # Labels and title
+    ax.set_xlabel("EMD Value")
+    ax.set_ylabel("Submission")
+    ax.set_title(
+        "EMD between Ground Truth and Submission (with and without optimized populations)"
+    )
+    # ax.legend()
+
+    fig.tight_layout()
+
+    fig.savefig(
+        config.output_paths["distribution_to_distribution"]["optimal_emd_plot_outpath"],
+        bbox_inches="tight",
+        dpi=300,
+    )
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Make map to map and distribution to distribution plots."
@@ -294,10 +464,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     path_to_config = args.config
+    # path_to_config = "/mnt/home/smbp/ceph/smbpchallenge/plotting_round1_and_round2/config_plotting_fsc_20250527.yaml"
 
     with open(path_to_config, "r") as file:
         config = yaml.safe_load(file)
     config = PlottingConfig.from_dict(config)
     assert config.map_to_map_distance in AVAILABLE_MAP2MAP_DISTANCES.keys()
-    map_to_map(config)
-    distribution_to_distribution(config)
+    # map_to_map(config)
+    distribution_to_distribution_optimal_probability(config)
+    # distribution_to_distribution_optimal_emd(config)
