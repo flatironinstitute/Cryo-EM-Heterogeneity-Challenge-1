@@ -76,7 +76,15 @@ def argsort_labels_manually(labels):
         "Neapolitan 1",
         "Ground Truth",
         "Mint Chocolate Chip 1",
+        "Mint Chocolate Chip 2",
+        "Mint Chocolate Chip 4",
+        "Mint Chocolate Chip 8",
+        "Mint Chocolate Chip 10",
+        "Mint Chocolate Chip 20",
+        "Mint Chocolate Chip 40",
+        "Mint Chocolate Chip 80",
         "Bubble Gum 1",
+        "Bubble Gum 2",
     ]
 
     sort_dict = {label: i for i, label in enumerate(ordered_possible_labels)}

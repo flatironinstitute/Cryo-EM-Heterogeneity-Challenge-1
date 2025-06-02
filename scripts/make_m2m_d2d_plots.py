@@ -157,7 +157,7 @@ def map_to_map(config):
     metadata_df.sort_values("pc1", inplace=True)
     gt_ordering = metadata_df.index.tolist()
     data_d = get_m2m_distances(config.map2map_results, config.map_to_map_distance)
-    nrows, ncols = 5, 5
+    nrows, ncols = 7, 5
     vmax = None
     fig, axis = plot_map_to_map_distances(
         data_d,
@@ -201,6 +201,7 @@ def plot_q_opt_distances(
         axes[idx_fname // ncols, idx_fname % ncols].set_title(data["id"], fontsize=30)
 
         def window_q(q_opt, window_size):
+            window_size = min(window_size, len(q_opt))
             running_avg = np.convolve(
                 q_opt, np.ones(window_size) / window_size, mode="same"
             )
@@ -304,7 +305,7 @@ def distribution_to_distribution_optimal_probability(config):
         data = pickle.load(f)
 
     window_size = 5
-    nrows, ncols = 5, 5
+    nrows, ncols = 7, 5
     suptitle = f"Submitted populations vs optimal populations \n {config.map_to_map_distance} distance (no rank) | n_replicates={data['config']['replicate_params']['n_replicates']} | window_size={window_size} | n_pool_ground_truth_microstates={data['config']['replicate_params']['n_pool_ground_truth_microstates']}"
 
     dist2dist_results_d = get_dist2dist_results(config.dist2dist_results["pkl_fnames"])

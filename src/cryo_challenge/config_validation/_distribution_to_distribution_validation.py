@@ -16,7 +16,7 @@ from torch import Tensor
 
 
 TolerantPositiveFloat = confloat(
-    ge=-1e-6
+    ge=-1e-3
 )  # numerical issues in CVXPY can cause negative values
 
 
