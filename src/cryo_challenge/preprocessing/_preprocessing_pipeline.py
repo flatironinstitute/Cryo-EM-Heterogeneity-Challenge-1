@@ -49,6 +49,10 @@ def run_preprocessing_pipeline(
         voxel_size_sub = sub_config.voxel_size
         volumes = dataset_item["volumes"]
 
+        # keep just in case we need it again
+        # print("    Thresholding submission")
+        # threshold_submission(volumes.clone(), sub_config.threshold_percentile)
+
         print("    Cropping and padding submission")
         # pad/crop (prep for downsampling)
         volumes = crop_or_pad_submission(

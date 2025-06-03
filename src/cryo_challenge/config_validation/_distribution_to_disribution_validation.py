@@ -339,16 +339,14 @@ class DistToDistResultsValidatorMetrics(BaseModel, extra="forbid"):
 
 def _validate_metric(metric, metric_name, config):
     if metric is None:
-        assert metric_name not in config["metrics"], (
-            f"{metric_name} metric is not computed, but is requested."
-        )
+        assert (
+            metric_name not in config["metrics"]
+        ), f"{metric_name} metric is not computed, but is requested."
     else:
         metric = dict(DistToDistResultsValidatorMetrics(**metric).model_dump())
         assert (
             len(metric["replicates"]) == config["replicate_params"]["n_replicates"]
-        ), (
-            f"Replicates in {metric_name} metric do not match the number of replicates in the config."
-        )
+        ), f"Replicates in {metric_name} metric do not match the number of replicates in the config."
     return metric
 
 

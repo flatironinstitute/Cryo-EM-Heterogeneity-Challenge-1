@@ -13,7 +13,7 @@ import glob
 from pathlib import PurePath, Path
 
 from ..preprocessing._downsampling import downsample_submission
-from ..preprocessing._global_alignment import threshold_submissions
+from ..preprocessing._global_alignment import threshold_submission
 from ..utils._whitening import WhiteningFilter
 from ..config_validation._svd_analysis_validation import SVDInputConfig
 from ..utils._fourier_statistics import compute_radially_averaged_powerspectrum_on_grid
@@ -37,7 +37,7 @@ class DatasetForSVD(Dataset):
 
     def __getitem__(self, idx) -> Dict[str, Tensor]:
         submission = torch.load(
-            self.submission_files[idx], mmap=True, weights_only=False
+            self.submission_files[idx], mmap=False, weights_only=False
         )
         return submission
 
@@ -282,7 +282,7 @@ def _load_gt_from_scratch(
         logging.info(
             f"    Thresholding at {normalize_params['threshold_percentile']} percentile..."
         )
-        volumes = threshold_submissions(
+        volumes = threshold_submission(
             volumes, normalize_params["threshold_percentile"]
         )
 
@@ -352,7 +352,7 @@ def _load_submission(
 
     if threshold_percentile is not None:
         logging.info(f"    Thresholding at {threshold_percentile} percentile...")
-        volumes = threshold_submissions(volumes, threshold_percentile)
+        volumes = threshold_submission(volumes, threshold_percentile)
 
     if downsample_box_size is not None:
         logging.info(f"    Downsampling to box size {downsample_box_size}...")

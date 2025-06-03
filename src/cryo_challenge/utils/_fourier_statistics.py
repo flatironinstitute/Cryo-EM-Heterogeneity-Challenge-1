@@ -126,7 +126,7 @@ def compute_fourier_shell_correlation(
     *,
     minimum_frequency: float = 0.0,
     maximum_frequency: float = math.sqrt(2) / 2,
-) -> tuple[Tensor, Tensor, Tensor]:
+) -> tuple[Tensor, Tensor]:
     """Compute the fourier shell correlation for two voxel maps.
 
     **Arguments:**
@@ -155,9 +155,6 @@ def compute_fourier_shell_correlation(
     - `frequency_bins`:
         The array of frequencies for which we have calculated the
         correlations.
-    - `frequency_threshold`:
-        The frequencies at which the correlation drops below the
-        specified threshold.
 
     !!! warning
 
@@ -232,7 +229,6 @@ def _compute_averaged_powerspectrum_from_stack(
         compute_radially_averaged_powerspectrum_stack(fourier_volumes)
     )
     frequency_bins = frequency_bins[0]
-    radial_frequency_grid = radial_frequency_grid[0]
 
     # Take the mean over the stack
     radially_averaged_powerspectrum = torch.mean(

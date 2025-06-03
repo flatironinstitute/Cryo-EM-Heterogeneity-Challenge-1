@@ -2,6 +2,29 @@ import torch
 import numpy as np
 from typing import Literal, Any, Optional, Tuple
 from pydantic import PositiveFloat, PositiveInt
+from scipy.ndimage import shift
+
+
+def center_submission(volumes, order_shift):
+    v = volumes.mean(0).clone().numpy()
+    v = v / v.sum()
+
+    L = volumes.shape[-1]
+    X = np.zeros(L)
+    mid = int(L / 2)
+    for i in range(L):
+        X[i] = i - mid
+
+    vx = np.sum(v, axis=(1, 2))
+    vy = np.sum(v, axis=(0, 2))
+    vz = np.sum(v, axis=(0, 1))
+    m = np.array([X @ vx, X @ vy, X @ vz])
+
+    for i in range(volumes.shape[0]):
+        volumes[i] = torch.from_numpy(
+            shift(volumes[i].numpy(), m, order_shift=order_shift)
+        )
+    return volumes
 
 
 def threshold_volume(volume: torch.Tensor, thresh_percentile: float) -> torch.Tensor:
@@ -19,13 +42,14 @@ def threshold_volume(volume: torch.Tensor, thresh_percentile: float) -> torch.Te
     volume (torch.Tensor): thresholded volume
     """
 
-    thresh = torch.quantile(volume.flatten(), thresh_percentile / 100.0)
+    # thresh = torch.quantile(volume.flatten(), thresh_percentile / 100.0)
+    thresh = torch.tensor(np.percentile(volume.flatten().numpy(), thresh_percentile))
     volume[volume < thresh] = 0.0
 
     return volume
 
 
-def threshold_submissions(
+def threshold_submission(
     volumes: torch.Tensor, thresh_percentile: float
 ) -> torch.Tensor:
     """
@@ -142,7 +166,7 @@ def align_submission_to_reference(
     )
 
     obj_vol = (
-        threshold_submissions(volumes.clone(), threshold_percentile)
+        threshold_submission(volumes.clone(), threshold_percentile)
         .mean(0)
         .numpy()
         .astype(np.float32)

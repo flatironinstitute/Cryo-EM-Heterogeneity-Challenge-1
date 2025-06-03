@@ -36,9 +36,9 @@ def main():
 
     ground_truth = torch.load(args.fname, weights_only=False)
     assert "volumes" in ground_truth.keys(), "Input file must contain 'volumes' key."
-    assert "populations" in ground_truth.keys(), (
-        "Input file must contain 'populations' key."
-    )
+    assert (
+        "populations" in ground_truth.keys()
+    ), "Input file must contain 'populations' key."
 
     n_pix = ground_truth["volumes"].shape[-1]
 
