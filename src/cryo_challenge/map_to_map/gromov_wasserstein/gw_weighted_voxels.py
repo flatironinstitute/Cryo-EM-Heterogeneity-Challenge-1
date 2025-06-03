@@ -4,11 +4,12 @@ import torch
 import ot
 import numpy as np
 from dask import delayed, compute
-from dask.distributed import Client
 from dask.diagnostics import ProgressBar
-from dask_jobqueue.slurm import SLURMRunner
 
 from cryo_challenge.preprocessing._downsampling import downsample_volume
+from cryo_challenge.map_to_map.gromov_wasserstein.frank_wolfe import (
+    frank_wolfe_emd,
+)
 
 precision = 128
 if precision == 32:
@@ -293,7 +294,7 @@ def parse_args():
     parser.add_argument(
         "--outdir",
         type=str,
-        default="/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/_map_to_map/gromov_wasserstein/",
+        default="/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/map_to_map/gromov_wasserstein/output/",
         help="Output directory for npy file",
     )
 
@@ -313,22 +314,28 @@ def parse_args():
         type=str,
         help="Path to submission file",
     )
+    parser.add_argument("--frank_wolfe", action="store_true", default=False)
 
     return parser.parse_args()
 
 
-def get_distance_matrix_dask_gw(
+def get_distance_matrix_gw_python_ot_dask(
     marginals_i,
     marginals_j,
     pairwise_distances_i,
     pairwise_distances_j,
     scheduler,
-    element_wise,
+    elementwise_not_rowwise,
     gw_distance_function_key,
+    tol_abs,
+    tol_rel,
+    max_iter,
+    verbose,
+    loss_fun,
 ):
     # TODO: dask.array.from_array for marginals and pairwise_distances
 
-    if element_wise:
+    if elementwise_not_rowwise:
         print("element wise")
         distance_matrix_dask_gw = get_distance_matrix_dask_element_wise(
             marginals_i=marginals_i,
@@ -338,12 +345,12 @@ def get_distance_matrix_dask_gw(
             distance_function=gw_distance_wrapper_element_wise,
             gw_distance_function=gw_distance_function_d[gw_distance_function_key],
             scheduler=scheduler,
-            tol_abs=1e-14,
-            tol_rel=1e-14,
-            max_iter=10000,
+            tol_abs=tol_abs,
+            tol_rel=tol_rel,
+            max_iter=max_iter,
             symmetric=True,
-            verbose=False,
-            loss_fun="square_loss",
+            verbose=verbose,
+            loss_fun=loss_fun,
         )
     else:
         print("row wise")
@@ -355,12 +362,12 @@ def get_distance_matrix_dask_gw(
             distance_function=gw_distance_wrapper_row_wise,
             gw_distance_function=gw_distance_function_d[gw_distance_function_key],
             scheduler=scheduler,
-            tol_abs=1e-18,
-            tol_rel=1e-18,
-            max_iter=10000,
+            tol_abs=float(tol_abs),
+            tol_rel=float(tol_rel),
+            max_iter=max_iter,
             symmetric=True,
-            verbose=False,
-            loss_fun="square_loss",
+            verbose=verbose,
+            loss_fun=loss_fun,
         )
     return distance_matrix_dask_gw
 
@@ -434,7 +441,88 @@ def setup_volume_and_distance(
     )
 
 
-def main(args):
+def get_distance_matrix_gw_via_fw(
+    marginals_i,
+    marginals_j,
+    sparse_coordinates_sets_i,
+    sparse_coordinates_sets_j,
+    pairwise_distances_i,
+    pairwise_distances_j,
+    max_iter,
+    gamma_atol,
+):
+    n_i = len(marginals_i)
+    n_j = len(marginals_j)
+    distance_matrix_gw = torch.empty((n_i, n_j), dtype=torch_dtype)
+    ones_i = torch.ones_like(marginals_i[0])
+    ones_j = torch.ones_like(marginals_j[0])
+    for i in range(n_i):
+        mu_x = marginals_i[i]
+        for j in range(n_j):
+            mu_y = marginals_j[j]
+
+            Gamma0 = torch.outer(marginals_i[i], marginals_j[j])
+
+            # Compute the optimal transport plan using Frank-Wolfe algorithm
+            Gamma, mx, my, objective_no_constant_term, log = frank_wolfe_emd(
+                sparse_coordinates_sets_i[i].T,
+                sparse_coordinates_sets_j[j].T,
+                Gamma0,
+                marginals_i[i],
+                marginals_j[j],
+                max_iter=max_iter,
+                gamma_atol=gamma_atol,
+            )
+            mx = mx.flatten()
+            my = my.flatten()
+            Cx = pairwise_distances_i[i] ** 2
+            Cy = pairwise_distances_j[j] ** 2
+            if torch.allclose(mu_x, ones_i) and torch.allclose(mu_y, ones_j):
+                c0 = (
+                    torch.sum(Cx**2)
+                    + torch.sum(Cy**2)
+                    - 2 * torch.sum(mx) * torch.sum(my)
+                )
+            else:
+                c0 = (
+                    (torch.outer(mu_x, mu_y) * Cx**2).sum()
+                    + (torch.outer(mu_x, mu_y) * Cy**2).sum()
+                    - 2 * mu_y.dot(my) * mu_x.dot(mx)
+                )
+
+            full_objective = objective_no_constant_term + c0
+            distance_matrix_gw[i, j] = full_objective.item()
+
+    return distance_matrix_gw
+
+
+def run_fw(args):
+    """
+    Remarks:
+    Use as:
+
+    if __name__ == "__main__":
+
+        @dataclass
+        class Args:
+            n_i: int = 4
+            n_j: int = 4
+            box_size: int = 20
+            top_k: int = 500
+            exponent: float = 1.0
+            cost_scale_factor: float = 1.0
+            scheduler: str = None
+            element_wise: bool = False
+            skip_normalize: bool = False
+            max_iter: int = 100
+            gamma_atol: float = 1e-6
+            outdir: str = "/mnt/home/gwoollard/ceph/repos/Cryo-EM-Heterogeneity-Challenge-1/src/cryo_challenge/map_to_map/gromov_wasserstein/output/"
+            fname: str = "/mnt/home/smbp/ceph/smbpchallenge/preprocessing_submissions/mock_submissions/submission_mint_chocolate_chip_4.pt"
+
+        args = Args()
+        run_fw(args)
+
+    """
     n_i = args.n_i
     n_j = args.n_j
     box_size = args.box_size
@@ -452,8 +540,88 @@ def main(args):
         _,
         marginals_i,
         marginals_j,
+        sparse_coordinates_sets_i,
+        sparse_coordinates_sets_j,
+        pairwise_distances_i,
+        pairwise_distances_j,
+        volumes_i,
+        volumes_j,
+    ) = setup_volume_and_distance(
+        volumes[:n_i],
+        volumes[:n_j],
+        box_size,
+        top_k,
+        exponent,
+        cost_scale_factor,
+        normalize,
+    )
+
+    distance_matrix = get_distance_matrix_gw_via_fw(
+        marginals_i,
+        marginals_j,
+        sparse_coordinates_sets_i,
+        sparse_coordinates_sets_j,
+        pairwise_distances_i**2,
+        pairwise_distances_j**2,
+        max_iter=args.max_iter,
+        gamma_atol=args.gamma_atol,
+    )
+
+    np.save(
+        os.path.join(
+            args.outdir,
+            f"gw_weighted_voxel_fw_topk{top_k}_ds{box_size}_float{precision}_exponent{exponent}_{len(volumes_i)}x{len(volumes_j)}_23.npy",
+        ),
+        distance_matrix,
+    )
+    return distance_matrix
+
+
+def main(args):
+    """
+
+    Remarks:
+    Use as:
+
+    if __name__ == "__main__":
+
+        args = parse_args()
+        if args.slurm:
+            job_id = os.environ["SLURM_JOB_ID"]
+            with SLURMRunner(
+                scheduler_file=args.scheduler_file,
+            ) as runner:
+                # The runner object contains the scheduler address and can be passed directly to a client
+                with Client(runner) as client:
+                    get_distance_matrix_dask_gw = main(args)
+
+        else:
+            with Client(local_directory=args.local_directory) as client:
+                get_distance_matrix_dask_gw = main(args)
+
+        # linter thinks client is unused, so need to do something with client as a workaround
+        assert isinstance(client, type(client))
+
+    """
+    n_i = args.n_i
+    n_j = args.n_j
+    box_size = args.box_size
+    top_k = args.top_k
+    exponent = args.exponent
+    cost_scale_factor = args.cost_scale_factor
+    normalize = not args.skip_normalize
+
+    fname = args.fname  # e.g. /path/to/submission_23.pt
+    submission = torch.load(fname, weights_only=False)
+    volumes = submission["volumes"].to(torch_dtype)
+
+    (
         _,
         _,
+        marginals_i,
+        marginals_j,
+        sparse_coordinates_sets_i,
+        sparse_coordinates_sets_j,
         pairwise_distances_i,
         pairwise_distances_j,
         volumes_i,
@@ -472,40 +640,41 @@ def main(args):
     scheduler = args.scheduler
     element_wise = args.element_wise
 
-    distance_matrix_dask_gw = get_distance_matrix_dask_gw(
-        marginals_i,
-        marginals_j,
-        pairwise_distances_i,
-        pairwise_distances_j,
-        scheduler,
-        element_wise,
-        gw_distance_function_key,
-    )
+    if args.frank_wolfe:
+        distance_matrix_dask_gw = get_distance_matrix_gw_via_fw(
+            marginals_i,
+            marginals_j,
+            sparse_coordinates_sets_i,
+            sparse_coordinates_sets_j,
+            pairwise_distances_i,
+            pairwise_distances_j,
+        )
 
-    np.save(
-        os.path.join(
-            args.outdir,
-            f"gw_weighted_voxel_topk{top_k}_ds{box_size}_float{precision}_costscalefactor{cost_scale_factor}_exponent{exponent}_{len(volumes_i)}x{len(volumes_j)}_23.npy",
-        ),
-        distance_matrix_dask_gw,
-    )
-    return distance_matrix_dask_gw
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    if args.slurm:
-        job_id = os.environ["SLURM_JOB_ID"]
-        with SLURMRunner(
-            scheduler_file=args.scheduler_file,
-        ) as runner:
-            # The runner object contains the scheduler address and can be passed directly to a client
-            with Client(runner) as client:
-                get_distance_matrix_dask_gw = main(args)
+        np.save(
+            os.path.join(
+                args.outdir,
+                f"gw_weighted_voxel_fw_topk{top_k}_ds{box_size}_float{precision}_exponent{exponent}_{len(volumes_i)}x{len(volumes_j)}_23.npy",
+            ),
+            distance_matrix_dask_gw,
+        )
+        return distance_matrix_dask_gw
 
     else:
-        with Client(local_directory=args.local_directory) as client:
-            get_distance_matrix_dask_gw = main(args)
+        distance_matrix_dask_gw = get_distance_matrix_gw_python_ot_dask(
+            marginals_i,
+            marginals_j,
+            pairwise_distances_i,
+            pairwise_distances_j,
+            scheduler,
+            element_wise,
+            gw_distance_function_key,
+        )
 
-    # linter thinks client is unused, so need to do something with client as a workaround
-    assert isinstance(client, type(client))
+        np.save(
+            os.path.join(
+                args.outdir,
+                f"gw_weighted_voxel_topk{top_k}_ds{box_size}_float{precision}_costscalefactor{cost_scale_factor}_exponent{exponent}_{len(volumes_i)}x{len(volumes_j)}_23.npy",
+            ),
+            distance_matrix_dask_gw,
+        )
+        return distance_matrix_dask_gw

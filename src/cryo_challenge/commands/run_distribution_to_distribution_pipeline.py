@@ -7,7 +7,7 @@ import os
 import yaml
 
 from ..distribution_to_distribution.distribution_to_distribution import run
-from ..config_validation._distribution_to_disribution_validation import (
+from ..config_validation._distribution_to_distribution_validation import (
     DistToDistInputConfig,
 )
 
@@ -51,4 +51,5 @@ def main_as_cli():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    main(add_args(parser).parse_args())
+    _ = main(add_args(parser).parse_args())
+    print("Done", 0)

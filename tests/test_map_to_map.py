@@ -1,6 +1,7 @@
 from omegaconf import OmegaConf
 from cryo_challenge.commands import run_map2map_pipeline
 import numpy as np
+import pytest
 
 
 def test_run_map2map_pipeline_self():
@@ -28,26 +29,38 @@ def test_run_map2map_pipeline_procrustes():
     return
 
 
-def test_run_map2map_pipeline_gw():
+def test_run_map2map_pipeline_gromov_wasserstein():
     args = OmegaConf.create(
-        {"config": "tests/config_files/test_config_map_to_map_gw.yaml"}
+        {
+            "config": "tests/config_files/test_config_map_to_map_gromov_wasserstein_python_ot.yaml"
+        }
     )
     results_dict = run_map2map_pipeline.main(args)
     assert "gromov_wasserstein" in results_dict.keys()
+
+    args = OmegaConf.create(
+        {
+            "config": "tests/config_files/test_config_map_to_map_gromov_wasserstein_frank_wolfe.yaml"
+        }
+    )
+    results_dict = run_map2map_pipeline.main(args)
+    assert "gromov_wasserstein" in results_dict.keys()
+
     return
 
 
-def test_run_map2map_pipeline_zernike():
+def test_run_map2map_pipeline_zernike3d():
     try:
         args = OmegaConf.create(
-            {"config": "tests/config_files/test_config_map_to_map_external.yaml"}
+            {"config": "tests/config_files/test_config_map_to_map_zernike3d.yaml"}
         )
         results_dict = run_map2map_pipeline.main(args)
         assert "zernike3d" in results_dict.keys()
     except Exception as e:
         print(e)
-        print(
-            "External test failed. Skipping test. Fails when running in CI if external dependencies are not installed."
+        pytest.skip(
+            "Skipping test. Fails in CI if external dependencies are not installed. "
+            "If the dependency is installed, this indicates a bug in the pipeline."
         )
     return
 
