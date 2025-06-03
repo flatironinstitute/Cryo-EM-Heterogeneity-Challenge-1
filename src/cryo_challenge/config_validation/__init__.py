@@ -8,3 +8,5 @@ from ._map_to_map_validation import (
     MapToMapInputConfig as MapToMapInputConfig,
     MapToMapResultsValidator as MapToMapResultsValidator,
 )
+
+from ._svd_analysis_validation import SVDInputConfig as SVDInputConfig

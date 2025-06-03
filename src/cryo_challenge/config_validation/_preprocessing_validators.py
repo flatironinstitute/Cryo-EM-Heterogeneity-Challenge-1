@@ -5,6 +5,7 @@ from pydantic import (
     BaseModel,
     Field,
     PositiveFloat,
+    NonNegativeFloat,
     PositiveInt,
     FilePath,
     DirectoryPath,
@@ -73,7 +74,7 @@ class PreprocessingSubmissionConfig(BaseModel, extra="forbid"):
         description="Voxel size of the submitted volumes",
     )
 
-    threshold_percentile: PositiveFloat = Field(
+    threshold_percentile: NonNegativeFloat = Field(
         description="Percentile to use for thresholding the submitted volumes",
     )
 
