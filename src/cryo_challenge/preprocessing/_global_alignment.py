@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from typing import Literal, Any, Optional
+from typing import Literal, Any, Optional, Tuple
 from pydantic import PositiveFloat, PositiveInt
 
 
@@ -107,7 +107,7 @@ def align_submission_to_reference(
     surrogate_min_step: PositiveFloat = 0.1,
     verbosity: Literal[0, 1, 2] = 0,
     dtype: Optional[Any] = None,
-) -> torch.Tensor:
+) -> Tuple[torch.Tensor, np.ndarray]:
     """
     Align submission volumes to ground truth volume
 
@@ -122,6 +122,8 @@ def align_submission_to_reference(
     Returns:
     --------
     volumes (torch.Tensor): aligned submission volumes
+    R_est (np.ndarray): estimated rotation matrix
+        If a guess is provided, the final rotation matrix is R_est @ R_guess
     """
 
     from aspire.volume import Volume
@@ -172,4 +174,4 @@ def align_submission_to_reference(
 
     volumes = torch.from_numpy(Volume(volumes.numpy()).rotate(full_rotation)._data)
 
-    return volumes
+    return volumes, R_est @ R_guess

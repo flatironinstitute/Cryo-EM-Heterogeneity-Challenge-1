@@ -93,13 +93,13 @@ def compute_pcv_matrix(submissions_svd: Dict, gt_svd: Optional[Dict] = None) -> 
         for i in range(n_subs):
             for j in range(i + 1, n_subs):
                 pcv_j_on_i = compute_captured_variance(
-                    submissions_svd[labels[i]]["eigenvectors"],
                     submissions_svd[labels[j]]["eigenvectors"],
+                    submissions_svd[labels[i]]["eigenvectors"],
                     submissions_svd[labels[i]]["singular_values"],
                 )
                 pcv_i_on_j = compute_captured_variance(
-                    submissions_svd[labels[j]]["eigenvectors"],
                     submissions_svd[labels[i]]["eigenvectors"],
+                    submissions_svd[labels[j]]["eigenvectors"],
                     submissions_svd[labels[j]]["singular_values"],
                 )
                 pcv_matrix[i, j] = pcv_j_on_i

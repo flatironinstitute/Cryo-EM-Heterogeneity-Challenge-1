@@ -2,6 +2,7 @@ import torch
 import json
 import os
 import mrcfile
+import numpy as np
 
 from ._global_alignment import align_submission_to_reference
 from ._cropping_and_padding import crop_or_pad_submission
@@ -66,7 +67,7 @@ def run_preprocessing_pipeline(
         # align to reference
         if sub_config.align:
             print("    Aligning submission to reference")
-            volumes = align_submission_to_reference(
+            volumes, rotation_mtx = align_submission_to_reference(
                 volumes,
                 reference_volume,
                 sub_config.initial_rotation_guess,
@@ -86,6 +87,8 @@ def run_preprocessing_pipeline(
                 verbosity=run_config.BOTAlign_params["verbosity"],
                 dtype=run_config.BOTAlign_params["dtype"],
             )
+        else:
+            rotation_mtx = np.eye(3)
 
         # save preprocessed volumes
         print("    Saving preprocessed submission")
@@ -96,6 +99,7 @@ def run_preprocessing_pipeline(
             submission_id,
             sub_fname,
             run_config.output_path,
+            rotation_mtx,
         )
         print(f"   submission saved as {sub_fname}")
         print(f"Preprocessing submission {submission_id} complete")
@@ -113,7 +117,7 @@ def _flavor_and_version_to_fname(flavor, version):
 
 
 def _save_submission(
-    volumes, populations, submission_id, submission_fname, output_path
+    volumes, populations, submission_id, submission_fname, output_path, rotation_mtx
 ):
     """
     Save preprocessed submission volumes
@@ -126,6 +130,7 @@ def _save_submission(
     submission_id (int): submission id
     submission_fname (str): filename used to save the submission
     output_path (str): path to save the submission
+    rotation_mtx (np.ndarray): rotation matrix used to align the submission
 
     **Returns**
 
@@ -136,6 +141,7 @@ def _save_submission(
         "volumes": volumes,
         "populations": populations,
         "id": submission_id,
+        "rotation_matrix": rotation_mtx,
     }
 
     submission_path = os.path.join(output_path, submission_fname)
