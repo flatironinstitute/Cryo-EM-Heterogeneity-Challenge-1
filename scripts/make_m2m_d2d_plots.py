@@ -4,14 +4,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Any
 import yaml
 import argparse
 import glob
 from natsort import natsorted
 import warnings
 
-from cryo_challenge.ploting.plotting_utils import COLORS, argsort_labels_manually
+from cryo_challenge.ploting.plotting_utils import (
+    COLORS,
+    NAME_PATCH,
+    argsort_labels_manually,
+)
 from cryo_challenge.map_to_map.map_to_map_pipeline import AVAILABLE_MAP2MAP_DISTANCES
 
 
@@ -23,6 +27,7 @@ class PlottingConfig:
     dist2dist_results: Dict[str, Union[str, List[str]]]
     map_to_map_distance: str
     output_paths: Dict[str, Dict[str, str]]
+    plot_settings: Dict[str, Any]
 
 
 def plot_map_to_map_distances(
@@ -110,6 +115,14 @@ def plot_map_to_map_distances(
         cbar = fig.colorbar(ax)
         cbar.ax.tick_params(labelsize=smaller_fontsize)
         plot_panel_label = anonymous_label
+        for key, value in NAME_PATCH.items():
+            if plot_panel_label.startswith(key):
+                plot_panel_label = plot_panel_label.replace(key, value)
+                warnings.warn(
+                    f"Replacing {key} with {value} in plot panel label: {plot_panel_label}",
+                    UserWarning,
+                )
+                break
         axes[idx // ncols, idx % ncols].set_title(
             plot_panel_label, fontsize=smaller_fontsize
         )
@@ -157,7 +170,10 @@ def map_to_map(config):
     metadata_df.sort_values("pc1", inplace=True)
     gt_ordering = metadata_df.index.tolist()
     data_d = get_m2m_distances(config.map2map_results, config.map_to_map_distance)
-    nrows, ncols = 7, 5
+    nrows, ncols = (
+        config.plot_settings["map_to_map"]["nrows"],
+        config.plot_settings["map_to_map"]["ncols"],
+    )
     vmax = None
     fig, axis = plot_map_to_map_distances(
         data_d,
@@ -178,14 +194,21 @@ def map_to_map(config):
 
 
 def plot_q_opt_distances(
-    dist2dist_results_d, metric, suptitle, nrows, ncols, window_size, COLORS=None
+    dist2dist_results_d,
+    metric,
+    suptitle,
+    nrows,
+    ncols,
+    window_size,
+    suptitle_y,
+    COLORS=None,
 ):
     available_labels = np.array(list(dist2dist_results_d.keys()))
     ordered_labels = available_labels[argsort_labels_manually(available_labels)]
 
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(50, 50))
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(8 * ncols, 8 * nrows))
 
-    fig.suptitle(suptitle, fontsize=30, y=0.95)
+    fig.suptitle(suptitle, fontsize=30, y=suptitle_y)
     alpha = 1
     linewidth = 3
 
@@ -198,7 +221,18 @@ def plot_q_opt_distances(
             label="submited",
             lw=linewidth,
         )
-        axes[idx_fname // ncols, idx_fname % ncols].set_title(data["id"], fontsize=30)
+        plot_panel_label = data["id"]
+        for key, value in NAME_PATCH.items():
+            if plot_panel_label.startswith(key):
+                plot_panel_label = plot_panel_label.replace(key, value)
+                warnings.warn(
+                    f"Replacing {key} with {value} in plot panel label: {plot_panel_label}",
+                    UserWarning,
+                )
+                break
+        axes[idx_fname // ncols, idx_fname % ncols].set_title(
+            plot_panel_label, fontsize=30
+        )
 
         def window_q(q_opt, window_size):
             window_size = min(window_size, len(q_opt))
@@ -304,8 +338,14 @@ def distribution_to_distribution_optimal_probability(config):
     with open(fname, "rb") as f:
         data = pickle.load(f)
 
-    window_size = 5
-    nrows, ncols = 7, 5
+    window_size = config.plot_settings["distribution_to_distribution"]["optimal_prob"][
+        "window_size"
+    ]
+    nrows, ncols = (
+        config.plot_settings["distribution_to_distribution"]["optimal_prob"]["nrows"],
+        config.plot_settings["distribution_to_distribution"]["optimal_prob"]["ncols"],
+    )
+
     suptitle = f"Submitted populations vs optimal populations \n {config.map_to_map_distance} distance (no rank) | n_replicates={data['config']['replicate_params']['n_replicates']} | window_size={window_size} | n_pool_ground_truth_microstates={data['config']['replicate_params']['n_pool_ground_truth_microstates']}"
 
     dist2dist_results_d = get_dist2dist_results(config.dist2dist_results["pkl_fnames"])
@@ -317,6 +357,9 @@ def distribution_to_distribution_optimal_probability(config):
         nrows,
         ncols,
         window_size,
+        config.plot_settings["distribution_to_distribution"]["optimal_prob"][
+            "suptitle_y"
+        ],
         COLORS,
     )
     fig.savefig(
@@ -335,7 +378,7 @@ def wragle_pkl_to_dataframe(pkl_globs, metric):
     fnames = natsorted(fnames)
 
     df_list = []
-    n_replicates = 30  # TODO: automate
+    n_replicates = 3  # TODO: automate
 
     for fname in fnames:
         with open(fname, "rb") as f:
@@ -431,6 +474,12 @@ def distribution_to_distribution_optimal_emd(config):
         config.output_paths["distribution_to_distribution"]["optimal_emd_data_outpath"]
     )
 
+    for key, value in NAME_PATCH.items():
+        df_sorted["id"] = df_sorted["id"].str.replace(key, value, regex=False)
+        warnings.warn(
+            f"Replacing {key} with {value} in id column of df_sorted",
+            UserWarning,
+        )
     fig, ax = plt.subplots(figsize=(8, 6))
 
     # Set position for each bar

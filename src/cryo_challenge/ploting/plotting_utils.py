@@ -46,6 +46,11 @@ PLOT_SETUP = {
     "Mint Chocolate Chip": {"category": "5", "marker": "^"},
 }
 
+NAME_PATCH = {
+    "Mint Chocolate Chip 1": "Averaged GT 80",
+    "Mint Chocolate Chip": "Averaged GT",
+}
+
 
 def argsort_labels_manually(labels):
     ordered_possible_labels = [
@@ -80,9 +85,11 @@ def argsort_labels_manually(labels):
         "Mint Chocolate Chip 4",
         "Mint Chocolate Chip 8",
         "Mint Chocolate Chip 10",
+        "Mint Chocolate Chip 16",
         "Mint Chocolate Chip 20",
         "Mint Chocolate Chip 40",
         "Mint Chocolate Chip 80",
+        "Mint Chocolate Chip 80 20240902",
         "Bubble Gum 1",
         "Bubble Gum 2",
     ]

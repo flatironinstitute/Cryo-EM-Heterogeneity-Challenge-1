@@ -168,14 +168,14 @@ def run(config):
                 "EMD_opt": prob.value,
                 "transport_plan_opt": T,
                 "flow_opt": flow,
-                "prob_opt": prob,
+                "prob_opt": None,  # prob,
                 "runtime_opt": runtime,
                 "q_opt_reg": q_opt_reg,
                 "EMD_opt_reg": EMD_opt_reg,
                 "transport_plan_opt_reg": T_reg,
                 "transport_plan_opt_self": T_self,
                 "flow_opt_reg": flow_reg,
-                "prob_opt_reg": prob_reg,
+                "prob_opt_reg": None,  # prob_reg,
                 "runtime_opt_reg": runtime_reg,
             }
             ## submission
