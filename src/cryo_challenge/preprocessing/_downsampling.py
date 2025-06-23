@@ -1,7 +1,14 @@
+"""
+Downsampling functions are based on CryoDRGN's downsampling functions
+https://github.com/ml-struct-bio/cryodrgn/blob/09c6f616be69e1bd392907ed966ad7304acc6ea8/cryodrgn/commands/downsample.py#L154 # noqa: E501
+
+These use the Hartley transform instead of the Fourier transform to downsample the volume.
+"""
+
 import torch
 from torch import Tensor
 
-from ..utils._fourier import htn_center
+from ..fft._fourier import htn_center
 from ._cropping_and_padding import crop_volume_to_box_size
 
 

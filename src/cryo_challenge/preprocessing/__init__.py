@@ -13,7 +13,7 @@ from ._cropping_and_padding import (
 )
 from ._global_alignment import (
     align_submission_to_reference as align_submission_to_reference,
-    threshold_submissions as threshold_submissions,
+    threshold_submission as threshold_submission,
     threshold_volume as threshold_volume,
 )
 
