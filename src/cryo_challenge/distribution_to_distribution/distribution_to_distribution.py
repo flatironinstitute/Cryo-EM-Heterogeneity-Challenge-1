@@ -64,6 +64,34 @@ def make_assignment_matrix(cost_matrix):
     return A
 
 
+def optimal_q_kl(n_iter, x_start, A, Window, prob_gt, break_atol):
+    n = A.shape[1]
+    xs = np.zeros((n_iter + 1, n))
+    ones = np.ones(n)
+    xs[0] = x_ = x_start
+    zeros = np.zeros(n)
+    WA = A
+    Wp = Window @ prob_gt
+    objective = np.zeros(n_iter)
+    for iter in range(n_iter):
+        objective[iter] = (Wp * np.log(WA.dot(x_))).sum()
+        gradf = ((Wp.reshape(-1, 1) * WA) / WA.dot(x_).reshape(-1, 1)).sum(0)
+        xs[iter + 1] = gradf * xs[iter]
+        eps = np.linalg.norm(xs[iter + 1] - xs[iter])
+        x_ = xs[iter + 1]
+
+        if np.logical_or(
+            np.isclose(gradf, ones, atol=break_atol),
+            np.isclose(gradf, zeros, atol=break_atol),
+        ).all():
+            break
+    q_opt = x_
+    iter_stop = iter
+    eps_stop = eps
+    klpq, klqp = compute_kl_between_distributions(Wp, WA.dot(q_opt))
+    return q_opt, objective[:iter_stop], klpq, klqp, iter_stop, eps_stop
+
+
 def run(config):
     metadata_df = pd.read_csv(config["path_to_ground_truth_metadata"])
     metadata_df.sort_values("pc1", inplace=True)
@@ -192,35 +220,6 @@ def run(config):
             # KL
 
             A = make_assignment_matrix(cost_matrix=W_distance)
-
-            def optimal_q_kl(n_iter, x_start, A, Window, prob_gt, break_atol):
-                n = A.shape[1]
-                xs = np.zeros((n_iter + 1, n))
-                ones = np.ones(n)
-                xs[0] = x_ = x_start
-                zeros = np.zeros(n)
-                WA = A
-                Wp = Window @ prob_gt
-                objective = np.zeros(n_iter)
-                for iter in range(n_iter):
-                    objective[iter] = (Wp * np.log(WA.dot(x_))).sum()
-                    gradf = ((Wp.reshape(-1, 1) * WA) / WA.dot(x_).reshape(-1, 1)).sum(
-                        0
-                    )
-                    xs[iter + 1] = gradf * xs[iter]
-                    eps = np.linalg.norm(xs[iter + 1] - xs[iter])
-                    x_ = xs[iter + 1]
-
-                    if np.logical_or(
-                        np.isclose(gradf, ones, atol=break_atol),
-                        np.isclose(gradf, zeros, atol=break_atol),
-                    ).all():
-                        break
-                q_opt = x_
-                iter_stop = iter
-                eps_stop = eps
-                klpq, klqp = compute_kl_between_distributions(Wp, WA.dot(q_opt))
-                return q_opt, objective[:iter_stop], klpq, klqp, iter_stop, eps_stop
 
             ## opt
             q_opt, objective, klpq, klqp, iter_stop, eps_stop = optimal_q_kl(
