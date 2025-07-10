@@ -53,6 +53,9 @@ NAME_PATCH = {
     "Mint Chocolate Chip": "Averaged GT",
     "Bubble Gum 2": "Sampled GT",
     "Pina Colada 1": "Piña Colada 2",
+    "(*) Rocky Road 2": "Rocky Road 2",
+    "(*) Rocky Road 3": "Rocky Road 3",
+    "(*) Chocolate Chip 2": "Chocolate Chip 2",
 }
 
 

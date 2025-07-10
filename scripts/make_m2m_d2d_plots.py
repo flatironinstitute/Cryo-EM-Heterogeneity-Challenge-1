@@ -250,8 +250,12 @@ def plot_q_opt_distances(
 ):
     available_labels = np.array(list(dist2dist_results_d.keys()))
     ordered_labels = available_labels[argsort_labels_manually(available_labels)]
+    lower_labels = [label.lower().replace(" ", "_") for label in ordered_labels]
 
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(8 * ncols, 8 * nrows))
+    base_fig_size = 8
+    fig, axes = plt.subplots(
+        nrows=nrows, ncols=ncols, figsize=(base_fig_size * ncols, base_fig_size * nrows)
+    )
 
     fig.suptitle(suptitle, fontsize=30, y=suptitle_y)
     alpha = 1
@@ -300,8 +304,15 @@ def plot_q_opt_distances(
                 }
             else:
                 label_d = {"EMD": None, "KL": None, "KL_raw": None, "EMD_raw": None}
+
+            lower_ice_cream = lower_labels[idx_fname]
+            if lower_ice_cream not in window_size:
+                window_size_int = window_size[None]
+            else:
+                window_size_int = window_size[lower_labels[idx_fname]]
             windowed_q[replicate_idx] = window_q(
-                data[metric]["replicates"][replicate_idx]["EMD"]["q_opt"], window_size
+                data[metric]["replicates"][replicate_idx]["EMD"]["q_opt"],
+                window_size_int,
             )
 
         windowed_q_mean = windowed_q.mean(axis=0)
@@ -395,7 +406,7 @@ def distribution_to_distribution_optimal_probability(config):
 
     dist2dist_results_d = get_dist2dist_results(config.dist2dist_results["pkl_fnames"])
 
-    fig, axes = plot_q_opt_distances(
+    fig, _ = plot_q_opt_distances(
         dist2dist_results_d,
         config.map_to_map_distance,
         suptitle,
@@ -588,6 +599,6 @@ if __name__ == "__main__":
         config = yaml.safe_load(file)
     config = PlottingConfig.from_dict(config)
     assert config.map_to_map_distance in AVAILABLE_MAP2MAP_DISTANCES.keys()
-    map_to_map(config)
-    # distribution_to_distribution_optimal_probability(config)
+    # map_to_map(config)
+    distribution_to_distribution_optimal_probability(config)
     # distribution_to_distribution_optimal_emd(config)
