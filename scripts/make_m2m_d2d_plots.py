@@ -214,14 +214,15 @@ def map_to_map(config):
         config.plot_settings["map_to_map"]["nrows"],
         config.plot_settings["map_to_map"]["ncols"],
     )
-    vmin = vmax = None
-    fig, axis = plot_map_to_map_distances(
+    vmin = config.plot_settings["map_to_map"]["vmin"]
+    vmax = config.plot_settings["map_to_map"]["vmax"]
+    fig, _ = plot_map_to_map_distances(
         data_d,
         gt_ordering,
         config.map_to_map_distance,
         nrows,
         ncols,
-        suptitle=config.map_to_map_distance["map_to_map"]["suptitle"],
+        suptitle=config.plot_settings["map_to_map"]["suptitle"],
         vmin=vmin,
         vmax=vmax,
         log_norm=config.plot_settings["map_to_map"]["log_norm"]
@@ -581,8 +582,7 @@ if __name__ == "__main__":
         help="Path to the config file for plotting.",
     )
     args = parser.parse_args()
-    path_to_config = args.config
-    # path_to_config = "/mnt/home/smbp/ceph/smbpchallenge/plotting_round1_and_round2/config_plotting_fsc_20250527.yaml"
+    path_to_config = args.config  # "/mnt/home/smbp/ceph/smbpchallenge/plotting_round1_and_round2/config_plotting_fsc_20250527.yaml"
 
     with open(path_to_config, "r") as file:
         config = yaml.safe_load(file)
