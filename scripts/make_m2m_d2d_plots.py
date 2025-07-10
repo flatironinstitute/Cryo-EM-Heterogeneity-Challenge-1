@@ -2,6 +2,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 from typing import List, Dict, Union, Any
@@ -17,6 +18,10 @@ from cryo_challenge.ploting.plotting_utils import (
     argsort_labels_manually,
 )
 from cryo_challenge.map_to_map.map_to_map_pipeline import AVAILABLE_MAP2MAP_DISTANCES
+
+mpl.rcParams["font.family"] = "sans-serif"
+mpl.rcParams["pdf.fonttype"] = 42  # TrueType fonts
+mpl.rcParams["ps.fonttype"] = 42
 
 
 @dataclass_json
@@ -41,26 +46,22 @@ def plot_map_to_map_distances(
     dpi=None,
     vmin=None,
     vmax=None,
+    log_norm=False,
 ):
-    smaller_fontsize = 20
-    larger_fontsize = 30
     n_plts = nrows * ncols
-    if vmax is None:
-        vmax = -np.inf
-        do_vmax_adjust = True
-    else:
-        do_vmax_adjust = False
-    if vmin is None:
-        do_vmin_adjust = True
-        vmin = np.inf
-    else:
-        do_vmin_adjust = False
 
     kwargs = {}
     if figsize is not None:
         kwargs["figsize"] = figsize
-    else:
-        kwargs["figsize"] = (10 * ncols, 10 * nrows)
+    elif "base_fig_size" in config.plot_settings["map_to_map"]:
+        kwargs["figsize"] = (
+            config.plot_settings["map_to_map"]["base_fig_size"] * ncols,
+            config.plot_settings["map_to_map"]["base_fig_size"] * nrows,
+        )
+    else:  # raise
+        kwargs["figsize"] = ValueError(
+            "Please provide a figsize or set 'base_fig_size' in config.plot_settings['map_to_map']"
+        )
     if dpi is not None:
         kwargs["dpi"] = dpi
     else:
@@ -72,10 +73,20 @@ def plot_map_to_map_distances(
         **kwargs,
     )
 
-    if suptitle is None:
-        fig.suptitle("d_{:}".format(metric), y=0.95, fontsize=larger_fontsize)
+    if suptitle is False:
+        pass
+    elif suptitle is None:
+        fig.suptitle(
+            "d_{:}".format(metric),
+            y=0.95,
+            fontsize=config.plot_settings["map_to_map"]["title_fontsize"],
+        )
     elif isinstance(suptitle, str):
-        fig.suptitle(suptitle, y=0.95, fontsize=larger_fontsize)
+        fig.suptitle(
+            suptitle,
+            y=0.95,
+            fontsize=config.plot_settings["map_to_map"]["title_fontsize"],
+        )
     else:
         raise ValueError("suptitle must be a string or None")
 
@@ -86,14 +97,25 @@ def plot_map_to_map_distances(
         data = data_d[anonymous_label]
         map2map_dist_matrix = data[metric]["cost_matrix"].iloc[gt_ordering].values
 
-        if do_vmin_adjust and map2map_dist_matrix.min() < vmin:
-            vmin = map2map_dist_matrix.min()
-        if do_vmax_adjust and map2map_dist_matrix.max() > vmax:
-            vmax = map2map_dist_matrix.max()
+        if log_norm:
+            from matplotlib import colors
 
-        ax = axes[idx // ncols, idx % ncols].imshow(
-            map2map_dist_matrix, aspect="auto", cmap="gray", vmin=vmin, vmax=vmax
-        )
+            ax = axes[idx // ncols, idx % ncols].imshow(
+                map2map_dist_matrix,
+                aspect="auto",
+                cmap="gray",
+                norm=colors.LogNorm(),
+                vmin=vmin,
+                vmax=vmax,
+            )
+        else:
+            ax = axes[idx // ncols, idx % ncols].imshow(
+                map2map_dist_matrix,
+                aspect="auto",
+                cmap="gray",
+                vmin=vmin,
+                vmax=vmax,
+            )
         for spine in axes[idx // ncols, idx % ncols].spines.values():
             ice_cream_no_version = [
                 colour for colour in COLORS.keys() if anonymous_label.startswith(colour)
@@ -107,13 +129,15 @@ def plot_map_to_map_distances(
                     UserWarning,
                 )
             spine.set_edgecolor(COLORS[single])
-            spine.set_linewidth(10)  # Optional: set thickness
+            spine.set_linewidth(config.plot_settings["map_to_map"]["spine_linewidth"])
 
         axes[idx // ncols, idx % ncols].tick_params(
-            axis="both", labelsize=smaller_fontsize
+            axis="both", labelsize=config.plot_settings["map_to_map"]["tick_fontsize"]
         )
         cbar = fig.colorbar(ax)
-        cbar.ax.tick_params(labelsize=smaller_fontsize)
+        cbar.ax.tick_params(
+            labelsize=config.plot_settings["map_to_map"]["cbar_fontsize"]
+        )
         plot_panel_label = anonymous_label
         for key, value in NAME_PATCH.items():
             if plot_panel_label.startswith(key):
@@ -124,18 +148,34 @@ def plot_map_to_map_distances(
                 )
                 break
         axes[idx // ncols, idx % ncols].set_title(
-            plot_panel_label, fontsize=smaller_fontsize
+            plot_panel_label,
+            fontsize=config.plot_settings["map_to_map"]["title_fontsize"],
+            pad=config.plot_settings["map_to_map"]["title_pad"],
         )
         if idx // ncols == nrows - 1 and idx % ncols == 0:
-            axes[idx // ncols, idx % ncols].set_xlabel("Submission index", fontsize=30)
+            axes[idx // ncols, idx % ncols].set_xlabel(
+                "Submission index",
+                fontsize=config.plot_settings["map_to_map"]["label_fontsize"],
+            )
             axes[idx // ncols, idx % ncols].set_ylabel(
-                "Ground truth index", fontsize=30
+                "Ground truth index",
+                fontsize=config.plot_settings["map_to_map"]["label_fontsize"],
             )
         else:
             axes[idx // ncols, idx % ncols].set_xlabel("")
             axes[idx // ncols, idx % ncols].set_ylabel("")
             axes[idx // ncols, idx % ncols].set_xticks([])
             axes[idx // ncols, idx % ncols].set_yticks([])
+
+    # After plotting all data panels
+    total_panels = nrows * ncols
+    n_plotted = len(ordered_labels)
+    # axes could be 2D or 1D depending on nrows/ncols, so flatten for easy indexing
+    axes_flat = axes.flatten() if hasattr(axes, "flatten") else axes.ravel()
+    for idx in range(n_plotted, total_panels):
+        axes_flat[idx].set_visible(False)
+
+    fig.tight_layout()
 
     return fig, axes
 
@@ -174,22 +214,26 @@ def map_to_map(config):
         config.plot_settings["map_to_map"]["nrows"],
         config.plot_settings["map_to_map"]["ncols"],
     )
-    vmax = None
+    vmin = vmax = None
     fig, axis = plot_map_to_map_distances(
         data_d,
         gt_ordering,
         config.map_to_map_distance,
         nrows,
         ncols,
-        suptitle=f"{config.map_to_map_distance} distance | vmax={vmax}",
+        suptitle=config.map_to_map_distance["map_to_map"]["suptitle"],
+        vmin=vmin,
         vmax=vmax,
+        log_norm=config.plot_settings["map_to_map"]["log_norm"]
+        if "log_norm" in config.plot_settings["map_to_map"]
+        else False,
     )
 
     # save the figure
     fig.savefig(
         config.output_paths["map_to_map"]["distance_matrices"],
         bbox_inches="tight",
-        dpi=300,
+        dpi=config.plot_settings["map_to_map"]["dpi"],
     )
 
 
@@ -545,5 +589,5 @@ if __name__ == "__main__":
     config = PlottingConfig.from_dict(config)
     assert config.map_to_map_distance in AVAILABLE_MAP2MAP_DISTANCES.keys()
     map_to_map(config)
-    distribution_to_distribution_optimal_probability(config)
-    distribution_to_distribution_optimal_emd(config)
+    # distribution_to_distribution_optimal_probability(config)
+    # distribution_to_distribution_optimal_emd(config)

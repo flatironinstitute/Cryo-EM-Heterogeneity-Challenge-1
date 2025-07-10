@@ -47,8 +47,11 @@ PLOT_SETUP = {
 }
 
 NAME_PATCH = {
-    "Mint Chocolate Chip 1": "Averaged GT 80",
+    # "Mint Chocolate Chip 10": "Averaged GT 10",
+    # "Mint Chocolate Chip 16": "Averaged GT 16",
+    # "Mint Chocolate Chip 1": "Averaged GT 80",
     "Mint Chocolate Chip": "Averaged GT",
+    "Bubble Gum 2": "Sampled GT",
 }
 
 
