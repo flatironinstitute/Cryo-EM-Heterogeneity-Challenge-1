@@ -38,8 +38,8 @@ def main(args):
     config = dict(MapToMapInputConfig(**config).model_dump(exclude_none=True))
     warnexists(config["path_to_output_file"])
     mkbasedir(os.path.dirname(config["path_to_output_file"]))
-
-    return run(config)
+    run(config)
+    return 0
 
 
 def main_as_cli():

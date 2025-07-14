@@ -40,8 +40,9 @@ def main(args):
     config = dict(DistToDistInputConfig(**config).model_dump())
     warnexists(config["path_to_output_file"])
     mkbasedir(os.path.dirname(config["path_to_output_file"]))
+    run(config)
 
-    return run(config)
+    return 0
 
 
 def main_as_cli():

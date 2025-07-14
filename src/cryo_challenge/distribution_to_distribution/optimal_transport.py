@@ -327,12 +327,3 @@ def main():
     q_opt_reg, T_reg, _, _, _ = optimal_q_emd_vec_regularized(
         p, cost, self_cost=-np.eye(2), solver=cp.CVXOPT, verbose=True
     )
-
-    print("q_opt", q_opt)
-    print("q_opt_reg", q_opt_reg)
-    print("T", T)
-    print("T_reg", T_reg)
-
-
-if __name__ == "__main__":
-    main()
