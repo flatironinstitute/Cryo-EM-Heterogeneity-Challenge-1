@@ -133,6 +133,8 @@ def run(config):
                 Window[i, e] = 1  # TODO: soft windowing
 
             cost = cost_matrix[idxs]
+            cost_max = np.abs(cost).max()
+            cost /= cost_max
 
             if config["metrics"][metric]["apply_rank_normalization"]:
                 cost_rank = np.apply_along_axis(rankdata, 1, cost)
@@ -168,11 +170,12 @@ def run(config):
                         config["emd_regularization"],
                     )
                 )
-                EMD_opt_reg = prob_reg.value
+                EMD_opt_reg = prob_reg.value * cost_max
 
             results_dict[metric]["replicates"][replicate_idx]["EMD"] = {
+                "cost_max": cost_max,
                 "q_opt": q_opt,
-                "EMD_opt": prob.value,
+                "EMD_opt": prob.value * cost_max,
                 "transport_plan_opt": T,
                 "flow_opt": flow,
                 "prob_opt": None,  # prob,
@@ -193,12 +196,15 @@ def run(config):
                 Wp, user_submitted_populations, W_distance
             )
             results_dict[metric]["replicates"][replicate_idx]["EMD"].update(
-                {"EMD_submitted": wasserstein, "transport_plan_submitted": transport}
+                {
+                    "EMD_submitted": wasserstein * cost_max,
+                    "transport_plan_submitted": transport,
+                }
             )
 
             # KL
 
-            A = make_assignment_matrix(cost_matrix=W_distance)
+            A = make_assignment_matrix(cost_matrix=W_distance * cost_max)
 
             def optimal_q_kl(n_iter, x_start, A, Window, prob_gt, break_atol):
                 n = A.shape[1]
