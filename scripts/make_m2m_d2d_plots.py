@@ -431,7 +431,7 @@ def distribution_to_distribution_optimal_probability(config):
         config.output_paths["distribution_to_distribution"][
             "optimal_prob_plot_outpath"
         ],
-        dpi=300,
+        dpi=config.plot_settings["distribution_to_distribution"]["optimal_prob"]["dpi"],
     )
 
 
