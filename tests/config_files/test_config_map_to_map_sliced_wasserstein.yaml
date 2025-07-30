@@ -19,7 +19,7 @@ metrics:
     vmap_chunk_size_gt: 4
     vmap_chunk_size_submission: 4
     wasserstein_p: 2
-    dev: cuda
+    dev: cpu
     compute_self_metric: true
 
   shared_params:
