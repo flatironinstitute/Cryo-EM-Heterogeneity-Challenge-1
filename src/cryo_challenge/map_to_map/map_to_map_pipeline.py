@@ -14,6 +14,7 @@ from .map_to_map_distance import (
     Zernike3DDistance,
     GromovWassersteinDistance,
     ProcrustesWassersteinDistance,
+    SlicedWassersteinDistance,
 )
 
 
@@ -27,6 +28,7 @@ ORDER_TO_ENDURE_FSC_BEFORE_RES = [
     "fsc",
     "res",
     "zernike3d",
+    "sliced_wasserstein",
     "gromov_wasserstein",
     "procrustes_wasserstein",
 ]
@@ -40,6 +42,7 @@ AVAILABLE_MAP2MAP_DISTANCES = {
     "zernike3d": Zernike3DDistance,
     "gromov_wasserstein": GromovWassersteinDistance,
     "procrustes_wasserstein": ProcrustesWassersteinDistance,
+    "sliced_wasserstein": SlicedWassersteinDistance,
 }
 
 AVAILABLE_MAP2MAP_DISTANCES = OrderedDict(

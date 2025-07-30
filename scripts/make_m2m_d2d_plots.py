@@ -728,6 +728,6 @@ if __name__ == "__main__":
         config = yaml.safe_load(file)
     config = PlottingConfig.from_dict(config)
     assert config.map_to_map_distance in AVAILABLE_MAP2MAP_DISTANCES.keys()
-    # map_to_map(config)
+    map_to_map(config)
     distribution_to_distribution_optimal_probability(config)
     distribution_to_distribution_optimal_objective(config)

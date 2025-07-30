@@ -248,6 +248,32 @@ class MapToMapInputConfigFrankWolfeParams(BaseModel, extra="forbid"):
     gamma_atol: float = Field(default=1e-6, description="Tolerance for convergence")
 
 
+class MapToMapInputConfigMetricsSlicedWasserstein(BaseModel, extra="forbid"):
+    downsample_box_size: PositiveInt = Field(
+        default=64,
+        description="Number of pixels to downsample to (in each dimension)",
+    )
+    n_rotations: PositiveInt = Field(
+        default=300,
+        description="Number of rotations to average over",
+    )
+    vmap_chunk_size_gt: PositiveInt = Field(
+        default=80,
+        description="Chunk size for the ground truth volumes",
+    )
+    vmap_chunk_size_submission: PositiveInt = Field(
+        default=20,
+        description="Chunk size for the submission volumes",
+    )
+    wasserstein_p: Literal[1, 2] = Field(
+        default=2,
+        description="Order of the Wasserstein distance (1 or 2)",
+    )
+    dev: Literal["cpu", "cuda"] = Field(
+        default="cuda" if torch.cuda.is_available() else "cpu"
+    )
+
+
 class MapToMapInputConfigMetricsProcrustesWasserstein(BaseModel, extra="forbid"):
     downsample_box_size: PositiveInt = Field(
         default=32,
@@ -406,6 +432,10 @@ class MapToMapInputConfigMetrics(BaseModel):
         default=None,
         description="List of metrics to compute, and there own parameters",
     )
+    sliced_wasserstein: Optional[dict] = Field(
+        default=None,
+        description="Extra parameters for the Sliced Wasserstein distance",
+    )
     procrustes_wasserstein: Optional[dict] = Field(
         default=None,
         description="Extra parameters for the Procrustes Wasserstein distance",
@@ -556,6 +586,11 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
     l2: dict, L2 results.
     bioem: dict, BioEM results.
     fsc: dict, FSC results.
+    res: dict, FSC res results.
+    zernike3d: dict, Zernike3D results.
+    sliced_wasserstein: dict, Sliced Wasserstein results.
+    gromov_wasserstein: dict, Gromov-Wasserstein results.
+    procrustes_wasserstein: dict, Procrustes-Wasserstein results.
     """
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
@@ -589,6 +624,10 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
     zernike3d: Optional[dict] = Field(
         default=None,
         description="Zernike3D results",
+    )
+    sliced_wasserstein: Optional[dict] = Field(
+        default=None,
+        description="Sliced Wasserstein results",
     )
     gromov_wasserstein: Optional[dict] = Field(
         default=None,
@@ -625,6 +664,10 @@ class MapToMapResultsValidator(BaseModel, extra="forbid"):
             self.fsc = dict(MapToMapResultsAllMetrics(**self.fsc).model_dump())
         if self.res is not None:
             self.res = dict(MapToMapResultsAllMetrics(**self.res).model_dump())
+        if self.sliced_wasserstein is not None:
+            self.sliced_wasserstein = dict(
+                MapToMapResultsAllMetrics(**self.sliced_wasserstein).model_dump()
+            )
         if self.procrustes_wasserstein is not None:
             self.procrustes_wasserstein = dict(
                 MapToMapResultsAllMetrics(**self.procrustes_wasserstein).model_dump()

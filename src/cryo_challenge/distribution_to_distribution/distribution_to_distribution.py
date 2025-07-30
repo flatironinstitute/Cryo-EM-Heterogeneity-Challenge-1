@@ -98,7 +98,7 @@ def run(config):
 
         ## self for regularization
         cost_self = data[metric]["cost_matrix_self"].values
-        if config["metrics"][metric]["apply_rank_normalization"] is not None:
+        if config["metrics"][metric]["apply_rank_normalization"]:
             cost_self_rank = np.apply_along_axis(rankdata, 1, cost_self)
             W_distance_self = cost_self_rank
         else:
@@ -133,14 +133,12 @@ def run(config):
                 Window[i, e] = 1  # TODO: soft windowing
 
             cost = cost_matrix[idxs]
-            cost_max = np.abs(cost).max()
-            cost /= cost_max
 
             if config["metrics"][metric]["apply_rank_normalization"]:
-                cost_rank = np.apply_along_axis(rankdata, 1, cost)
-                W_distance = Window @ cost_rank
-            else:
-                W_distance = Window @ cost
+                cost = np.apply_along_axis(rankdata, 1, cost)
+            cost_max = np.abs(cost).max()
+            cost /= cost_max
+            W_distance = Window @ cost
 
             ## gt prob
             Wp = Window @ prob_gt_reduced
