@@ -145,7 +145,6 @@ def run(config):
 
             # EMD
             ## opt
-            print("optimizing EMD for metric:", metric, "replicate:", replicate_idx)
             q_opt, T, flow, prob, runtime = optimal_q_emd_vec(
                 Wp, W_distance, cvxpy_solve_kwargs=config["cvxpy_solve_kwargs"]
             )
@@ -153,12 +152,6 @@ def run(config):
                 q_opt_reg = T_reg = T_self = flow_reg = prob_reg = runtime_reg = None
                 EMD_opt_reg = None
             else:
-                print(
-                    "optimizing self EMD with regularization for metric:",
-                    metric,
-                    "replicate:",
-                    replicate_idx,
-                )
                 q_opt_reg, T_reg, T_self, flow_reg, prob_reg, runtime_reg = (
                     optimal_q_emd_vec_regularized(
                         Wp,
@@ -234,7 +227,6 @@ def run(config):
                 return q_opt, objective[:iter_stop], klpq, klqp, iter_stop, eps_stop
 
             ## opt
-            print("optimizing KL for metric:", metric, "replicate:", replicate_idx)
             q_opt, objective, klpq, klqp, iter_stop, eps_stop = optimal_q_kl(
                 n_iter=config["optimal_q_kl_params"]["n_iter"],
                 x_start=np.ones(n) / n,

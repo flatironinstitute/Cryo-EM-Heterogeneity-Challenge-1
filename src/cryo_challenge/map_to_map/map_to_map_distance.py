@@ -12,7 +12,9 @@ from dask_jobqueue.slurm import SLURMRunner
 import torch.multiprocessing as mp
 
 from cryo_challenge.preprocessing import downsample_submission
-from .sliced_wasserstein.pixel_strip import get_distance_matrix_real_space_slicing
+from .sliced_wasserstein.real_space import (
+    get_distance_matrix_real_space_sliced_wasserstein,
+)
 from .gromov_wasserstein.gw_weighted_voxels import (
     get_distance_matrix_gw_via_fw,
     get_distance_matrix_gw_python_ot_dask,
@@ -804,7 +806,7 @@ class SlicedWassersteinDistance(MapToMapDistance):
             maps2, sliced_wasserstein_config["downsample_box_size"]
         ).to(sliced_wasserstein_config["dev"])
 
-        distance_matrix_sw = get_distance_matrix_real_space_slicing(
+        distance_matrix_sw = get_distance_matrix_real_space_sliced_wasserstein(
             downsampled_volumes_gt, downsampled_volumes_sub, sliced_wasserstein_config
         )
         return distance_matrix_sw.detach().cpu().numpy()
