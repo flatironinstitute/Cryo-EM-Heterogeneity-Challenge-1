@@ -278,7 +278,8 @@ class DistToDistResultsValidatorReplicateEMD(BaseModel, extra="forbid"):
     """
 
     q_opt: List[TolerantPositiveFloat]
-    EMD_opt: PositiveFloat
+    cost_max: float
+    EMD_opt: float
     transport_plan_opt: List[List[float]]
     flow_opt: Any
     prob_opt: Any

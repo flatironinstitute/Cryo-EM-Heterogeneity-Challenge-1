@@ -11,6 +11,10 @@ from dask.distributed import Client
 from dask_jobqueue.slurm import SLURMRunner
 import torch.multiprocessing as mp
 
+from cryo_challenge.preprocessing import downsample_submission
+from .sliced_wasserstein.real_space import (
+    get_distance_matrix_real_space_sliced_wasserstein,
+)
 from .gromov_wasserstein.gw_weighted_voxels import (
     get_distance_matrix_gw_via_fw,
     get_distance_matrix_gw_python_ot_dask,
@@ -780,3 +784,29 @@ class GromovWassersteinDistance(MapToMapDistance):
     @override
     def get_computed_assets(self, maps1, maps2, global_store_of_running_results):
         return self.stored_computed_assets  # must run get_distance_matrix first
+
+
+class SlicedWassersteinDistance(MapToMapDistance):
+    """Sliced Wasserstein distance.
+
+    Sliced Wasserstein distance is invariant to map alignment, because it compares the projections of the maps onto random directions.
+    """
+
+    @override
+    def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
+        sliced_wasserstein_config = self.config["metrics"]["sliced_wasserstein"]
+        bs = self.config["data_params"]["box_size"]
+        maps1 = maps1.reshape(-1, bs, bs, bs)
+        maps2 = maps2.reshape(-1, bs, bs, bs)
+
+        downsampled_volumes_gt = downsample_submission(
+            maps1, sliced_wasserstein_config["downsample_box_size"]
+        ).to(sliced_wasserstein_config["dev"])
+        downsampled_volumes_sub = downsample_submission(
+            maps2, sliced_wasserstein_config["downsample_box_size"]
+        ).to(sliced_wasserstein_config["dev"])
+
+        distance_matrix_sw = get_distance_matrix_real_space_sliced_wasserstein(
+            downsampled_volumes_gt, downsampled_volumes_sub, sliced_wasserstein_config
+        )
+        return distance_matrix_sw.detach().cpu().numpy()

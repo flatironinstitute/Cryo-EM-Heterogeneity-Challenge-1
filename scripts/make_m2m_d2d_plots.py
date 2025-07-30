@@ -241,25 +241,29 @@ def map_to_map(config):
 def plot_q_opt_distances(
     dist2dist_results_d,
     metric,
-    suptitle,
-    nrows,
-    ncols,
-    window_size,
-    suptitle_y,
+    config_optimal_prob,
     COLORS=None,
 ):
     available_labels = np.array(list(dist2dist_results_d.keys()))
     ordered_labels = available_labels[argsort_labels_manually(available_labels)]
     lower_labels = [label.lower().replace(" ", "_") for label in ordered_labels]
 
-    base_fig_size = 8
+    base_fig_size = config_optimal_prob["base_fig_size"]
+    nrows = config_optimal_prob["nrows"]
+    ncols = config_optimal_prob["ncols"]
+    suptitle = config_optimal_prob["suptitle"]
+    suptitle_y = config_optimal_prob["suptitle_y"]
+    d2d_metric = config_optimal_prob["distribution_to_distribution_metric"]
     fig, axes = plt.subplots(
         nrows=nrows, ncols=ncols, figsize=(base_fig_size * ncols, base_fig_size * nrows)
     )
 
-    fig.suptitle(suptitle, fontsize=30, y=suptitle_y)
-    alpha = 1
-    linewidth = 3
+    fig.suptitle(
+        suptitle, fontsize=config_optimal_prob["suptitle_fontsize"], y=suptitle_y
+    )
+    alpha = config_optimal_prob["prob_alpha"]
+    linewidth = config_optimal_prob["prob_linewidth"]
+    window_size = config_optimal_prob["window_size"]
 
     for idx_fname, label in enumerate(ordered_labels):
         data = dist2dist_results_d[label]
@@ -280,7 +284,7 @@ def plot_q_opt_distances(
                 )
                 break
         axes[idx_fname // ncols, idx_fname % ncols].set_title(
-            plot_panel_label, fontsize=30
+            plot_panel_label, fontsize=config_optimal_prob["title_fontsize"]
         )
 
         def window_q(q_opt, window_size):
@@ -311,7 +315,7 @@ def plot_q_opt_distances(
             else:
                 window_size_int = window_size[lower_labels[idx_fname]]
             windowed_q[replicate_idx] = window_q(
-                data[metric]["replicates"][replicate_idx]["EMD"]["q_opt"],
+                data[metric]["replicates"][replicate_idx][d2d_metric]["q_opt"],
                 window_size_int,
             )
 
@@ -331,7 +335,7 @@ def plot_q_opt_distances(
             windowed_q_mean,
             color=color,
             alpha=alpha,
-            label=label_d["EMD"],
+            label=label_d[d2d_metric],
             lw=linewidth,
         )
 
@@ -361,16 +365,16 @@ def plot_q_opt_distances(
 
         if idx_fname // ncols == nrows - 1 and idx_fname % ncols == 0:
             axes[idx_fname // ncols, idx_fname % ncols].set_xlabel(
-                "Submission index", fontsize=30
+                "Submission index", fontsize=config_optimal_prob["label_fontsize"]
             )
             axes[idx_fname // ncols, idx_fname % ncols].set_ylabel(
-                "Population", fontsize=30
+                "Population", fontsize=config_optimal_prob["label_fontsize"]
             )
         else:
             axes[idx_fname // ncols, idx_fname % ncols].set_xlabel("")
             axes[idx_fname // ncols, idx_fname % ncols].set_ylabel("")
         axes[idx_fname // ncols, idx_fname % ncols].tick_params(
-            axis="both", labelsize=20
+            axis="both", labelsize=config_optimal_prob["tick_fontsize"]
         )
 
     for ax in axes.flat:
@@ -385,6 +389,8 @@ def plot_q_opt_distances(
         for spine in ax.spines.values():
             spine.set_visible(False)
 
+    fig.tight_layout()
+
     return fig, axes
 
 
@@ -397,32 +403,35 @@ def distribution_to_distribution_optimal_probability(config):
     window_size = config.plot_settings["distribution_to_distribution"]["optimal_prob"][
         "window_size"
     ]
-    nrows, ncols = (
-        config.plot_settings["distribution_to_distribution"]["optimal_prob"]["nrows"],
-        config.plot_settings["distribution_to_distribution"]["optimal_prob"]["ncols"],
-    )
 
-    suptitle = f"Submitted populations vs optimal populations \n {config.map_to_map_distance} distance (no rank) | n_replicates={data['config']['replicate_params']['n_replicates']} | window_size={window_size} | n_pool_ground_truth_microstates={data['config']['replicate_params']['n_pool_ground_truth_microstates']}"
+    if (
+        config.plot_settings["distribution_to_distribution"]["optimal_prob"]["suptitle"]
+        is None
+    ):
+        config.plot_settings["distribution_to_distribution"]["optimal_prob"][
+            "suptitle"
+        ] = f"Submitted populations vs optimal populations \n {config.map_to_map_distance} distance (no rank) | n_replicates={data['config']['replicate_params']['n_replicates']} | window_size={window_size} | n_pool_ground_truth_microstates={data['config']['replicate_params']['n_pool_ground_truth_microstates']}"
+    elif (
+        config.plot_settings["distribution_to_distribution"]["optimal_prob"]["suptitle"]
+        is False
+    ):
+        config.plot_settings["distribution_to_distribution"]["optimal_prob"][
+            "suptitle"
+        ] = None
 
     dist2dist_results_d = get_dist2dist_results(config.dist2dist_results["pkl_fnames"])
 
     fig, _ = plot_q_opt_distances(
         dist2dist_results_d,
         config.map_to_map_distance,
-        suptitle,
-        nrows,
-        ncols,
-        window_size,
-        config.plot_settings["distribution_to_distribution"]["optimal_prob"][
-            "suptitle_y"
-        ],
+        config.plot_settings["distribution_to_distribution"]["optimal_prob"],
         COLORS,
     )
     fig.savefig(
         config.output_paths["distribution_to_distribution"][
             "optimal_prob_plot_outpath"
         ],
-        dpi=300,
+        dpi=config.plot_settings["distribution_to_distribution"]["optimal_prob"]["dpi"],
     )
 
 
@@ -480,25 +489,55 @@ def wragle_pkl_to_dataframe(pkl_globs, metric):
     df["EMD_submitted_norm"] = (
         df["EMD_submitted"] / df["n_pool_ground_truth_microstates"]
     )
+    df["klpq_opt_norm"] = df["klpq_opt"] / df["n_pool_ground_truth_microstates"]
+    df["klqp_opt_norm"] = df["klqp_opt"] / df["n_pool_ground_truth_microstates"]
+    df["klpq_submitted_norm"] = (
+        df["klpq_submitted"] / df["n_pool_ground_truth_microstates"]
+    )
+    df["klqp_submitted_norm"] = (
+        df["klqp_submitted"] / df["n_pool_ground_truth_microstates"]
+    )
 
     return df
 
 
-def get_d2d_emd_opt_results(pkl_globs, map_to_map_distance):
-    df_fsc = wragle_pkl_to_dataframe(pkl_globs, map_to_map_distance)
-    df = df_fsc[
-        ["id", "EMD_opt", "EMD_submitted", "EMD_opt_norm", "EMD_submitted_norm"]
+def get_d2d_objective_opt_results(
+    pkl_globs, map_to_map_distance, exact_objective_label
+):
+    df = wragle_pkl_to_dataframe(pkl_globs, map_to_map_distance)
+    df = df[
+        [
+            "id",
+            "EMD_opt",
+            "EMD_submitted",
+            "EMD_opt_norm",
+            "EMD_submitted_norm",
+            "klpq_opt",
+            "klqp_opt",
+            "klpq_submitted",
+            "klqp_submitted",
+            "klpq_opt_norm",
+            "klqp_opt_norm",
+            "klpq_submitted_norm",
+            "klqp_submitted_norm",
+        ]
     ]
     df_average = df.groupby(["id"]).mean().reset_index()
     df_std = (
         df.groupby(["id"])
         .std()
         .reset_index()
-        .filter(["EMD_opt_norm", "EMD_submitted_norm", "id"])
+        .filter(
+            [
+                f"{exact_objective_label}_opt_norm",
+                f"{exact_objective_label}_submitted_norm",
+                "id",
+            ]
+        )
         .rename(
             columns={
-                "EMD_opt_norm": "EMD_opt_norm_std",
-                "EMD_submitted_norm": "EMD_submitted_norm_std",
+                f"{exact_objective_label}_opt_norm": f"{exact_objective_label}_opt_norm_std",
+                f"{exact_objective_label}_submitted_norm": f"{exact_objective_label}_submitted_norm_std",
             }
         )
     )
@@ -519,15 +558,24 @@ def get_d2d_emd_opt_results(pkl_globs, map_to_map_distance):
 
     sorted_idx = argsort_labels_manually(df_average_and_error.id.tolist())
     df_sorted = df_average_and_error.iloc[sorted_idx]
+    backwards = True
+    if backwards:
+        df_sorted = df_sorted.iloc[::-1]
     return df_sorted
 
 
-def distribution_to_distribution_optimal_emd(config):
-    df_sorted = get_d2d_emd_opt_results(
-        config.dist2dist_results["pkl_globs"], config.map_to_map_distance
+def distribution_to_distribution_optimal_objective(config):
+    df_sorted = get_d2d_objective_opt_results(
+        config.dist2dist_results["pkl_globs"],
+        config.map_to_map_distance,
+        config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+            "exact_objective_label"
+        ],
     )  # TODO: skip this step if already done
     df_sorted.to_csv(
-        config.output_paths["distribution_to_distribution"]["optimal_emd_data_outpath"]
+        config.output_paths["distribution_to_distribution"][
+            "optimal_objective_data_outpath"
+        ]
     )
 
     for key, value in NAME_PATCH.items():
@@ -536,29 +584,72 @@ def distribution_to_distribution_optimal_emd(config):
             f"Replacing {key} with {value} in id column of df_sorted",
             UserWarning,
         )
-    fig, ax = plt.subplots(figsize=(8, 6))
+
+    fig_size_height = config.plot_settings["distribution_to_distribution"][
+        "optimal_objective"
+    ]["fig_size_height"]
+    fig_size_width = config.plot_settings["distribution_to_distribution"][
+        "optimal_objective"
+    ]["fig_size_width"]
+    fig, ax = plt.subplots(figsize=(fig_size_width, fig_size_height))
 
     # Set position for each bar
     indices = np.arange(len(df_sorted))
-    bar_width = 0.4
+    bar_width = config.plot_settings["distribution_to_distribution"][
+        "optimal_objective"
+    ]["bar_width"]
 
     # Plot EMD_opt
+    objective_label_opt = (
+        config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+            "exact_objective_label"
+        ]
+        + "_opt"
+    )
+    objective_label_submitted = (
+        config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+            "exact_objective_label"
+        ]
+        + "_submitted"
+    )
     _ = ax.barh(
         indices - bar_width / 2,
-        df_sorted["EMD_opt"],
+        df_sorted[objective_label_opt],
         height=bar_width,
         color=df_sorted["colours"],
-        label="EMD_opt",
-        alpha=0.5,
+        label=objective_label_opt,
+        alpha=config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+            "alpha"
+        ],
+    )
+    ax.errorbar(
+        df_sorted[objective_label_opt],
+        indices - bar_width / 2,
+        xerr=df_sorted[objective_label_opt + "_norm_std"],  # or your error column
+        fmt="none",
+        ecolor="black",
+        capsize=config.plot_settings["distribution_to_distribution"][
+            "optimal_objective"
+        ]["errorbar_capsize"],
     )
 
     # Plot EMD_submitted
     _ = ax.barh(
         indices + bar_width / 2,
-        df_sorted["EMD_submitted"],
+        df_sorted[objective_label_submitted],
         height=bar_width,
         color=df_sorted["colours"],
-        label="EMD_submitted",
+        label=objective_label_submitted,
+    )
+    ax.errorbar(
+        df_sorted[objective_label_submitted],
+        indices + bar_width / 2,
+        xerr=df_sorted[objective_label_submitted + "_norm_std"],  # or your error column
+        fmt="none",
+        ecolor="black",
+        capsize=config.plot_settings["distribution_to_distribution"][
+            "optimal_objective"
+        ]["errorbar_capsize"],
     )
 
     # Set y-axis to show ID labels
@@ -566,19 +657,57 @@ def distribution_to_distribution_optimal_emd(config):
     ax.set_yticklabels(df_sorted["id"])
 
     # Labels and title
-    ax.set_xlabel("EMD Value")
-    ax.set_ylabel("Submission")
+    exact_objective_label = config.plot_settings["distribution_to_distribution"][
+        "optimal_objective"
+    ]["exact_objective_label"]
+    ax.set_xlabel(
+        exact_objective_label,
+        fontsize=config.plot_settings["distribution_to_distribution"][
+            "optimal_objective"
+        ]["label_fontsize"],
+    )
+    ax.set_ylabel(
+        "Submission",
+        fontsize=config.plot_settings["distribution_to_distribution"][
+            "optimal_objective"
+        ]["label_fontsize"],
+    )
+
+    if (
+        config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+            "title"
+        ]
+        is None
+    ):
+        config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+            "title"
+        ] = f"{exact_objective_label} between Ground Truth and Submission (with and without optimized populations)"
+    elif not config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+        "title"
+    ]:
+        config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+            "title"
+        ] = None
     ax.set_title(
-        "EMD between Ground Truth and Submission (with and without optimized populations)"
+        config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+            "title"
+        ],
+        fontsize=config.plot_settings["distribution_to_distribution"][
+            "optimal_objective"
+        ]["title_fontsize"],
     )
     # ax.legend()
 
     fig.tight_layout()
 
     fig.savefig(
-        config.output_paths["distribution_to_distribution"]["optimal_emd_plot_outpath"],
+        config.output_paths["distribution_to_distribution"][
+            "optimal_objective_plot_outpath"
+        ],
         bbox_inches="tight",
-        dpi=300,
+        dpi=config.plot_settings["distribution_to_distribution"]["optimal_objective"][
+            "dpi"
+        ],
     )
 
 
@@ -599,6 +728,6 @@ if __name__ == "__main__":
         config = yaml.safe_load(file)
     config = PlottingConfig.from_dict(config)
     assert config.map_to_map_distance in AVAILABLE_MAP2MAP_DISTANCES.keys()
-    # map_to_map(config)
+    map_to_map(config)
     distribution_to_distribution_optimal_probability(config)
-    # distribution_to_distribution_optimal_emd(config)
+    distribution_to_distribution_optimal_objective(config)
