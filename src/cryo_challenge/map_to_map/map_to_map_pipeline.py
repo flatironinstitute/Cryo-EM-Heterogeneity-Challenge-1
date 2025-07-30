@@ -18,7 +18,11 @@ from .map_to_map_distance import (
 )
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 ORDER_TO_ENDURE_FSC_BEFORE_RES = [
@@ -62,7 +66,10 @@ def run(config):
         if distance_label in config["metrics"]
     }
 
-    do_low_memory_mode = config["metrics"]["shared_params"]["low_memory"] is not None
+    if config["metrics"]["shared_params"]["low_memory"] is None:
+        do_low_memory_mode = False
+    else:
+        do_low_memory_mode = config["metrics"]["shared_params"]["low_memory"]["do"]
 
     logger.info("Loading submission")
     submission = torch.load(
@@ -104,9 +111,8 @@ def run(config):
 
     computed_assets = {}
     for distance_label, map_to_map_distance in map_to_map_distances.items():
-        print(f"Computing {distance_label} distance")
         assert distance_label in config["metrics"].keys()
-        logger.info(f"cost matrix: {distance_label}")
+        logger.info(f"Computing: {distance_label}")
 
         map_to_map_distance.distance_matrix_precomputation(
             maps_gt_flat,

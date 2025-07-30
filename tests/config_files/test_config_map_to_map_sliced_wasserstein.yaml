@@ -14,10 +14,10 @@ data_params:
     path_to_mask: tests/data/Ground_truth/test_mask_bool.mrc
 metrics:
   sliced_wasserstein:
-    downsample_box_size: 4
-    n_rotations: 7
-    vmap_chunk_size_gt: 4
-    vmap_chunk_size_submission: 4
+    downsample_box_size: 32
+    n_rotations: 300
+    vmap_chunk_size_gt: 80
+    vmap_chunk_size_submission: 80
     wasserstein_p: 2
     dev: cpu
     compute_self_metric: true

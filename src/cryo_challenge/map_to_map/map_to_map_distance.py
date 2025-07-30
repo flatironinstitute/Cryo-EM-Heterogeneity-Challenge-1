@@ -26,8 +26,11 @@ from .procrustes_wasserstein.procrustes_wasserstein import (
     procrustes_wasserstein,
 )
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -789,7 +792,8 @@ class GromovWassersteinDistance(MapToMapDistance):
 class SlicedWassersteinDistance(MapToMapDistance):
     """Sliced Wasserstein distance.
 
-    Sliced Wasserstein distance is invariant to map alignment, because it compares the projections of the maps onto random directions.
+    Sliced Wasserstein distance compares the projections of the maps onto random directions
+    (same random direction for both volumes, so not alignment invariant).
     """
 
     @override
@@ -799,6 +803,7 @@ class SlicedWassersteinDistance(MapToMapDistance):
         maps1 = maps1.reshape(-1, bs, bs, bs)
         maps2 = maps2.reshape(-1, bs, bs, bs)
 
+        logger.info("Downsampling maps for Sliced Wasserstein distance")
         downsampled_volumes_gt = downsample_submission(
             maps1, sliced_wasserstein_config["downsample_box_size"]
         ).to(sliced_wasserstein_config["dev"])
@@ -806,6 +811,7 @@ class SlicedWassersteinDistance(MapToMapDistance):
             maps2, sliced_wasserstein_config["downsample_box_size"]
         ).to(sliced_wasserstein_config["dev"])
 
+        logger.info("Computing Sliced Wasserstein distance matrix")
         distance_matrix_sw = get_distance_matrix_real_space_sliced_wasserstein(
             downsampled_volumes_gt, downsampled_volumes_sub, sliced_wasserstein_config
         )

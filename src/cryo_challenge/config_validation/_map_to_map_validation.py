@@ -258,12 +258,16 @@ class MapToMapInputConfigMetricsSlicedWasserstein(BaseModel, extra="forbid"):
         description="Number of rotations to average over",
     )
     vmap_chunk_size_gt: PositiveInt = Field(
-        default=80,
+        default=40,
         description="Chunk size for the ground truth volumes",
     )
     vmap_chunk_size_submission: PositiveInt = Field(
-        default=20,
+        default=40,
         description="Chunk size for the submission volumes",
+    )
+    vmap_chunk_size_n_rotations: PositiveInt = Field(
+        default=50,
+        description="Chunk size for the n_rotations dimension",
     )
     wasserstein_p: Literal[1, 2] = Field(
         default=2,
