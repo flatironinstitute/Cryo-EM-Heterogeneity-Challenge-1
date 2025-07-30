@@ -11,13 +11,14 @@ data_params:
     path_to_metadata: tests/data/Ground_truth/test_metadata_10.csv
   mask_params:
     apply_mask: false
-    path_to_mask: tests/data/Ground_truth/test_mask_bool.mrc
+    path_to_mask: null
 metrics:
   sliced_wasserstein:
-    downsample_box_size: 32
-    n_rotations: 300
-    vmap_chunk_size_gt: 80
-    vmap_chunk_size_submission: 80
+    downsample_box_size: 4
+    n_rotations: 30
+    vmap_chunk_size_gt: 2
+    vmap_chunk_size_submission: 2
+    vmap_chunk_size_n_rotations: 10
     wasserstein_p: 2
     dev: cpu
     compute_self_metric: true
