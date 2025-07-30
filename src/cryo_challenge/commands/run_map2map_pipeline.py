@@ -38,13 +38,13 @@ def main(args):
     config = dict(MapToMapInputConfig(**config).model_dump(exclude_none=True))
     warnexists(config["path_to_output_file"])
     mkbasedir(os.path.dirname(config["path_to_output_file"]))
-
     return run(config)  # return 0 to avoid dump
 
 
 def main_as_cli():
     parser = argparse.ArgumentParser(description=__doc__)
-    return main(add_args(parser).parse_args())
+    main(add_args(parser).parse_args())
+    return 0
 
 
 if __name__ == "__main__":
