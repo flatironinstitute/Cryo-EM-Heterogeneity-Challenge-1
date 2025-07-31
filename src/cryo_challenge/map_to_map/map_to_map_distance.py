@@ -26,8 +26,11 @@ from .procrustes_wasserstein.procrustes_wasserstein import (
     procrustes_wasserstein,
 )
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -786,10 +789,32 @@ class GromovWassersteinDistance(MapToMapDistance):
         return self.stored_computed_assets  # must run get_distance_matrix first
 
 
+def optimize_scale_and_bias(maps_ref, maps_to_optimize):
+    """Optimize scale and bias for two maps.
+
+    Notes:
+    Minimizes || maps_ref.mean(0) - (scale*maps_to_optimize + bias).mean(0) ||
+
+    """
+    mean_map_ref = maps_ref.mean(0)
+    mean_map_to_optimize = maps_to_optimize.mean(0)
+
+    cc = torch.mean(mean_map_to_optimize**2)
+    co = torch.mean(mean_map_ref * mean_map_to_optimize)
+    c = torch.mean(mean_map_to_optimize)
+    o = torch.mean(mean_map_ref)
+
+    scale = (co - c * o) / (cc - c**2)
+    bias = o - scale * c
+
+    return scale, bias
+
+
 class SlicedWassersteinDistance(MapToMapDistance):
     """Sliced Wasserstein distance.
 
-    Sliced Wasserstein distance is invariant to map alignment, because it compares the projections of the maps onto random directions.
+    Sliced Wasserstein distance compares the projections of the maps onto random directions
+    (same random direction for both volumes, so not alignment invariant).
     """
 
     @override
@@ -799,6 +824,29 @@ class SlicedWassersteinDistance(MapToMapDistance):
         maps1 = maps1.reshape(-1, bs, bs, bs)
         maps2 = maps2.reshape(-1, bs, bs, bs)
 
+        if sliced_wasserstein_config["multiplicative_mask"]["apply_mask"]:
+            logger.info("Applying multiplicative mask for Sliced Wasserstein distance")
+            mask = mrcfile.open(
+                sliced_wasserstein_config["multiplicative_mask"]["path_to_mask"]
+            ).data
+            mask = torch.from_numpy(mask).to(maps1.dtype).unsqueeze(0)
+            maps1 = maps1 * mask
+            maps2 = maps2 * mask
+
+        if sliced_wasserstein_config["normalize_params"]["do"]:
+            logger.info("Normalizing maps for Sliced Wasserstein distance")
+            if (
+                sliced_wasserstein_config["normalize_params"]["method"]
+                == "optimize_scale_and_bias"
+            ):
+                scale, bias = optimize_scale_and_bias(maps1, maps2)
+                maps2 = scale * maps2 + bias
+            else:
+                raise NotImplementedError(
+                    f"Normalization method {sliced_wasserstein_config['normalize_params']['method']} not implemented."
+                )
+
+        logger.info("Downsampling maps for Sliced Wasserstein distance")
         downsampled_volumes_gt = downsample_submission(
             maps1, sliced_wasserstein_config["downsample_box_size"]
         ).to(sliced_wasserstein_config["dev"])
@@ -806,6 +854,7 @@ class SlicedWassersteinDistance(MapToMapDistance):
             maps2, sliced_wasserstein_config["downsample_box_size"]
         ).to(sliced_wasserstein_config["dev"])
 
+        logger.info("Computing Sliced Wasserstein distance matrix")
         distance_matrix_sw = get_distance_matrix_real_space_sliced_wasserstein(
             downsampled_volumes_gt, downsampled_volumes_sub, sliced_wasserstein_config
         )

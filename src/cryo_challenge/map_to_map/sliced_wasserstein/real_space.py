@@ -1,6 +1,16 @@
 import torch
 import torch.nn.functional as F
+from torch.func import vmap
 from scipy.spatial.transform import Rotation as R
+import logging
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 
 @torch.no_grad()
@@ -84,6 +94,58 @@ def wasserstein_1d_torch_pairwise(a, b, p):
 
 
 @torch.no_grad()
+def get_distance_matrix_real_space_sliced_wasserstein_vmap(
+    volumes_gt, volumes_sub, config
+):
+    dev = config["dev"]
+    dtype = volumes_gt.dtype
+    grid = prepare_grid(config["downsample_box_size"], dtype).to(dev)
+    n_rotations = config["n_rotations"]
+
+    # Generate batched random rotations and translations
+    rotations = torch.tensor(
+        R.random(n_rotations).as_matrix(), dtype=dtype, device=dev
+    )  # (n_rotations, 3, 3)
+    translations = torch.zeros(
+        n_rotations, 3, dtype=dtype, device=dev
+    )  # (n_rotations, 3)
+
+    # Project all volumes under all rotations
+    def project_all(volumes, rotations, translations, grid, chunk_size):
+        return vmap(
+            lambda R_, t_: vmap(
+                interpolate_and_project,
+                in_dims=(0, None, None, None),
+                chunk_size=chunk_size,
+            )(volumes, R_, t_, grid),
+            in_dims=(0, 0),
+        )(rotations, translations)  # → (n_rotations, n_vols, box_size)
+
+    pixel_strips_gt = project_all(
+        volumes_gt, rotations, translations, grid, config["vmap_chunk_size_gt"]
+    )
+    pixel_strips_sub = project_all(
+        volumes_sub, rotations, translations, grid, config["vmap_chunk_size_submission"]
+    )
+
+    # Compute sliced Wasserstein matrices for each rotation
+    sliced_w_matrices = vmap(
+        lambda strips_gt, strips_sub: wasserstein_1d_torch_pairwise(
+            strips_gt, strips_sub, config["wasserstein_p"]
+        ),
+        in_dims=(0, 0),  # vmap over rotations
+        chunk_size=config["vmap_chunk_size_n_rotations"],
+    )(pixel_strips_gt, pixel_strips_sub)  # → (n_rotations, n_vols_gt, n_vols_sub)
+
+    # Average over rotations
+    map_to_map_distance_matrix = sliced_w_matrices.mean(
+        dim=0
+    )  # → (n_vols_gt, n_vols_sub)
+
+    return map_to_map_distance_matrix
+
+
+@torch.no_grad()
 def get_distance_matrix_real_space_sliced_wasserstein(volumes_gt, volumes_sub, config):
     dev = config["dev"]
     grid = prepare_grid(config["downsample_box_size"], volumes_gt.dtype).to(dev)
@@ -95,7 +157,7 @@ def get_distance_matrix_real_space_sliced_wasserstein(volumes_gt, volumes_sub, c
     ).to(dev)
     for _ in range(n_rotations):
         if _ % 100 == 0:
-            print("rotation number", _)
+            logger.info(f"rotation number {_}")
         rotation = torch.from_numpy(R.random().as_matrix()).to(volumes_gt.dtype).to(dev)
         translation = torch.zeros(3, dtype=volumes_gt.dtype).to(dev)
         pixel_strips_gt = torch.vmap(
@@ -108,6 +170,7 @@ def get_distance_matrix_real_space_sliced_wasserstein(volumes_gt, volumes_sub, c
             in_dims=(0, None, None, None),
             chunk_size=config["vmap_chunk_size_submission"],
         )(volumes_sub, rotation, translation, grid)
+        # sliced_wasserstein pixel strip example
         sliced_w_matrix = wasserstein_1d_torch_pairwise(
             pixel_strips_gt, pixel_strips_sub, config["wasserstein_p"]
         )
