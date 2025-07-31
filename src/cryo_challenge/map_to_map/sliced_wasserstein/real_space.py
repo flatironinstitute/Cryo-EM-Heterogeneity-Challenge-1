@@ -157,7 +157,7 @@ def get_distance_matrix_real_space_sliced_wasserstein(volumes_gt, volumes_sub, c
     ).to(dev)
     for _ in range(n_rotations):
         if _ % 100 == 0:
-            logger.info("rotation number", _)
+            logger.info(f"rotation number {_}")
         rotation = torch.from_numpy(R.random().as_matrix()).to(volumes_gt.dtype).to(dev)
         translation = torch.zeros(3, dtype=volumes_gt.dtype).to(dev)
         pixel_strips_gt = torch.vmap(

@@ -25,6 +25,9 @@ metrics:
     multiplicative_mask:
       apply_mask: true
       path_to_mask: tests/data/Ground_truth/test_mask_bool.mrc
+    normalize_params:
+      do: true
+      method: optimize_scale_and_bias
 
   shared_params:
     chunk_size_submission: 4

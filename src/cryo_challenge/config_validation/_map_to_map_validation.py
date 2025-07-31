@@ -138,7 +138,7 @@ class MapToMapInputConfigNormalize(BaseModel, extra="forbid"):
         default=False,
         description="Whether to normalize the volumes",
     )
-    method: Literal["median_zscore"] = Field(
+    method: Literal["median_zscore", "optimize_scale_and_bias"] = Field(
         default="median_zscore",
         description="Method to use for normalization",
     )
@@ -279,11 +279,24 @@ class MapToMapInputConfigMetricsSlicedWasserstein(BaseModel, extra="forbid"):
     multiplicative_mask: Dict = Field(
         description="Parameters for the multiplicative mask",
     )
+    normalize_params: Optional[Dict] = Field(
+        default=None,
+        description="Parameters for the normalization of the volumes",
+    )
 
     @field_validator("multiplicative_mask")
     @classmethod
     def validate_mask_params(cls, mask_params):
         return dict(MapToMapInputConfigDataMask(**mask_params).model_dump())
+
+    @field_validator("normalize_params")
+    @classmethod
+    def validate_normalize_params(cls, normalize_params):
+        if normalize_params is not None:
+            normalize_params = dict(
+                MapToMapInputConfigNormalize(**normalize_params).model_dump()
+            )
+        return normalize_params
 
 
 class MapToMapInputConfigMetricsProcrustesWasserstein(BaseModel, extra="forbid"):

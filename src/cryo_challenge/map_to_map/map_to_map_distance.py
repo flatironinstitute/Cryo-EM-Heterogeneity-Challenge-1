@@ -789,6 +789,27 @@ class GromovWassersteinDistance(MapToMapDistance):
         return self.stored_computed_assets  # must run get_distance_matrix first
 
 
+def optimize_scale_and_bias(maps_ref, maps_to_optimize):
+    """Optimize scale and bias for two maps.
+
+    Notes:
+    Minimizes || maps_ref.mean(0) - (scale*maps_to_optimize + bias).mean(0) ||
+
+    """
+    mean_map_ref = maps_ref.mean(0)
+    mean_map_to_optimize = maps_to_optimize.mean(0)
+
+    cc = torch.mean(mean_map_to_optimize**2)
+    co = torch.mean(mean_map_ref * mean_map_to_optimize)
+    c = torch.mean(mean_map_to_optimize)
+    o = torch.mean(mean_map_ref)
+
+    scale = (co - c * o) / (cc - c**2)
+    bias = o - scale * c
+
+    return scale, bias
+
+
 class SlicedWassersteinDistance(MapToMapDistance):
     """Sliced Wasserstein distance.
 
@@ -800,16 +821,30 @@ class SlicedWassersteinDistance(MapToMapDistance):
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         sliced_wasserstein_config = self.config["metrics"]["sliced_wasserstein"]
         bs = self.config["data_params"]["box_size"]
-        mask = (
-            mrcfile.open(
+        maps1 = maps1.reshape(-1, bs, bs, bs)
+        maps2 = maps2.reshape(-1, bs, bs, bs)
+
+        if sliced_wasserstein_config["multiplicative_mask"]["apply_mask"]:
+            logger.info("Applying multiplicative mask for Sliced Wasserstein distance")
+            mask = mrcfile.open(
                 sliced_wasserstein_config["multiplicative_mask"]["path_to_mask"]
             ).data
-            if sliced_wasserstein_config["multiplicative_mask"]["apply_mask"]
-            else 1
-        )
-        mask = torch.from_numpy(mask).to(maps1.dtype).unsqueeze(0)
-        maps1 = maps1.reshape(-1, bs, bs, bs) * mask
-        maps2 = maps2.reshape(-1, bs, bs, bs) * mask
+            mask = torch.from_numpy(mask).to(maps1.dtype).unsqueeze(0)
+            maps1 = maps1 * mask
+            maps2 = maps2 * mask
+
+        if sliced_wasserstein_config["normalize_params"]["do"]:
+            logger.info("Normalizing maps for Sliced Wasserstein distance")
+            if (
+                sliced_wasserstein_config["normalize_params"]["method"]
+                == "optimize_scale_and_bias"
+            ):
+                scale, bias = optimize_scale_and_bias(maps1, maps2)
+                maps2 = scale * maps2 + bias
+            else:
+                raise NotImplementedError(
+                    f"Normalization method {sliced_wasserstein_config['normalize_params']['method']} not implemented."
+                )
 
         logger.info("Downsampling maps for Sliced Wasserstein distance")
         downsampled_volumes_gt = downsample_submission(

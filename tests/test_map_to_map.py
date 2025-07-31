@@ -109,7 +109,3 @@ def test_run_map2map_pipeline_sliced_wasserstein():
     assert "sliced_wasserstein" in results_dict.keys()
 
     return
-
-
-if __name__ == "__main__":
-    test_run_map2map_pipeline_sliced_wasserstein()
