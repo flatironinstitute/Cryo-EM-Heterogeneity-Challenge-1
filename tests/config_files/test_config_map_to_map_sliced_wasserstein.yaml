@@ -22,6 +22,9 @@ metrics:
     wasserstein_p: 2
     dev: cpu
     compute_self_metric: true
+    multiplicative_mask:
+      apply_mask: true
+      path_to_mask: tests/data/Ground_truth/test_mask_bool.mrc
 
   shared_params:
     chunk_size_submission: 4

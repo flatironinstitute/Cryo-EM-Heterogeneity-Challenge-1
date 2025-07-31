@@ -276,6 +276,14 @@ class MapToMapInputConfigMetricsSlicedWasserstein(BaseModel, extra="forbid"):
     dev: Literal["cpu", "cuda"] = Field(
         default="cuda" if torch.cuda.is_available() else "cpu"
     )
+    multiplicative_mask: Dict = Field(
+        description="Parameters for the multiplicative mask",
+    )
+
+    @field_validator("multiplicative_mask")
+    @classmethod
+    def validate_mask_params(cls, mask_params):
+        return dict(MapToMapInputConfigDataMask(**mask_params).model_dump())
 
 
 class MapToMapInputConfigMetricsProcrustesWasserstein(BaseModel, extra="forbid"):

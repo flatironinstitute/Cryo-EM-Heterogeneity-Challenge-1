@@ -800,8 +800,16 @@ class SlicedWassersteinDistance(MapToMapDistance):
     def get_distance_matrix(self, maps1, maps2, global_store_of_running_results):
         sliced_wasserstein_config = self.config["metrics"]["sliced_wasserstein"]
         bs = self.config["data_params"]["box_size"]
-        maps1 = maps1.reshape(-1, bs, bs, bs)
-        maps2 = maps2.reshape(-1, bs, bs, bs)
+        mask = (
+            mrcfile.open(
+                sliced_wasserstein_config["multiplicative_mask"]["path_to_mask"]
+            ).data
+            if sliced_wasserstein_config["multiplicative_mask"]["apply_mask"]
+            else 1
+        )
+        mask = torch.from_numpy(mask).to(maps1.dtype).unsqueeze(0)
+        maps1 = maps1.reshape(-1, bs, bs, bs) * mask
+        maps2 = maps2.reshape(-1, bs, bs, bs) * mask
 
         logger.info("Downsampling maps for Sliced Wasserstein distance")
         downsampled_volumes_gt = downsample_submission(
