@@ -1,5 +1,5 @@
 from omegaconf import OmegaConf
-from cryo_challenge._commands import run_preprocessing
+from cryo_challenge.commands import run_preprocessing
 
 
 def test_run_preprocessing():

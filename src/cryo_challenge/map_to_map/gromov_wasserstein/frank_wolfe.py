@@ -1,0 +1,114 @@
+import torch
+import ot
+from collections import defaultdict
+
+
+def _objective_no_constant_term(X, Y, Gamma, L):
+    """Compute 2 * X * Gamma * Y^T"""
+    Z = 2 * X @ Gamma @ Y.T
+    frob_sq = torch.sum(Z**2)  # ||·||_F^2
+    inner_product = torch.sum(L * Gamma)  # <L, Gamma>
+    return -frob_sq - inner_product
+
+
+def gw_objective_cost(Cx, Cy, Gamma):
+    """
+    Compute the Gromov-Wasserstein objective given distance matrices Cx, Cy and transport plan Gamma.
+    Args:
+        Cx: np.ndarray, shape (n, n), pairwise distance matrix for X
+        Cy: np.ndarray, shape (m, m), pairwise distance matrix for Y
+        Gamma: np.ndarray, shape (n, m), transport plan
+    Returns:
+        obj: float, GW objective value
+    """
+    term = (
+        (Cx[:, :, None, None] - Cy[None, None, :, :]) ** 2
+        * Gamma[:, None, :, None]
+        * Gamma[None, :, None, :]
+    )
+    return torch.sum(term)
+
+
+def frank_wolfe_emd(X, Y, Gamma0, mu_x, mu_y, max_iter, gamma_atol, log=None):
+    """
+    Frank-Wolfe algorithm for Gromov-wasserstein optimal transport using the Earth Mover's Distance (EMD).
+
+    Objective extended from https://openreview.net/forum?id=l9MbuqzlZt to include non-uniform marginals mu_x and mu_y.
+
+    $$
+    \min_{\Gamma \in \Pi} -\|2X \Gamma Y^\top\|_F^2 - \langle L, \Gamma \rangle + c_0
+
+    \begin{aligned}
+    L &= 2 (\mu_y^\top \mathbf{1}_y) \, m_x m_y^\top - 4 m_x \mu_y Y^\top Y - 4 X^\top X \mu_x m_y \\
+    \nabla_{\Gamma_t} f(\Gamma_t) &= -8 X^\top X \Gamma_t Y^\top Y - L \\
+    S_t &= \arg\min_{S \in \Pi} \langle \Gamma_t, \nabla_\Gamma f(\Gamma) \rangle \\
+    \eta_t &= \frac{-8 \, \mathrm{tr}[(S_t - \Gamma_t)^\top X^\top X \Gamma_t Y^\top Y] - \mathrm{tr}[L^\top (S_t - \Gamma_t)]}{8 \, \mathrm{tr}[(S_t - \Gamma_t)^\top X^\top X (S_t - \Gamma_t) Y^\top Y]} \\
+    \Gamma_{t+1} &= \eta_t\Gamma_t + (1-\eta_t) S_t
+    \end{aligned}
+    $$
+
+    """
+    lx, nx = X.shape
+    ly, ny = Y.shape
+    assert nx == ny
+    XtX = X.T @ X
+    YtY = Y.T @ Y
+
+    mx = (torch.linalg.norm(X, axis=0) ** 2).reshape(-1, 1)
+    my = (torch.linalg.norm(Y, axis=0) ** 2).reshape(-1, 1)
+    vec_1xy = torch.ones_like(mx)
+
+    L = 2 * mu_y.dot(vec_1xy.flatten()) * torch.outer(mx.flatten(), my.flatten())
+    L -= 4 * torch.outer(mx.flatten(), mu_y.flatten()) @ Y.T @ Y
+    L -= 4 * X.T @ X @ torch.outer(mu_x.flatten(), my.flatten())
+
+    assert Gamma0.shape == L.shape
+
+    # Initial coupling: uniform transport plan
+    Gamma_t_plus_1 = Gamma0
+
+    # log
+    if log is not None:
+        log = defaultdict(list)
+        log["objective"].append(_objective_no_constant_term(X, Y, Gamma0, L))
+        log["Gamma"].append(Gamma0)
+    for t in range(max_iter):
+        print("iter", t)
+        # Gradient
+        Gamma_t = Gamma_t_plus_1
+        grad = -8 * XtX @ Gamma_t @ YtY - L
+
+        # Linear oracle: solve transport problem using EMD
+        C = grad  # cost matrix = gradient
+        S = ot.emd(mu_x, mu_y, C)  # optimal coupling (transport plan)
+
+        # Line search
+        diff = S - Gamma_t
+        numerator = -8 * torch.sum((XtX @ diff) * (Gamma_t @ YtY)) - torch.sum(L * diff)
+        denominator = 8 * torch.sum((XtX @ diff) * (diff @ YtY))
+        eta = torch.clip(numerator / denominator, 0, 1) if denominator > 1e-12 else 0
+
+        # Update
+        Gamma_t_plus_1 = eta * Gamma_t + (1 - eta) * S
+
+        objective_value = _objective_no_constant_term(X, Y, Gamma_t_plus_1, L)
+
+        if log is not None:
+            log["objective"].append(objective_value)
+            log["Gamma"].append(Gamma_t_plus_1)
+            log["eta"].append(0)
+            log["Gamma_t"].append(Gamma_t_plus_1)
+            log["S"].append(Gamma_t_plus_1)
+            log["diff"].append(torch.zeros_like(Gamma_t_plus_1))
+            log["numerator"].append(0)
+            log["denominator"].append(0)
+            log["Gamma_t_plus_1"].append(Gamma_t_plus_1)
+
+        if torch.linalg.norm(Gamma_t_plus_1 - Gamma_t) < gamma_atol:
+            print("Converged")
+            break
+
+    if t == max_iter - 1:
+        print("Max iterations reached")
+
+    return Gamma_t_plus_1, mx, my, objective_value, log

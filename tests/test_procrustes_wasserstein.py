@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from scipy.spatial.transform import Rotation as R
-from cryo_challenge._map_to_map.procrustes_wasserstein.procrustes_wasserstein import (
+from cryo_challenge.map_to_map.procrustes_wasserstein.procrustes_wasserstein import (
     procrustes_wasserstein,
 )
 

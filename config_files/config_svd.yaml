@@ -1,21 +1,29 @@
-path_to_submissions: path/to/preprocessed/submissions/ # where all the submission_i.pt files are
+path_to_submissions:
 #excluded_submissions: # you can exclude some submissions by filename, default = []
 #  - "submission_0.pt"
 #  - "submission_1.pt"
-voxel_size: 1.0 # voxel size of the input maps (will probably be removed soon)
 
 dtype: float32 # optional, default = float32
 svd_max_rank: 5 # optional, default = full rank svd
+
+# processed volumes for SVD can be saved to speed up
+# future computations (see output params)
+continue_from_previous: True # optional, default = False
+
 normalize_params: # optional, if not given there will be no normalization
-  mask_path: path/to/mask.mrc # default = None, no masking applied
-  bfactor: 170 # default = None, no bfactor applied
-  box_size_ds: 16 # default = None, no downsampling applied
+  path_to_mask: path/to/mask.mrc # default = None, no masking applied
+  downsample_box_size: 16 # default = None, no downsampling applied
+  threshold_percentile: 97.0 # default = None, no thresholding applied
+  normalize_power_spectrum: True # default = False, no normalization applied
 
 gt_params: # optional, if provided there will be extra results
-  gt_vols_file: path/to/gt_volumes.npy # volumes must be in .npy format (memory stuff)
+  path_to_gt_volumes: path/to/gt_volumes.pt # volumes must be saved in a .pt file
   skip_vols: 1 # default = 1, no volumes skipped. Equivalent to volumes[::skip_vols]
 
 output_params:
-  output_file: path/to/output_file.pt # where the results will be saved
-  save_svd_data: True # optional, default = False
+  path_to_output_dir: path/to/output/dir # where the results and other files will be saved
+
+  # This parameter is required if continue_from_previous wants to be used in the future
+  keep_prep_submissions_for_svd: True # don't delete the submissions prepared to run SVD
+  overwrite: True # overwrite the output dir if it already exists
   generate_plots: True # optional, default = False
