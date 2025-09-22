@@ -30,10 +30,21 @@ The data is available via the Open Science Foundation project [The Inaugural Fla
 
 **_NOTE_**: We recommend downloadaing the data with the script and wget as the downloads from the web browser might be unstable.
 
+# System Requirements
+
+Running the code in this repository requires a system with Python 3.10-3.13.
+
 # Installation
 
+## Clone the repository
+Before installation, please clone this GitHub repository locally:
+
+```bash
+git clone git@github.com:flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1.git
+```
+
 ## Stable installation
-Installing this repository is simply. We recommend creating a virtual environment (using conda or pyenv), since we have dependencies such as PyTorch or Aspire, which are better dealt with in an isolated environment. After creating your environment, make sure to activate it and run
+The library in this repository may be installed with `pip`. We recommend creating a virtual environment (using conda or pyenv), since we have dependencies such as PyTorch or Aspire, which are better dealt with in an isolated environment. After creating your environment, make sure to activate it and run
 
 ```bash
 cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
@@ -45,18 +56,14 @@ If you are interested in testing the programs previously installed, please, inst
 
 ```bash
 cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
-pip install .[dev]
+pip install -e .[dev]
 ```
 
 The test included in the repo can be executed with PyTest as shown below:
 
 ```bash
 cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
-sh tests/scripts/fetch_test_data.sh # download test data from OSF
-pytest tests/test_preprocessing.py
-pytest tests/test_svd.py
-pytest tests/test_map_to_map.py
-pytest tests/test_distribution_to_distribution.py
+pytest tests/
 ```
 
 # Running

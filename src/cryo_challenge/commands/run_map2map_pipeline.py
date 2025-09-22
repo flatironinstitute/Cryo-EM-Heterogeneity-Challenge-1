@@ -31,14 +31,20 @@ def warnexists(out):
         Warning("Warning: {} already exists. Overwriting.".format(out))
 
 
+def run_map2map_from_config(config: MapToMapInputConfig):
+    config_as_dict = dict(config.model_dump(exclude_none=True))
+    warnexists(config_as_dict["path_to_output_file"])
+    mkbasedir(os.path.dirname(config_as_dict["path_to_output_file"]))
+    return run(config_as_dict)
+
+
 def main(args):
     with open(args.config, "r") as file:
-        config = yaml.safe_load(file)
+        config_file = yaml.safe_load(file)
 
-    config = dict(MapToMapInputConfig(**config).model_dump(exclude_none=True))
-    warnexists(config["path_to_output_file"])
-    mkbasedir(os.path.dirname(config["path_to_output_file"]))
-    return run(config)  # return 0 to avoid dump
+    config = MapToMapInputConfig(**config_file)
+    run_output = run_map2map_from_config(config)
+    return run_output
 
 
 def main_as_cli():

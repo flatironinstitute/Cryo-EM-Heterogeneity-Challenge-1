@@ -117,7 +117,7 @@ def main():
         "gt_equally_spaced_samples",
     ]:
         torch.manual_seed(args.seed)
-        gt_volumes = torch.load(args.gt_path_to_volumes, weights_only=False)
+        gt_volumes = torch.load(str(args.gt_path_to_volumes), weights_only=False)
         n_pix = int(round(gt_volumes.shape[-1] ** (1 / 3)))
         assert gt_volumes.shape[-1] == n_pix**3, "Input file must be a cube."
 
