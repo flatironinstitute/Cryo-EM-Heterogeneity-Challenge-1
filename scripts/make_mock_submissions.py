@@ -69,7 +69,7 @@ def main():
     ), "Invalid mode. Choose from 'divisible_average', 'gt_equally_spaced_samples', or 'gt_equally_spaced_averaged_disjoint'."
 
     if args.mode == "divisible_average":
-        ground_truth = torch.load(args.path_to_submission_file, weights_only=False)
+        ground_truth = torch.load(str(args.path_to_submission_file), weights_only=False)
         assert (
             "volumes" in ground_truth.keys()
         ), "Input file must contain 'volumes' key."

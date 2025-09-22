@@ -59,7 +59,7 @@ class SVDInputConfigGT(BaseModel, extra="forbid"):
 
     @field_validator("path_to_gt_volumes")
     def check_volumes_shape(cls, value):
-        vols_gt = torch.load(value, mmap=True, weights_only=False)
+        vols_gt = torch.load(str(value), mmap=True, weights_only=False)
 
         if len(vols_gt.shape) not in [2, 4]:
             raise ValueError(

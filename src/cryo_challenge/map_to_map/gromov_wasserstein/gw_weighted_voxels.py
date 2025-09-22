@@ -532,7 +532,7 @@ def run_fw(args):
     normalize = not args.skip_normalize
 
     fname = args.fname  # e.g. /path/to/submission_23.pt
-    submission = torch.load(fname, weights_only=False)
+    submission = torch.load(str(fname), weights_only=False)
     volumes = submission["volumes"].to(torch_dtype)
 
     (
