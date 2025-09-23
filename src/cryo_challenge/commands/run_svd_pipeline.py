@@ -33,12 +33,7 @@ def warnexists(out):
         Warning("Warning: {} already exists. Overwriting.".format(out))
 
 
-def main(args):
-    with open(args.config, "r") as file:
-        config_dict = yaml.safe_load(file)
-
-    config = SVDInputConfig(**config_dict)
-
+def run_svd_from_config(config: SVDInputConfig):
     warnexists(config.output_params["path_to_output_dir"])
     mkbasedir(config.output_params["path_to_output_dir"])
 
@@ -64,20 +59,29 @@ def main(args):
     logger.addHandler(fhandler)
     logger.setLevel(logging.INFO)
 
+    config_as_dict = dict(config.model_dump())
     with open(
         os.path.join(config.output_params["path_to_output_dir"], "config.yaml"), "w"
     ) as file:
-        yaml.dump(config_dict, file)
+        yaml.dump(config_as_dict, file)
 
     if config.gt_params is None:
         logging.info("Running SVD without reference volumes")
-        run_svd_noref(config)
+        output = run_svd_noref(config)
 
     else:
         logging.info("Running SVD with reference volumes")
-        run_svd_with_ref(config)
+        output = run_svd_with_ref(config)
 
-    return
+    return output
+
+
+def main(args):
+    with open(args.config, "r") as file:
+        config_dict = yaml.safe_load(file)
+
+    config = SVDInputConfig(**config_dict)
+    return run_svd_from_config(config)
 
 
 def main_as_cli():

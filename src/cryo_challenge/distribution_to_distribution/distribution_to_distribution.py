@@ -73,7 +73,11 @@ def run(config):
 
     user_submitted_populations = data["user_submitted_populations"]
     submission_id = torch.load(
-        data["config"]["data_params"]["submission_params"]["path_to_submission_file"],
+        str(
+            data["config"]["data_params"]["submission_params"][
+                "path_to_submission_file"
+            ]
+        ),
         weights_only=False,
     )["id"]
 

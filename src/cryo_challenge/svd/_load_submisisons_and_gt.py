@@ -37,7 +37,7 @@ class DatasetForSVD(Dataset):
 
     def __getitem__(self, idx) -> Dict[str, Tensor]:
         submission = torch.load(
-            self.submission_files[idx], mmap=False, weights_only=False
+            str(self.submission_files[idx]), mmap=False, weights_only=False
         )
         return submission
 
@@ -125,7 +125,7 @@ def load_gt(svd_input_config: SVDInputConfig) -> DatasetForSVD:
 
 
 def _is_valid_submission_file(filename: FilePath) -> None:
-    submission_metadata = torch.load(filename, mmap=True, weights_only=False)
+    submission_metadata = torch.load(str(filename), mmap=True, weights_only=False)
     if "id" not in submission_metadata:
         raise ValueError(f"Submission file {filename} does not contain 'id' key.")
     if "volumes" not in submission_metadata:
@@ -205,7 +205,7 @@ def _load_submissions_from_scrath(
     },
     dtype: Literal["float32", "float64"] = "float32",
 ) -> List[FilePath]:
-    box_size = torch.load(submission_files[0], weights_only=False, mmap=True)[
+    box_size = torch.load(str(submission_files[0]), weights_only=False, mmap=True)[
         "volumes"
     ].shape[-1]
 
@@ -248,7 +248,7 @@ def _load_gt_from_scratch(
     },
     dtype: Literal["float32", "float64"] = "float32",
 ) -> Dict[str, Tensor]:
-    volumes = torch.load(path_to_gt_volumes, mmap=True, weights_only=False)
+    volumes = torch.load(str(path_to_gt_volumes), mmap=True, weights_only=False)
 
     if len(volumes.shape) == 2:
         box_size_gt = int(round((float(volumes.shape[-1]) ** (1.0 / 3.0))))
@@ -334,7 +334,7 @@ def _load_submission(
     mask: Tensor,
     dtype: Literal["float32", "float64"],
 ) -> tuple[str, dict]:
-    submission = torch.load(path_to_submission, weights_only=False, mmap=True)
+    submission = torch.load(str(path_to_submission), weights_only=False, mmap=True)
 
     label = submission["id"]
 

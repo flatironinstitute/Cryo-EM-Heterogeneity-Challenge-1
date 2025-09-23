@@ -28,7 +28,7 @@ def main():
     args = parser.parse_args()
 
     # open mmap .pt
-    maps = torch.load(args.fname, mmap=True, weights_only=False)
+    maps = torch.load(str(args.fname), mmap=True, weights_only=False)
     assert maps.ndim == 2, "expected flannened 3D maps"
     npix = int(round(maps.shape[-1] ** (1 / 3)))
 

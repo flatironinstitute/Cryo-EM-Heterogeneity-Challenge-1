@@ -1,4 +1,5 @@
-path_to_submissions:
+path_to_submissions: path/to/submissions/dir # or path to symbolic links directory
+
 #excluded_submissions: # you can exclude some submissions by filename, default = []
 #  - "submission_0.pt"
 #  - "submission_1.pt"
@@ -12,18 +13,18 @@ continue_from_previous: True # optional, default = False
 
 normalize_params: # optional, if not given there will be no normalization
   path_to_mask: path/to/mask.mrc # default = None, no masking applied
-  downsample_box_size: 16 # default = None, no downsampling applied
-  threshold_percentile: 97.0 # default = None, no thresholding applied
+  downsample_box_size: 64 # default = None, no downsampling applied
+  threshold_percentile: 93.0 # default = None, no thresholding applied
   normalize_power_spectrum: True # default = False, no normalization applied
 
 gt_params: # optional, if provided there will be extra results
   path_to_gt_volumes: path/to/gt_volumes.pt # volumes must be saved in a .pt file
-  skip_vols: 1 # default = 1, no volumes skipped. Equivalent to volumes[::skip_vols]
+  skip_vols: 10 # default = 1, no volumes skipped. Equivalent to volumes[::skip_vols]
 
 output_params:
   path_to_output_dir: path/to/output/dir # where the results and other files will be saved
 
   # This parameter is required if continue_from_previous wants to be used in the future
+  # It will speed up significantly future computations of the SVD metric
   keep_prep_submissions_for_svd: True # don't delete the submissions prepared to run SVD
   overwrite: True # overwrite the output dir if it already exists
-  generate_plots: True # optional, default = False

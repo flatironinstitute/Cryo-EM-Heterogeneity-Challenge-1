@@ -722,7 +722,7 @@ if __name__ == "__main__":
         help="Path to the config file for plotting.",
     )
     args = parser.parse_args()
-    path_to_config = args.config  # "/mnt/home/smbp/ceph/smbpchallenge/plotting_round1_and_round2/config_plotting_fsc_20250527.yaml"
+    path_to_config = args.config
 
     with open(path_to_config, "r") as file:
         config = yaml.safe_load(file)

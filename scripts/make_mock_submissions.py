@@ -69,7 +69,7 @@ def main():
     ), "Invalid mode. Choose from 'divisible_average', 'gt_equally_spaced_samples', or 'gt_equally_spaced_averaged_disjoint'."
 
     if args.mode == "divisible_average":
-        ground_truth = torch.load(args.path_to_submission_file, weights_only=False)
+        ground_truth = torch.load(str(args.path_to_submission_file), weights_only=False)
         assert (
             "volumes" in ground_truth.keys()
         ), "Input file must contain 'volumes' key."
@@ -117,7 +117,7 @@ def main():
         "gt_equally_spaced_samples",
     ]:
         torch.manual_seed(args.seed)
-        gt_volumes = torch.load(args.gt_path_to_volumes, weights_only=False)
+        gt_volumes = torch.load(str(args.gt_path_to_volumes), weights_only=False)
         n_pix = int(round(gt_volumes.shape[-1] ** (1 / 3)))
         assert gt_volumes.shape[-1] == n_pix**3, "Input file must be a cube."
 

@@ -826,9 +826,12 @@ class SlicedWassersteinDistance(MapToMapDistance):
 
         if sliced_wasserstein_config["multiplicative_mask"]["apply_mask"]:
             logger.info("Applying multiplicative mask for Sliced Wasserstein distance")
-            mask = mrcfile.open(
-                sliced_wasserstein_config["multiplicative_mask"]["path_to_mask"]
-            ).data
+            mask = np.asarray(
+                mrcfile.open(
+                    sliced_wasserstein_config["multiplicative_mask"]["path_to_mask"]
+                ).data
+            ).copy()
+
             mask = torch.from_numpy(mask).to(maps1.dtype).unsqueeze(0)
             maps1 = maps1 * mask
             maps2 = maps2 * mask

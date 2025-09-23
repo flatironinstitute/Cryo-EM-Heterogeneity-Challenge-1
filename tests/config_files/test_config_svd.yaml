@@ -19,5 +19,4 @@ gt_params: # optional, if provided there will be extra results
 output_params:
   path_to_output_dir: tests/results/svd/
   keep_prep_submissions_for_svd: False
-  generate_plots: False
   overwrite: True

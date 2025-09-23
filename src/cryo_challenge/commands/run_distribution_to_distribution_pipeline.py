@@ -7,9 +7,7 @@ import os
 import yaml
 
 from ..distribution_to_distribution.distribution_to_distribution import run
-from ..config_validation._distribution_to_distribution_validation import (
-    DistToDistInputConfig,
-)
+from ..config_validation import DistToDistInputConfig
 
 
 def add_args(parser):
@@ -33,16 +31,19 @@ def warnexists(out):
         Warning("Warning: {} already exists. Overwriting.".format(out))
 
 
+def run_dist2dist_from_config(config: DistToDistInputConfig):
+    config_as_dict = dict(config.model_dump())
+    warnexists(config_as_dict["path_to_output_file"])
+    mkbasedir(os.path.dirname(config_as_dict["path_to_output_file"]))
+    return run(config_as_dict)
+
+
 def main(args):
     with open(args.config, "r") as file:
-        config = yaml.safe_load(file)
+        config_file = yaml.safe_load(file)
 
-    config = dict(DistToDistInputConfig(**config).model_dump())
-    warnexists(config["path_to_output_file"])
-    mkbasedir(os.path.dirname(config["path_to_output_file"]))
-    run(config)
-
-    return 0
+    config = DistToDistInputConfig(**config_file)
+    return run_dist2dist_from_config(config)
 
 
 def main_as_cli():
