@@ -59,7 +59,7 @@ class SVDInputConfigGT(BaseModel, extra="forbid"):
 
     @field_validator("path_to_gt_volumes")
     def check_volumes_shape(cls, value):
-        vols_gt = torch.load(value, mmap=True, weights_only=False)
+        vols_gt = torch.load(str(value), mmap=True, weights_only=False)
 
         if len(vols_gt.shape) not in [2, 4]:
             raise ValueError(
@@ -75,10 +75,6 @@ class SVDInputConfigOutput(BaseModel, extra="forbid"):
     keep_prep_submissions_for_svd: bool = Field(
         default=False,
         description="Save data for continue. If True, this will save the prepared data for continue.",
-    )
-    generate_plots: bool = Field(
-        default=False,
-        description="Generate plots. If True, this will generate plots for the analysis.",
     )
     overwrite: bool = Field(
         default=False,

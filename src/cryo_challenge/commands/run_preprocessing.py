@@ -49,12 +49,7 @@ def _load_reference_config(path_to_reference_config):
     return reference_config
 
 
-def main(args):
-    with open(args.config, "r") as file:
-        config = yaml.safe_load(file)
-
-    config = PreprocessingRunConfig(**config)
-
+def run_preprocessing_from_config(config: SubmissionPreprocessingDataset):
     _warnexists(config.output_path)
     _mkbasedir(config.output_path)
 
@@ -67,6 +62,15 @@ def main(args):
     )
 
     run_preprocessing_pipeline(dataset, config)
+
+
+def main(args):
+    with open(args.config, "r") as file:
+        config = yaml.safe_load(file)
+
+    config = PreprocessingRunConfig(**config)
+
+    run_preprocessing_from_config(config)
 
     return 0
 

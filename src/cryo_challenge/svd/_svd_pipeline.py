@@ -5,7 +5,6 @@ import logging
 
 from ._svd_metrics import (
     compute_pcv_matrix,
-    compute_fsc_matrix_first_eigvecs,
     compute_common_embedding,
     project_to_gt_embedding,
 )
@@ -93,10 +92,6 @@ def run_svd_with_ref(config: SVDInputConfig):
     )
     logging.info("... done")
 
-    logging.info("Computing FSC Distance Matrix")
-    fsc_dist_mtx_results = compute_fsc_matrix_first_eigvecs(submissions_svd, gt_svd)
-    logging.info("... done")
-
     logging.info("Computing Common Embedding")
     common_embedding_results = compute_common_embedding(submissions_svd, gt_svd)
     logging.info("... done")
@@ -105,11 +100,17 @@ def run_svd_with_ref(config: SVDInputConfig):
     gt_embedding_results = project_to_gt_embedding(submissions_svd, gt_svd)
     logging.info("... done")
 
+    populations = {}
+    for i in range(len(submissions_data)):
+        submission = submissions_data[i]
+        pop = submission["populations"]
+        populations[submission["id"]] = pop / pop.sum()
+
     results = {
         "capvar_distance_matrix_results": cap_var_dist_mtx_results,
-        "fsc_distance_matrix_results": fsc_dist_mtx_results,
         "common_embedding_results": common_embedding_results,
         "gt_embedding_results": gt_embedding_results,
+        "populations": populations,
     }
 
     if not config.output_params["keep_prep_submissions_for_svd"]:
@@ -128,11 +129,6 @@ def run_svd_with_ref(config: SVDInputConfig):
     logging.info("Saving results")
     torch.save(results, path_to_results)
     logging.info("... done")
-
-    if config.output_params["generate_plots"]:
-        raise NotImplementedError(
-            "Plots are currently turned off due to incompatibilities. Your results were saved right before this error triggered."
-        )
 
     return
 
@@ -197,22 +193,22 @@ def run_svd_noref(config: dict):
     )
     logging.info("... done")
 
-    logging.info("Computing FSC Distance Matrix")
-    fsc_dist_mtx_results = compute_fsc_matrix_first_eigvecs(
-        submissions_svd, gt_svd=None
-    )
-    logging.info("... done")
-
     logging.info("Computing Common Embedding")
     common_embedding_results = compute_common_embedding(
         submissions_svd=submissions_svd, gt_svd=None
     )
     logging.info("... done")
 
+    populations = {}
+    for i in range(len(submissions_data)):
+        submission = submissions_data[i]
+        pop = submission["populations"]
+        populations[submission["id"]] = pop / pop.sum()
+
     results = {
         "capvar_distance_matrix_results": cap_var_dist_mtx_results,
-        "fsc_distance_matrix_results": fsc_dist_mtx_results,
         "common_embedding_results": common_embedding_results,
+        "populations": populations,
     }
 
     if not config.output_params["keep_prep_submissions_for_svd"]:
@@ -231,10 +227,5 @@ def run_svd_noref(config: dict):
     logging.info("Saving results")
     torch.save(results, path_to_results)
     logging.info("... done")
-
-    if config.output_params["generate_plots"]:
-        raise NotImplementedError(
-            "Plots are currently turned off due to incompatibilities. Your results were saved right before this error triggered."
-        )
 
     return

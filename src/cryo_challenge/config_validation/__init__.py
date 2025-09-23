@@ -9,4 +9,9 @@ from ._map_to_map_validation import (
     MapToMapResultsValidator as MapToMapResultsValidator,
 )
 
+from ._distribution_to_distribution_validation import (
+    DistToDistInputConfig as DistToDistInputConfig,
+    DistToDistResultsValidator as DistToDistResultsValidator,
+)
+
 from ._svd_analysis_validation import SVDInputConfig as SVDInputConfig

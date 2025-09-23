@@ -73,7 +73,7 @@ def run(config):
 
     logger.info("Loading submission")
     submission = torch.load(
-        config["data_params"]["submission_params"]["path_to_submission_file"],
+        str(config["data_params"]["submission_params"]["path_to_submission_file"]),
         weights_only=False,
     )
     submission_volume_key = config["data_params"]["submission_params"]["volume_key"]
@@ -104,7 +104,7 @@ def run(config):
 
     logger.info("Loading ground truth")
     maps_gt_flat = torch.load(
-        config["data_params"]["ground_truth_params"]["path_to_volumes"],
+        str(config["data_params"]["ground_truth_params"]["path_to_volumes"]),
         mmap=do_low_memory_mode,
         weights_only=False,
     )
