@@ -1,0 +1,213 @@
+import pandas as pd
+import pickle
+import torch
+import logging
+from collections import OrderedDict
+
+from ..config_validation._map_to_map_validation import MapToMapResultsValidator
+from .map_to_map_distance import (
+    FSCDistance,
+    Correlation,
+    L2DistanceNorm,
+    BioEM3dDistance,
+    FSCResDistance,
+    Zernike3DDistance,
+    GromovWassersteinDistance,
+    ProcrustesWassersteinDistance,
+    SlicedWassersteinDistance,
+)
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+ORDER_TO_ENDURE_FSC_BEFORE_RES = [
+    "corr",
+    "l2",
+    "bioem",
+    "fsc",
+    "res",
+    "zernike3d",
+    "sliced_wasserstein",
+    "gromov_wasserstein",
+    "procrustes_wasserstein",
+]
+
+AVAILABLE_MAP2MAP_DISTANCES = {
+    "corr": Correlation,
+    "l2": L2DistanceNorm,
+    "bioem": BioEM3dDistance,
+    "fsc": FSCDistance,
+    "res": FSCResDistance,
+    "zernike3d": Zernike3DDistance,
+    "gromov_wasserstein": GromovWassersteinDistance,
+    "procrustes_wasserstein": ProcrustesWassersteinDistance,
+    "sliced_wasserstein": SlicedWassersteinDistance,
+}
+
+AVAILABLE_MAP2MAP_DISTANCES = OrderedDict(
+    (k, AVAILABLE_MAP2MAP_DISTANCES[k]) for k in ORDER_TO_ENDURE_FSC_BEFORE_RES
+)
+
+
+def run(config):
+    """
+    Compare a submission to ground truth.
+    """
+
+    logger.info("Running map-to-map analysis")
+    map_to_map_distances = {
+        distance_label: distance_class(config)
+        for distance_label, distance_class in AVAILABLE_MAP2MAP_DISTANCES.items()
+        if distance_label in config["metrics"]
+    }
+
+    if config["metrics"]["shared_params"]["low_memory"] is None:
+        do_low_memory_mode = False
+    else:
+        do_low_memory_mode = config["metrics"]["shared_params"]["low_memory"]["do"]
+
+    logger.info("Loading submission")
+    submission = torch.load(
+        str(config["data_params"]["submission_params"]["path_to_submission_file"]),
+        weights_only=False,
+    )
+    submission_volume_key = config["data_params"]["submission_params"]["volume_key"]
+    submission_metadata_key = config["data_params"]["submission_params"]["metadata_key"]
+    label_key = config["data_params"]["submission_params"]["label_key"]
+    user_submission_label = submission[label_key]
+
+    metadata_gt = pd.read_csv(
+        config["data_params"]["ground_truth_params"]["path_to_metadata"]
+    )
+
+    self_results_dict, results_dict = {}, {}
+    results_dict["config"] = config
+    self_results_dict["config"] = config
+
+    if not torch.is_tensor(submission[submission_metadata_key]):
+        submission[submission_metadata_key] = torch.tensor(
+            submission[submission_metadata_key]
+        )
+
+    results_dict["user_submitted_populations"] = (
+        submission[submission_metadata_key] / submission[submission_metadata_key].sum()
+    )
+
+    maps_user_flat = submission[submission_volume_key].reshape(
+        len(submission["volumes"]), -1
+    )
+
+    logger.info("Loading ground truth")
+    maps_gt_flat = torch.load(
+        str(config["data_params"]["ground_truth_params"]["path_to_volumes"]),
+        mmap=do_low_memory_mode,
+        weights_only=False,
+    )
+
+    computed_assets = {}
+    for distance_label, map_to_map_distance in map_to_map_distances.items():
+        assert distance_label in config["metrics"].keys()
+        logger.info(f"Computing: {distance_label}")
+
+        map_to_map_distance.distance_matrix_precomputation(
+            maps_gt_flat,
+            maps_user_flat,
+        )
+
+        cost_matrix = map_to_map_distance.get_distance_matrix(
+            maps_gt_flat,
+            maps_user_flat,
+            global_store_of_running_results=results_dict,
+        )
+        computed_assets = map_to_map_distance.get_computed_assets(
+            maps_gt_flat,
+            maps_user_flat,
+            global_store_of_running_results=results_dict,
+        )
+        computed_assets.update(computed_assets)
+
+        cost_matrix_df = pd.DataFrame(
+            cost_matrix, columns=None, index=metadata_gt.populations.tolist()
+        )
+
+        single_distance_results_dict = {
+            "cost_matrix": cost_matrix_df,
+            "user_submission_label": user_submission_label,
+            "computed_assets": computed_assets,
+        }
+
+        if config["metrics"][distance_label]["compute_self_metric"]:
+            if distance_label == "zernike3d":
+                temporary_tmp_dir = config["metrics"][distance_label]["tmpDir"]
+                config["metrics"][distance_label]["tmpDir"] = config["metrics"][
+                    distance_label
+                ]["tmpDirSelf"]
+
+            map_to_map_distance.distance_matrix_precomputation(
+                maps_user_flat,
+                maps_user_flat,
+            )
+            cost_matrix = map_to_map_distance.get_distance_matrix(
+                maps_user_flat,
+                maps_user_flat,
+                global_store_of_running_results=self_results_dict,
+            )
+            computed_assets_self = map_to_map_distance.get_computed_assets(
+                maps_user_flat,
+                maps_user_flat,
+                global_store_of_running_results=self_results_dict,
+            )
+            if distance_label == "zernike3d":
+                config["metrics"][distance_label]["tmpDirSelf"] = config["metrics"][
+                    distance_label
+                ]["tmpDir"]
+                config["metrics"][distance_label]["tmpDir"] = temporary_tmp_dir
+
+            computed_assets_self.update(computed_assets_self)
+
+            cost_matrix_df = pd.DataFrame(
+                cost_matrix,
+                columns=None,
+                index=results_dict["user_submitted_populations"].tolist(),
+            )
+
+            self_single_distance_results_dict = {
+                "cost_matrix_self": cost_matrix_df,
+                "computed_assets": computed_assets_self,
+            }
+
+            self_single_distance_results_dict_nooverwrite = {
+                "cost_matrix_self": cost_matrix_df,
+                "computed_assets_self": computed_assets_self,
+            }
+
+            self_results_dict[distance_label] = self_single_distance_results_dict
+
+            single_distance_results_dict.update(
+                self_single_distance_results_dict_nooverwrite
+            )
+
+        if (
+            "metrics_self" in config.keys()
+            and distance_label not in config["metrics_self"]
+        ):
+            single_distance_results_dict.update(
+                {"user_submission_label": user_submission_label}
+            )
+
+        results_dict[distance_label] = single_distance_results_dict
+
+    # Validate before saving
+    results_dict = dict(
+        MapToMapResultsValidator(**results_dict).model_dump(exclude_none=True)
+    )
+
+    with open(config["path_to_output_file"], "wb") as f:
+        pickle.dump(results_dict, f)
+
+    return results_dict

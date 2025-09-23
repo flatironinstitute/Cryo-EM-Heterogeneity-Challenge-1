@@ -1,0 +1,25 @@
+path_to_map_to_map_results: tests/data/data_for_dist_to_dist/test_map_to_map_distance_matrix_submission_0.pkl
+metrics:
+  l2:
+    apply_rank_normalization: true
+path_to_ground_truth_metadata: tests/data/Ground_truth/test_metadata_10.csv
+replicate_params:
+  n_replicates: 3
+  n_pool_ground_truth_microstates: 2
+  replicate_fraction: 0.9
+cvxpy_solve_kwargs:
+  solver: ECOS
+  verbose: True
+emd_regularization:
+  cvxpy_solve_kwargs:
+    solver: SCS
+    max_iters: 100000
+    verbose: True
+  scalar_hyperparam_self_emd: 1.0
+  scalar_hyperparam_self_entropy_q: 1.0
+  scalar_hyperparam_weighted_l2_in_cost: 1.0
+  q_greater_than_constraint: 0.000001
+optimal_q_kl_params:
+  n_iter: 100000
+  break_atol: 0.0001
+path_to_output_file: tests/results/test_distribution_to_distribution_submission_0.pkl
