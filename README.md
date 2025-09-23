@@ -72,6 +72,9 @@ pytest tests/
 
 This will make sure all the pipelines run on a mock set of submissions.
 
+# Demo
+
+We have prepared a demo dataset for running all our pipelines. The instructions for downloading the required data and running the pipelines can be found [here](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/tree/main/demo)
 
 # Running
 If you want to run our code on the full challenge data, or you own local data, please complete the following steps
