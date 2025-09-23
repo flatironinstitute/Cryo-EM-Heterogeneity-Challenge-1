@@ -28,4 +28,4 @@ metrics:
       do: true
       method: median_zscore
 
-path_to_output_file: ../results/map_to_map_distance_matrix_submission_0.pkl
+path_to_output_file: ../results/map_to_map_distance_matrix_submission_x.pkl

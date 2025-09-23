@@ -1,15 +1,26 @@
-path_to_map_to_map_results: results/map_to_map_distance_matrix_submission_0.pkl
+path_to_map_to_map_results: ../results/map_to_map_distance_matrix_submission_x.pkl
 metrics:
-  - l2
-  - corr
-  - bioem
-  - fsc
-path_to_ground_truth_metadata: data/dataset_2_ground_truth/metadata.csv
-n_replicates: 30
-n_pool_microstate: 5
-replicate_fraction: 0.9
-cvxpy_solver: ECOS
-optimal_q_kl:
+  l2:
+    apply_rank_normalization: false
+  corr:
+    apply_rank_normalization: false
+  bioem:
+    apply_rank_normalization: false
+  fsc:
+    apply_rank_normalization: false
+  res:
+    apply_rank_normalization: false
+
+path_to_ground_truth_metadata: ../data/dataset_2_ground_truth/metadata.csv
+replicate_params:
+  n_replicates: 30
+  n_pool_ground_truth_microstates: 1
+  replicate_fraction: 0.9
+cvxpy_solve_kwargs:
+  solver: ECOS
+  verbose: True
+  max_iters: 250
+optimal_q_kl_params:
   n_iter: 100000
   break_atol: 0.0001
-path_to_output_file: results/distribution_to_distribution_submission_0.pkl
+path_to_output_file: ../results/distribution_to_distribution_submission_x.pkl
