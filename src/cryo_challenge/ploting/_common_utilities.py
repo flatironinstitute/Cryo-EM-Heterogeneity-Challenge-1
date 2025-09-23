@@ -19,6 +19,7 @@ DEFAULT_PLOT_PARAMETERS = {
     "Ground Truth": {"marker": "o", "color": "#ffb000"},
     "Sampled GT": {"marker": "v", "color": "#ffb000"},
     "Averaged GT": {"marker": "^", "color": "#ffb000"},
+    "DUMMY": {"marker": "x", "color": "#148fff"},
 }
 
 DEFAULT_LABEL_ORDERING = [
@@ -79,6 +80,7 @@ FORMATTED_LABELS_FOR_PLOTS = {
     "Sampled GT": "Sampled GT",
     "Averaged GT": "Averaged GT",
     "Ground Truth": "Ground Truth",
+    "DUMMY": "DUMMY",
 }
 
 ABBREVIATIONS_FOR_LABELS = {
@@ -109,6 +111,7 @@ ABBREVIATIONS_FOR_LABELS = {
     "Averaged GT": "Avg. GT",
     "Sampled GT": "Samp. GT",
     "Ground Truth": "GT",
+    "DUMMY": "DUMMY",
 }
 
 
@@ -131,13 +134,16 @@ def sort_labels_manually(
     if sorting_labels is None:
         sorting_labels = DEFAULT_LABEL_ORDERING
 
-    try:
-        sort_dict = {label: i for i, label in enumerate(sorting_labels)}
-        indices = np.array([sort_dict[label] for label in labels])
-    except KeyError as e:
-        raise KeyError(f"Label {e} not found in sorting_labels") from e
+    sort_dict = {label: i for i, label in enumerate(sorting_labels)}
 
-    indices = np.argsort(indices)
+    indices = []
+    for label in labels:
+        if label not in sort_dict:
+            indices.append(len(sorting_labels) + 1)
+        else:
+            indices.append(sort_dict[label])
+
+    indices = np.array(indices).argsort()
     return labels[indices], indices
 
 
@@ -167,5 +173,5 @@ def get_plot_parameters_for_labels(
                 plot_parameters[label] = plot_parameters_dict[possible_label]
     for label in labels:
         if label not in plot_parameters.keys():
-            raise ValueError(f"Label {label} not found in plot_parameters_dict")
+            plot_parameters[label] = plot_parameters_dict["DUMMY"]
     return plot_parameters

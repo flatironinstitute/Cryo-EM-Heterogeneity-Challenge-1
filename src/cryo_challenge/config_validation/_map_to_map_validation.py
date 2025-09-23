@@ -112,6 +112,7 @@ class MapToMapInputConfigData(BaseModel, extra="forbid"):
         description="Parameters for the ground truth file",
     )
     mask_params: dict = Field(
+        default=dict(apply_mask=False, path_to_mask=None),
         description="Parameters for the mask file",
     )
 

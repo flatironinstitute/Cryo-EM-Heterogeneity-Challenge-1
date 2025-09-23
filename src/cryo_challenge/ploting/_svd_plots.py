@@ -69,6 +69,19 @@ def plot_pcv_vs_label(
     plot_setup = get_plot_parameters_for_labels(labels)
     colors = [plot_setup[label]["color"] for label in labels]
 
+    formatted_labels = []
+    for label in labels:
+        if label in FORMATTED_LABELS_FOR_PLOTS:
+            formatted_labels.append(FORMATTED_LABELS_FOR_PLOTS[label])
+        else:
+            formatted_labels.append(label)
+
+    ref_formatted_label = (
+        FORMATTED_LABELS_FOR_PLOTS[ref_label]
+        if ref_label in FORMATTED_LABELS_FOR_PLOTS
+        else ref_label
+    )
+
     ax.barh(np.arange(len(labels)), pcv_vs_ref, color=colors)
 
     # Reverse the order of the y-axis to invert
@@ -77,14 +90,12 @@ def plot_pcv_vs_label(
     # Set other parameters
     ax.set_xticks([0.0, 0.25, 0.5, 0.75, 1.0])
     ax.set_xticklabels([0.0, 0.25, 0.5, 0.75, 1.0], fontsize=fontsize)
-    ax.set_xlabel(f"PCV vs {FORMATTED_LABELS_FOR_PLOTS[ref_label]}", fontsize=fontsize)
+    ax.set_xlabel(f"PCV vs {ref_formatted_label}", fontsize=fontsize)
     ax.set_xlim(0, 1.05)
 
     # Set up y-axis ticks and labels
     ax.set_yticks(np.arange(len(labels)))
-    ax.set_yticklabels(
-        [FORMATTED_LABELS_FOR_PLOTS[label] for label in labels], fontsize=fontsize
-    )
+    ax.set_yticklabels(formatted_labels, fontsize=fontsize)
     ax.set_ylim(-0.8, len(labels) - 0.2)
 
     if figure_filename is not None:
@@ -119,7 +130,13 @@ def plot_pcv_matrix(
     labels = distance_matrix_results["labels"]
     labels, sort_idxs = sort_labels_manually(labels)
 
-    labels_plot = [ABBREVIATIONS_FOR_LABELS[label] for label in labels]
+    formatted_labels = []
+    for label in labels:
+        if label in ABBREVIATIONS_FOR_LABELS:
+            formatted_labels.append(ABBREVIATIONS_FOR_LABELS[label])
+        else:
+            formatted_labels.append(label)
+
     dist_matrix = dist_matrix[sort_idxs, :][:, sort_idxs]
 
     fig, ax = plt.subplots(figsize=(15, 15), layout="compressed")
@@ -135,9 +152,14 @@ def plot_pcv_matrix(
 
     ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
     ax.set_xticks(
-        ticks=np.arange(len(labels)), labels=labels_plot, rotation=90, fontsize=fontsize
+        ticks=np.arange(len(labels)),
+        labels=formatted_labels,
+        rotation=90,
+        fontsize=fontsize,
     )
-    ax.set_yticks(ticks=np.arange(len(labels)), labels=labels_plot, fontsize=fontsize)
+    ax.set_yticks(
+        ticks=np.arange(len(labels)), labels=formatted_labels, fontsize=fontsize
+    )
 
     if figure_filename is not None:
         fig.savefig(figure_filename, bbox_inches="tight", dpi=300)
@@ -186,6 +208,12 @@ def plot_common_embedding(
 
     # extract labels amd get plot parameters
     plot_parameters = get_plot_parameters_for_labels(labels)
+    formatted_labels = []
+    for label in labels:
+        if label in FORMATTED_LABELS_FOR_PLOTS:
+            formatted_labels.append(FORMATTED_LABELS_FOR_PLOTS[label])
+        else:
+            formatted_labels.append(label)
 
     # Sort labels and common embedding
     labels, _ = sort_labels_manually(labels)
@@ -238,7 +266,7 @@ def plot_common_embedding(
             marker="o",
             linewidth=0.3,
             # edgecolor="black",
-            label=f"{FORMATTED_LABELS_FOR_PLOTS[label]}",
+            label=f"{formatted_labels[i]}",
             zorder=2,
         )
 
@@ -252,9 +280,7 @@ def plot_common_embedding(
         ax.flatten()[i].set_xlim((-0.21, 0.21))
         ax.flatten()[i].set_ylim((-0.21, 0.21))
 
-        ax.flatten()[i].set_title(
-            f"{FORMATTED_LABELS_FOR_PLOTS[label]}", fontsize=fontsize, y=0.7
-        )
+        ax.flatten()[i].set_title(f"{formatted_labels[i]}", fontsize=fontsize, y=0.7)
 
     for i in range(len(labels), n_cols * n_rows):
         ax.flatten()[i].axis("off")
@@ -307,6 +333,12 @@ def plot_projection_to_gt_embedding(
     labels = list(sub_embedding_in_gt.keys())
     labels, _ = sort_labels_manually(labels)
     plot_parameters = get_plot_parameters_for_labels(labels)
+    formatted_labels = []
+    for label in labels:
+        if label in FORMATTED_LABELS_FOR_PLOTS:
+            formatted_labels.append(FORMATTED_LABELS_FOR_PLOTS[label])
+        else:
+            formatted_labels.append(label)
 
     populations_ref = populations[ref_label_for_populations]
     embedding_gt = sub_embedding_in_gt[ref_label_for_populations]
@@ -337,7 +369,7 @@ def plot_projection_to_gt_embedding(
         )
 
         ax.flatten()[i].set_title(
-            f"{FORMATTED_LABELS_FOR_PLOTS[label]}",
+            f"{formatted_labels[i]}",
             fontsize=fontsize,
             loc="center",
         )
