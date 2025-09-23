@@ -76,10 +76,6 @@ class SVDInputConfigOutput(BaseModel, extra="forbid"):
         default=False,
         description="Save data for continue. If True, this will save the prepared data for continue.",
     )
-    generate_plots: bool = Field(
-        default=False,
-        description="Generate plots. If True, this will generate plots for the analysis.",
-    )
     overwrite: bool = Field(
         default=False,
         description="Overwrite existing files. If True, this will overwrite existing files.",

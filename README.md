@@ -32,9 +32,11 @@ The data is available via the Open Science Foundation project [The Inaugural Fla
 
 # System Requirements
 
-Running the code in this repository requires a system with Python 3.10-3.13.
+Running the code in this repository requires a system with Python 3.10-3.13. The code is tested automatically using GitHub actions for the latest stable Ubuntu version for Python 3.10, 3.11, 3.12 and 3.13. No specialized hardware is required for running the pipelines. GPU acceleration is possible through Torch's functionalities. The execution of the Map To Map pipelines can be accelerated through Dask, although this is optional.
 
 # Installation
+
+Note: the installation time may vary depending on the virtual environment framework used. Using python's default `venv` the installation should take between one and two minutes.
 
 ## Clone the repository
 Before installation, please clone this GitHub repository locally:
@@ -52,35 +54,63 @@ pip install .
 ```
 
 ## Developer installation
-If you are interested in testing the programs previously installed, please, install the repository in development mode with the following commands:
+If you are interested in developing, please, install the repository in editable mode and install the development dependencies with the following commands:
 
 ```bash
 cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
 
-The test included in the repo can be executed with PyTest as shown below:
+# Testing
+
+We recommend testing your installation by running
 
 ```bash
 cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
 pytest tests/
 ```
 
+This will make sure all the pipelines run on a mock set of submissions.
+
+
 # Running
 If you want to run our code on the full challenge data, or you own local data, please complete the following steps
 
+### 0. Preprocessing raw submissions
+As the the submissions for the challenge are anonymous, we do not provide the raw submissions. For running our preprocessing pipeline for new submissions please see our [preprocessing tutorial](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/tutorials/1_tutorial_preprocessing.ipynb). We provide access to all preprocessed submissions below.
+
 ### 1. Download the full challenge data from [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/)
-You can do this through the web browser, or programatically with wget (you can use [this script](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/data/fetch_data.sh), this will download around 220 GB of data)
+You can do this through the web browser, or programatically with wget (you can use [this script](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/data/fetch_data.sh), this will download around 220 GB of data).
+
+After downloading the data you will have three folders: `dataset_1_submissions`, `datset_2_submissions`, and `Ground_truth`. The first two folders contain the preprocessed submissions for the experimental and simulated datasets, respectivelly. The third folder contains the GT-based mock submissions (Averaged GT and Sampled GT), as well as the volumes used for generating the data for the simulated datasets (`maps_gt_flat.pt`). These are provided as a .pt file to make easier the execution of our analysis pipelines.
+
 
 ### 2. Modify the config files and run the commands on the full challenge data
 Point to the path where the data is locally
-The [tutorial notebooks](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/tree/main/tutorials) explain how to setup the config files, and run the commands
+The [tutorial notebooks](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/tree/main/tutorials) explain how to setup the config files, and how to run each pipeline. We provide examples of config files for each pipeline. Given a config file, each pipeline can be executed from the command line as:
+
+```bash
+run_svd_pipeline                          --config config_files/config_svd.yaml
+run_map_to_map_pipeline                   --config config_files/config_map_to_map.yaml
+run_distribution_to_distribution_pipeline --config config_files/config_distribution_to_distribution.yaml
 ```
-cryo_challenge run_preprocessing                      --config config_files/config_preproc.yaml
-cryo_challenge run_svd                                --config config_files/config_svd.yaml
-cryo_challenge run_map2map_pipeline                   --config config_files/config_map_to_map.yaml
-cryo_challenge run_distribution2distribution_pipeline --config config_files/config_distribution_to_distribution.yaml
-```
+
+### 3. SVD Pipeline
+
+Running this pipeline for the simulated dataset submissions takes around 45 minutes on a computer node with 64 CPU cores and 128 GB of RAM. The runtime is divided into 1) Preparing the submissions (30 min) and 2) Computing the metrics (15 min). Since the prepared submissions are saved on disk (optional, see Tutorial), subsequent executions of this metric will be faster.
+
+See our [Tutorial](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/tutorials/2_tutorial_svd.ipynb) for a step-by-step on how to reproduce the results presented in the paper.
+
+
+### 4. Map to Map Pipeline
+
+GEOFF TODO
+
+### 5. Distribution to Distribution Pipeline
+
+GEOFF TODO
+
+
 
 
 # Contributing
