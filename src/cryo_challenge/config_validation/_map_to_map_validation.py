@@ -112,7 +112,6 @@ class MapToMapInputConfigData(BaseModel, extra="forbid"):
         description="Parameters for the ground truth file",
     )
     mask_params: dict = Field(
-        default=dict(apply_mask=False, path_to_mask=None),
         description="Parameters for the mask file",
     )
 
@@ -584,7 +583,7 @@ class MapToMapResultsAllMetrics(BaseModel, extra="forbid"):
         default=None,
         description="Cost matrix (ground truth versus submission)",
     )
-    cost_matrix_self: pandas.DataFrame = Field(
+    cost_matrix_self: Optional[pandas.DataFrame] = Field(
         default=None,
         description="Cost matrix (submission versus submission)",
     )
@@ -596,7 +595,7 @@ class MapToMapResultsAllMetrics(BaseModel, extra="forbid"):
         default=None,
         description="Computed assets",
     )
-    computed_assets_self: dict = Field(
+    computed_assets_self: Optional[dict] = Field(
         default=None,
         description="Computed assets",
     )
