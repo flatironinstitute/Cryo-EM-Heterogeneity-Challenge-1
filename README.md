@@ -79,27 +79,26 @@ If you want to run our code on the full challenge data, or you own local data, p
 ### 0. Preprocessing raw submissions
 As the the submissions for the challenge are anonymous, we do not provide the raw submissions. For running our preprocessing pipeline for new submissions please see our [preprocessing tutorial](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/tutorials/1_tutorial_preprocessing.ipynb). We provide access to all preprocessed submissions below.
 
-### 1. Download the full challenge data from [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/)
-You can do this through the web browser, or programatically with wget (you can use [this script](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/data/fetch_data.sh), this will download around 220 GB of data).
-
-After downloading the data you will have three folders: `dataset_1_submissions`, `datset_2_submissions`, and `Ground_truth`. The first two folders contain the preprocessed submissions for the experimental and simulated datasets, respectivelly. The third folder contains the GT-based mock submissions (Averaged GT and Sampled GT), as well as the volumes used for generating the data for the simulated datasets (`maps_gt_flat.pt`). These are provided as a .pt file to make easier the execution of our analysis pipelines.
+### 1. Download the full challenge data from The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge
+The data required to reproduce the results from the challenge can be downloaded from [OSF](https://osf.io/8h6fz/). Tje data consists of three folders: `dataset_1_submissions`, `datset_2_submissions`, and `Ground_truth`. The first two folders contain the preprocessed submissions for the experimental and simulated datasets, respectivelly. The third folder contains the GT-based mock submissions (Averaged GT and Sampled GT), as well as the volumes used for generating the data for the simulated datasets (`maps_gt_flat.pt`). These are provided as a .pt file to make easier the execution of our analysis pipelines.
 
 
 ### 2. Modify the config files and run the commands on the full challenge data
-Point to the path where the data is locally
 The [tutorial notebooks](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/tree/main/tutorials) explain how to setup the config files, and how to run each pipeline. We provide examples of config files for each pipeline. Given a config file, each pipeline can be executed from the command line as:
 
 ```bash
-run_svd_pipeline                          --config config_files/config_svd.yaml
-run_map_to_map_pipeline                   --config config_files/config_map_to_map.yaml
-run_distribution_to_distribution_pipeline --config config_files/config_distribution_to_distribution.yaml
+run_svd_pipeline                          --config path/to/config_files/config_svd.yaml
+run_map_to_map_pipeline                   --config path/to/config_files/config_map_to_map.yaml
+run_distribution_to_distribution_pipeline --config path/to/config_files/config_distribution_to_distribution.yaml
 ```
+
+Example for config files can be found [here](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/tree/main/config_files)
 
 ### 3. SVD Pipeline
 
 Running this pipeline for the simulated dataset submissions takes around 45 minutes on a computer node with 64 CPU cores and 128 GB of RAM. The runtime is divided into 1) Preparing the submissions (30 min) and 2) Computing the metrics (15 min). Since the prepared submissions are saved on disk (optional, see Tutorial), subsequent executions of this metric will be faster.
 
-See our [Tutorial](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/tutorials/2_tutorial_svd.ipynb) for a step-by-step on how to reproduce the results presented in the paper.
+See our [SVD Tutorial](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/blob/main/tutorials/2_tutorial_svd.ipynb) for a step-by-step on how to reproduce the results presented in the paper.
 
 
 ### 4. Map to Map Pipeline
