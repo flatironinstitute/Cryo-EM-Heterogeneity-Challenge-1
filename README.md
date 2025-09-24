@@ -106,14 +106,11 @@ See our [SVD Tutorial](https://github.com/flatironinstitute/Cryo-EM-Heterogeneit
 
 ### 4. Map to Map Pipeline
 
-GEOFF TODO
+Running this pipeline takes several hours or more per submission, depending on what metrics are requested. On a computer node with dozens of CPU cores and several hundreds of GB of RAM, the metrics `l2, bioem, corr` take several minutes; `fsc` takes several hours, with `res` taking minutes but needing the `fsc` results. The other metrics take much longer and it's recommended to only use a few hundred ground truth volumes for reference for them.
 
 ### 5. Distribution to Distribution Pipeline
 
-GEOFF TODO
-
-
-
+Running this pipeline takes several minutes (we used a computer node with dozens of CPU cores and several hundreds of GB of RAM, but much less would be needed), and scales linearly with the number of replicates requested. Depending on the CVXPY solver requested, and the tolerance values requested, it can take a lot longer. We recommend ECOS, SCS, or CLARABEL.
 
 # Contributing
 If you find any bug or have a suggestion on the code feel free to open an issue [here](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/issues).
