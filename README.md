@@ -2,7 +2,7 @@
 
 <p align="center">
 
-<img alt="Supported Python versions" src="https://img.shields.io/badge/Supported_Python_Versions-3.8_%7C_3.9_%7C_3.10_%7C_3.11-blue">
+<img alt="Supported Python versions" src="https://img.shields.io/badge/Supported_Python_Versions-3.10_%7C_3.11_%7C_3.12_%7C_3.13-blue">
 <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/total">
 <img alt="GitHub branch check runs" src="https://img.shields.io/github/check-runs/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/main">
 <img alt="GitHub License" src="https://img.shields.io/github/license/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1">
@@ -46,12 +46,20 @@ git clone git@github.com:flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1.git
 ```
 
 ## Stable installation
-The library in this repository may be installed with `pip`. We recommend creating a virtual environment (using conda or pyenv), since we have dependencies such as PyTorch or Aspire, which are better dealt with in an isolated environment. After creating your environment, make sure to activate it and run
+The library in this repository may be installed with `pip`. We recommend creating a virtual environment (using conda or pyenv), since we have dependencies such as PyTorch or Aspire, which are better dealt with in an isolated environment. After creating your environment, make sure to activate it and run:
 
 ```bash
 cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
 pip install .
 ```
+
+Alternatively, you can install without cloning the repository by running:
+
+```bash
+pip install git+https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1.git
+```
+
+although this will not give you access to the tests and tutorials.
 
 ## Developer installation
 If you are interested in developing, please, install the repository in editable mode and install the development dependencies with the following commands:
