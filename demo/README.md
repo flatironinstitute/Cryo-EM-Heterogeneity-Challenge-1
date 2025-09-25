@@ -14,7 +14,7 @@ Create and activate a virtual environment using your prefered method. For exampl
 
 ```bash
 python -m venv .venv
-source activate .venv/bin/activate
+source .venv/bin/activate
 ```
 Note: For this to work you need to have Python installed with version 3.10-3.13.
 
@@ -25,10 +25,12 @@ pip install git+https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Chall
 ```
 
 # Downloading the required data
-The data can be download directly from the OSF link provided above, or by running the following command from the terminal.
+The data can be download directly from the OSF link provided above, or by running the following command from the terminal. After downloading unzip the file and `cd` into the decompressed directory.
 
 ```bash
-wget https://files.osf.io/v1/resources/8h6fz/providers/dropbox/demo.zip?download=true (TODO)
+wget https://f`iles.osf.io/v1/resources/8h6fz/providers/dropbox/demo.zip?download=true
+unzip demo.zip
+cd demo
 ```
 
 The demo data includes:
@@ -49,7 +51,7 @@ After downloading and unzipping the data, and installing our library; each pipel
 ## 1. Preprocessing
 
 ```bash
-run_preprocessing_pipeline --config 1_preprocessing/run_preproc_config.yaml
+run_preprocessing --config 1_preprocessing/run_preproc_config.yaml
 ```
 
 This should create the following files under `1_preprocessing/`:
@@ -67,6 +69,7 @@ This will run the SVD analysis pipeline. The results can be found in `2_svd_anal
 ```bash
 python 2_svd_analysis/plot_svd_results.py
 ```
+The generated plots should be in `2_svd_analysis/svd_results` and should match the results in `2_svd_analysis/expected_results` up to a change in sign in the common embedding plots.
 
 ## 3. Map-to-Map analysis
 
