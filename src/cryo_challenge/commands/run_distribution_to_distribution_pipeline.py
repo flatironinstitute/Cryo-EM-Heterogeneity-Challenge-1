@@ -48,7 +48,8 @@ def main(args):
 
 def main_as_cli():
     parser = argparse.ArgumentParser(description=__doc__)
-    return main(add_args(parser).parse_args())
+    main(add_args(parser).parse_args())
+    return 0
 
 
 if __name__ == "__main__":

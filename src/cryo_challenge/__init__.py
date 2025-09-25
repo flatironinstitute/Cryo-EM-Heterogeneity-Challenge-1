@@ -5,6 +5,7 @@ from . import (
     distribution_to_distribution as distribution_to_distribution,
     svd as svd,
     utils as utils,
+    plot_utils as plot_utils,
 )
 from .commands import (
     run_preprocessing_from_config as run_preprocessing_from_config,
