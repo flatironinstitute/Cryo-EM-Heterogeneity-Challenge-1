@@ -48,6 +48,8 @@ For simplicity all volumes have been downsampled to a box size of 32 pixels. To 
 
 After downloading and unzipping the data, and installing our library; each pipeline can be run by executing the following commands:
 
+Note: Running all the instructions will take several minutes. No GPU or special hardware is required.
+
 ## 1. Preprocessing
 
 ```bash
