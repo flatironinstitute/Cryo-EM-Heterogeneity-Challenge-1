@@ -2,7 +2,7 @@
 
 <p align="center">
 
-<img alt="Supported Python versions" src="https://img.shields.io/badge/Supported_Python_Versions-3.8_%7C_3.9_%7C_3.10_%7C_3.11-blue">
+<img alt="Supported Python versions" src="https://img.shields.io/badge/Supported_Python_Versions-3.10_%7C_3.11_%7C_3.12_%7C_3.13-blue">
 <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/total">
 <img alt="GitHub branch check runs" src="https://img.shields.io/github/check-runs/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/main">
 <img alt="GitHub License" src="https://img.shields.io/github/license/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1">
@@ -46,12 +46,20 @@ git clone git@github.com:flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1.git
 ```
 
 ## Stable installation
-The library in this repository may be installed with `pip`. We recommend creating a virtual environment (using conda or pyenv), since we have dependencies such as PyTorch or Aspire, which are better dealt with in an isolated environment. After creating your environment, make sure to activate it and run
+The library in this repository may be installed with `pip`. We recommend creating a virtual environment (using conda or pyenv), since we have dependencies such as PyTorch or Aspire, which are better dealt with in an isolated environment. After creating your environment, make sure to activate it and run:
 
 ```bash
 cd /path/to/Cryo-EM-Heterogeneity-Challenge-1
 pip install .
 ```
+
+Alternatively, you can install without cloning the repository by running:
+
+```bash
+pip install git+https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1.git
+```
+
+although this will not give you access to the tests and tutorials.
 
 ## Developer installation
 If you are interested in developing, please, install the repository in editable mode and install the development dependencies with the following commands:
@@ -106,14 +114,11 @@ See our [SVD Tutorial](https://github.com/flatironinstitute/Cryo-EM-Heterogeneit
 
 ### 4. Map to Map Pipeline
 
-GEOFF TODO
+Running this pipeline takes several hours or more per submission, depending on what metrics are requested. On a computer node with dozens of CPU cores and several hundreds of GB of RAM, the metrics `l2, bioem, corr` take several minutes; `fsc` takes several hours, with `res` taking minutes but needing the `fsc` results. The other metrics take much longer and it's recommended to only use a few hundred ground truth volumes for reference for them.
 
 ### 5. Distribution to Distribution Pipeline
 
-GEOFF TODO
-
-
-
+Running this pipeline takes several minutes (we used a computer node with dozens of CPU cores and several hundreds of GB of RAM, but much less would be needed), and scales linearly with the number of replicates requested. Depending on the CVXPY solver requested, and the tolerance values requested, it can take a lot longer. We recommend ECOS, SCS, or CLARABEL.
 
 # Contributing
 If you find any bug or have a suggestion on the code feel free to open an issue [here](https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Challenge-1/issues).
