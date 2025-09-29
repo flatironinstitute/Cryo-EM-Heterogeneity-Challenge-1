@@ -32,6 +32,7 @@ wget https://osf.io/download/68dacd9aabd55e9e99e4a4b6/ -O demo.zip
 unzip demo.zip
 cd demo
 ```
+Alternatively, you can also download the data from OSF: [link](https://osf.io/8h6fz/files/dropbox/demo.zip)
 
 The demo data includes:
 * `new_submission`: a directory with volumes and populations in the same format that was requested for participants of the challenge
