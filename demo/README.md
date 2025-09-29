@@ -28,7 +28,7 @@ pip install git+https://github.com/flatironinstitute/Cryo-EM-Heterogeneity-Chall
 The data can be download directly from the OSF link provided above, or by running the following command from the terminal. After downloading unzip the file and `cd` into the decompressed directory.
 
 ```bash
-wget https://f`iles.osf.io/v1/resources/8h6fz/providers/dropbox/demo.zip?download=true
+wget https://osf.io/download/68dacd9aabd55e9e99e4a4b6/ -O demo.zip
 unzip demo.zip
 cd demo
 ```
