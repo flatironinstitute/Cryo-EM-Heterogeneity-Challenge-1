@@ -17,7 +17,7 @@
 
 
 
-This repository contains the code used to analyse the submissions for the [Inaugural Flatiron Cryo-EM Heterogeneity Challenge](https://www.simonsfoundation.org/flatiron/center-for-computational-biology/structural-and-molecular-biophysics-collaboration/heterogeneity-in-cryo-electron-microscopy/).
+This repository contains the code used to analyse the submissions for the [Inaugural Flatiron Cryo-EM Heterogeneity Challenge](https://www.simonsfoundation.org/flatiron/center-for-computational-biology/structural-and-molecular-biophysics-collaboration/heterogeneity-in-cryo-electron-microscopy/). A description of the challenge and the results can be found in [this manuscript on bioRxiv](https://www.biorxiv.org/content/10.1101/2025.07.18.665582v1).
 
 # Scope
 This repository explains how to preprocess a submission (80 maps and corresponding probability distribution), and analyze it. Challenge participants can benchmark their submissions locally against the ground truth and other submissions that are available on the cloud via the Open Science Foundation project [The Inaugural Flatiron Institute Cryo-EM Heterogeneity Community Challenge](https://osf.io/8h6fz/).
