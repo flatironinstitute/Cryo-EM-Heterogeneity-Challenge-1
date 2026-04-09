@@ -94,6 +94,7 @@ def main(args):
 
     config = SVDInputConfig(**config_dict)
     if args.precompute_power_spectrum:
+        mkbasedir(config.output_params["path_to_output_dir"])
         logging.info("Precomputing power spectrum for normalization")
         common_power_spectrum_on_grid = compute_common_power_spectrum_on_grid(
             dataset_for_svd=load_submissions(config)

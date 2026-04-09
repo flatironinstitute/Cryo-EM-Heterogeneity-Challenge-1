@@ -5,7 +5,7 @@ path_to_submissions: tests/data/dataset_2_submissions/
 
 dtype: float32
 svd_max_rank: 5
-continue_from_previous: True
+continue_from_previous: False
 
 normalize_params: # optional, if not given there will be no normalization
   path_to_mask: tests/data/Ground_truth/test_mask_dilated_wide.mrc
