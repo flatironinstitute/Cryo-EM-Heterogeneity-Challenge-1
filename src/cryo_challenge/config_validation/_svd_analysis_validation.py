@@ -46,6 +46,11 @@ class SVDInputConfigNormalize(BaseModel, extra="forbid"):
         default=True,
         description="Normalize power spectrum. If True, the power spectrum is normalized.",
     )
+    path_to_common_power_spectrum: Optional[FilePath] = Field(
+        default=None,
+        description="Path to the common power spectrum file in .pt format. "
+        "If None, the common power spectrum is not loaded and should be computed from the submissions.",
+    )
 
 
 class SVDInputConfigGT(BaseModel, extra="forbid"):
