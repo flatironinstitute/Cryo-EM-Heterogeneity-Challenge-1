@@ -61,11 +61,23 @@ def run_svd_with_ref(config: SVDInputConfig):
     logging.info("... done")
 
     if config.normalize_params["normalize_power_spectrum"]:
-        logging.info("Computing common power spectrum")
-        common_power_spectrum_on_grid = compute_common_power_spectrum_on_grid(
-            dataset_for_svd=submissions_data
-        )
-        logging.info("... done")
+        if config.normalize_params["path_to_common_power_spectrum"] is not None:
+            logging.info(
+                "Loading common power spectrum from {}".format(
+                    config.normalize_params["path_to_common_power_spectrum"]
+                )
+            )
+            common_power_spectrum_on_grid = torch.load(
+                config.normalize_params["path_to_common_power_spectrum"],
+                map_location="cpu",
+            )
+            logging.info("... done")
+        else:
+            logging.info("Computing common power spectrum")
+            common_power_spectrum_on_grid = compute_common_power_spectrum_on_grid(
+                dataset_for_svd=submissions_data
+            )
+            logging.info("... done")
     else:
         common_power_spectrum_on_grid = None
 
@@ -133,7 +145,7 @@ def run_svd_with_ref(config: SVDInputConfig):
     return
 
 
-def run_svd_noref(config: dict):
+def run_svd_noref(config: SVDInputConfig):
     """
     Run SVD analysis when a reference is NOT provided.
     This function computes the SVD for all submissions,
@@ -170,11 +182,23 @@ def run_svd_noref(config: dict):
     logging.info("... done")
 
     if config.normalize_params["normalize_power_spectrum"]:
-        logging.info("Computing common power spectrum")
-        common_power_spectrum_on_grid = compute_common_power_spectrum_on_grid(
-            dataset_for_svd=submissions_data
-        )
-        logging.info("... done")
+        if config.normalize_params["path_to_common_power_spectrum"] is not None:
+            logging.info(
+                "Loading common power spectrum from {}".format(
+                    config.normalize_params["path_to_common_power_spectrum"]
+                )
+            )
+            common_power_spectrum_on_grid = torch.load(
+                config.normalize_params["path_to_common_power_spectrum"],
+                map_location="cpu",
+            )
+            logging.info("... done")
+        else:
+            logging.info("Computing common power spectrum")
+            common_power_spectrum_on_grid = compute_common_power_spectrum_on_grid(
+                dataset_for_svd=submissions_data
+            )
+            logging.info("... done")
     else:
         common_power_spectrum_on_grid = None
 
@@ -227,5 +251,13 @@ def run_svd_noref(config: dict):
     logging.info("Saving results")
     torch.save(results, path_to_results)
     logging.info("... done")
+    if common_power_spectrum_on_grid is not None:
+        logging.info("Saving common power spectrum on grid")
+        torch.save(
+            common_power_spectrum_on_grid,
+            os.path.join(
+                config.output_params["path_to_output_dir"], "common_power_spectrum.pt"
+            ),
+        )
 
     return
