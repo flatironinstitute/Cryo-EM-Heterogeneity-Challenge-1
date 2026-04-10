@@ -219,6 +219,11 @@ def _load_submissions_from_scrath(
     )
 
     tmp_dir = os.path.join(path_to_output_dir, "prepared_submissions_for_svd/")
+    if not os.path.exists(tmp_dir):
+        try:
+            os.makedirs(tmp_dir)
+        except (FileExistsError, PermissionError):
+            raise ValueError("Output path does not exist and cannot be created.")
 
     prepared_subs_files = []
     for file in tqdm(submission_files, desc="Loading submissions"):
