@@ -12,12 +12,96 @@ import glob
 from natsort import natsorted
 import warnings
 
-from cryo_challenge.ploting.plotting_utils import (
-    COLORS,
-    NAME_PATCH,
-    argsort_labels_manually,
-)
 from cryo_challenge.map_to_map.map_to_map_pipeline import AVAILABLE_MAP2MAP_DISTANCES
+from _deanonymized import DEANONYMIZED_NAME_PATCH as NAME_PATCH
+
+COLORS = {
+    "Coffee": "#999999",
+    "Salted Caramel": "#97b4ff",
+    "Neapolitan": "#648fff",
+    "Peanut Butter": "#1858ff",
+    "Cherry": "#b3a4f7",
+    "Pina Colada": "#8c75f2",
+    "Chocolate": "#785ef0",
+    "Cookie Dough": "#512fec",
+    "Chocolate Chip": "#3d18e9",
+    "Vanilla": "#e35299",
+    "Mango": "#dc267f",
+    "Black Raspberry": "#ff8032",
+    "Rocky Road": "#fe6100",
+    "Ground Truth": "#ffb000",
+    "Mint Chocolate Chip": "#ffb000",
+    "Bubble Gum": "#ffb000",
+}
+
+
+PLOT_SETUP = {
+    "Salted Caramel": {"category": "1", "marker": "o"},
+    "Neapolitan": {"category": "1", "marker": "v"},
+    "Peanut Butter": {"category": "1", "marker": "^"},
+    "Coffee": {"category": "1", "marker": "<"},
+    "Cherry": {"category": "2", "marker": "o"},
+    "Pina Colada": {"category": "2", "marker": "v"},
+    "Cookie Dough": {"category": "2", "marker": "^"},
+    "Chocolate Chip": {"category": "2", "marker": "<"},
+    "Chocolate": {"category": "2", "marker": ">"},
+    "Vanilla": {"category": "3", "marker": "o"},
+    "Mango": {"category": "3", "marker": "v"},
+    "Rocky Road": {"category": "4", "marker": "o"},
+    "Black Raspberry": {"category": "4", "marker": "v"},
+    "Ground Truth": {"category": "5", "marker": "o"},
+    "Bubble Gum": {"category": "5", "marker": "v"},
+    "Mint Chocolate Chip": {"category": "5", "marker": "^"},
+}
+
+
+def argsort_labels_manually(labels):
+    ordered_possible_labels = [
+        "Coffee 1",
+        "Pina Colada 1",
+        "Cookie Dough 1",
+        "Cookie Dough 2",
+        "Cherry 1",
+        "Cherry 2",
+        "Chocolate Chip 1",
+        "Chocolate Chip 2",
+        "Chocolate 1",
+        "Chocolate 2",
+        "Rocky Road 1",
+        "Rocky Road 2",
+        "Rocky Road 3",
+        "Black Raspberry 1",
+        "Black Raspberry 2",
+        "Vanilla 1",
+        "Vanilla 2",
+        "Mango 1",
+        "Salted Caramel 1",
+        "Salted Caramel 2",
+        "Salted Caramel 3",
+        "Peanut Butter 1",
+        "Peanut Butter 2",
+        "Neapolitan 1",
+        "Neapolitan 2",
+        "Ground Truth",
+        "Mint Chocolate Chip 1",
+        "Mint Chocolate Chip 2",
+        "Mint Chocolate Chip 4",
+        "Mint Chocolate Chip 8",
+        "Mint Chocolate Chip 10",
+        "Mint Chocolate Chip 16",
+        "Mint Chocolate Chip 20",
+        "Mint Chocolate Chip 40",
+        "Mint Chocolate Chip 80",
+        "Mint Chocolate Chip 80 20240902",
+        "Bubble Gum 1",
+        "Bubble Gum 2",
+    ]
+
+    sort_dict = {label: i for i, label in enumerate(ordered_possible_labels)}
+
+    indices = np.array([sort_dict[label] for label in labels])
+    return np.argsort(indices)
+
 
 mpl.rcParams["font.family"] = "sans-serif"
 mpl.rcParams["pdf.fonttype"] = 42  # TrueType fonts
@@ -427,12 +511,15 @@ def distribution_to_distribution_optimal_probability(config):
         config.plot_settings["distribution_to_distribution"]["optimal_prob"],
         COLORS,
     )
-    fig.savefig(
-        config.output_paths["distribution_to_distribution"][
-            "optimal_prob_plot_outpath"
-        ],
-        dpi=config.plot_settings["distribution_to_distribution"]["optimal_prob"]["dpi"],
-    )
+    for ext in [".pdf", ".svg"]:
+        fig.savefig(
+            config.output_paths["distribution_to_distribution"][
+                "optimal_prob_plot_outpath"
+            ].replace(".pdf", ext),
+            dpi=config.plot_settings["distribution_to_distribution"]["optimal_prob"][
+                "dpi"
+            ],
+        )
 
 
 def wragle_pkl_to_dataframe(pkl_globs, metric):
@@ -700,15 +787,16 @@ def distribution_to_distribution_optimal_objective(config):
 
     fig.tight_layout()
 
-    fig.savefig(
-        config.output_paths["distribution_to_distribution"][
-            "optimal_objective_plot_outpath"
-        ],
-        bbox_inches="tight",
-        dpi=config.plot_settings["distribution_to_distribution"]["optimal_objective"][
-            "dpi"
-        ],
-    )
+    for ext in [".pdf", ".svg"]:
+        fig.savefig(
+            config.output_paths["distribution_to_distribution"][
+                "optimal_objective_plot_outpath"
+            ].replace(".pdf", ext),
+            bbox_inches="tight",
+            dpi=config.plot_settings["distribution_to_distribution"][
+                "optimal_objective"
+            ]["dpi"],
+        )
 
 
 if __name__ == "__main__":
