@@ -33,7 +33,9 @@ COLORS = {
     "Mint Chocolate Chip": "#ffb000",
     "Bubble Gum": "#ffb000",
 }
-
+COLORS["Recovar"] = COLORS["Vanilla"]
+COLORS["CRYODRGN"] = COLORS["Pina Colada"]
+COLORS["3DVA"] = COLORS["Mango"]
 
 PLOT_SETUP = {
     "Salted Caramel": {"category": "1", "marker": "o"},
@@ -56,6 +58,7 @@ PLOT_SETUP = {
 
 
 def argsort_labels_manually(labels):
+    print("-------------LABELS:", labels)
     ordered_possible_labels = [
         "Coffee 1",
         "Pina Colada 1",
@@ -95,11 +98,33 @@ def argsort_labels_manually(labels):
         "Mint Chocolate Chip 80 20240902",
         "Bubble Gum 1",
         "Bubble Gum 2",
+        "3DVA 224px 1x particles 1",
+        "3DVA 224px 2x particles 1",
+        "3DVA 224px 4x particles 1",
+        "3DVA 224px 10x particles 1",
+        "3DVA 224px 20x particles 1",
+        "CRYODRGN 224px 1x particles 1",
+        "CRYODRGN 224px 2x particles 1",
+        "CRYODRGN 224px 4x particles 1",
+        "CRYODRGN 224px 10x particles 1",
+        "CRYODRGN 224px 20x particles 1",
+        "Recovar 224px 1x particles 1",
+        "Recovar 224px 2x particles 1",
+        "Recovar 224px 4x particles 1",
+        "Recovar 224px 10x particles 1",
+        "Recovar 224px 20x particles 1",
     ]
 
     sort_dict = {label: i for i, label in enumerate(ordered_possible_labels)}
 
-    indices = np.array([sort_dict[label] for label in labels])
+    # Place unknown labels after the known ones, preserving their original relative order
+    base = len(sort_dict)
+    indices = np.array(
+        [
+            sort_dict[label] if label in sort_dict else base + i
+            for i, label in enumerate(labels)
+        ]
+    )
     return np.argsort(indices)
 
 
@@ -218,7 +243,14 @@ def plot_map_to_map_distances(
         axes[idx // ncols, idx % ncols].tick_params(
             axis="both", labelsize=config.plot_settings["map_to_map"]["tick_fontsize"]
         )
-        cbar = fig.colorbar(ax)
+        cbar = fig.colorbar(ax, ax=axes[idx // ncols, idx % ncols])
+        if idx // ncols == nrows - 1 and idx % ncols == ncols - 1:
+            cbar.set_label(
+                "FSC Distance",
+                fontsize=config.plot_settings["map_to_map"]["cbar_fontsize"],
+                rotation=270,
+                labelpad=20,
+            )
         cbar.ax.tick_params(
             labelsize=config.plot_settings["map_to_map"]["cbar_fontsize"]
         )
@@ -236,6 +268,10 @@ def plot_map_to_map_distances(
             fontsize=config.plot_settings["map_to_map"]["title_fontsize"],
             pad=config.plot_settings["map_to_map"]["title_pad"],
         )
+        axes[idx // ncols, idx % ncols].set_ylabel(
+            "Ground truth index",
+            fontsize=config.plot_settings["map_to_map"]["label_fontsize"],
+        )
         if idx // ncols == nrows - 1 and idx % ncols == 0:
             axes[idx // ncols, idx % ncols].set_xlabel(
                 "Submission index",
@@ -245,10 +281,25 @@ def plot_map_to_map_distances(
                 "Ground truth index",
                 fontsize=config.plot_settings["map_to_map"]["label_fontsize"],
             )
-        else:
-            axes[idx // ncols, idx % ncols].set_xlabel("")
+        elif idx % ncols == 0:
+            # axes[idx // ncols, idx % ncols].set_xlabel("")
+            axes[idx // ncols, idx % ncols].set_ylabel(
+                "Ground truth index",
+                fontsize=config.plot_settings["map_to_map"]["label_fontsize"],
+            )
+            # axes[idx // ncols, idx % ncols].set_xticks([])
+        elif idx // ncols == nrows - 1:
+            axes[idx // ncols, idx % ncols].set_xlabel(
+                "Submission index",
+                fontsize=config.plot_settings["map_to_map"]["label_fontsize"],
+            )
             axes[idx // ncols, idx % ncols].set_ylabel("")
-            axes[idx // ncols, idx % ncols].set_xticks([])
+            axes[idx // ncols, idx % ncols].set_yticks([])
+
+        else:
+            # axes[idx // ncols, idx % ncols].set_xlabel("")
+            axes[idx // ncols, idx % ncols].set_ylabel("")
+            # axes[idx // ncols, idx % ncols].set_xticks([])
             axes[idx // ncols, idx % ncols].set_yticks([])
 
     # After plotting all data panels
@@ -816,6 +867,6 @@ if __name__ == "__main__":
         config = yaml.safe_load(file)
     config = PlottingConfig.from_dict(config)
     assert config.map_to_map_distance in AVAILABLE_MAP2MAP_DISTANCES.keys()
-    map_to_map(config)
+    # map_to_map(config)
     distribution_to_distribution_optimal_probability(config)
-    distribution_to_distribution_optimal_objective(config)
+    # distribution_to_distribution_optimal_objective(config)
