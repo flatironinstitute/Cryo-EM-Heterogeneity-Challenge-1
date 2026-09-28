@@ -1,6 +1,11 @@
+import os
 import pickle
+
+import hydra
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from omegaconf import DictConfig
 from scipy.stats import ks_2samp
 
 from cryo_challenge.plot_utils._common_utilities import DEFAULT_PLOT_PARAMETERS
@@ -56,126 +61,96 @@ ice_cream_method_map = {
     "Mint Chocolate Chip 80": "Averaged GT",
 }
 
-if __name__ == "__main__":
-    gt_ordering = pd.read_csv(
-        "/mnt/home/gwoollard/ceph/repos/cryomethods_comparison_pipeline/osf/metadata.csv"
-    )
+
+@hydra.main(version_base=None, config_path="config", config_name="accuracy_rare_states")
+def main(cfg: DictConfig) -> None:
+    gt_ordering = pd.read_csv(cfg.paths.metadata)
     idx_map = gt_ordering.sort_values("pc1").index.values
+    frequencies = gt_ordering["populations_count"].values[idx_map]
 
-    data_fnames = [
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_pina_colada_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_cookie_dough_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_cookie_dough_2.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_cherry_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_cherry_2.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_chocolate_chip_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_chocolate_chip_2.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_chocolate_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_chocolate_2.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_rocky_road_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_rocky_road_2.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_rocky_road_3.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_black_raspberry_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_vanilla_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_vanilla_2.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_mango_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_peanut_butter_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_peanut_butter_2.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_neapolitan_1.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_neapolitan_2.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_bubble_gum_2.pkl",
-        "/mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output/map_to_map_mint_chocolate_chip_80.pkl",
-    ]
+    data_fnames = [os.path.join(cfg.paths.pkl_dir, f) for f in cfg.submissions]
+    os.makedirs(cfg.paths.output_dir, exist_ok=True)
 
-    nrows = 5
-    ncols = 5
-    base_size = 3
-    fig, axes = plt.subplots(
-        nrows, ncols, figsize=(base_size * ncols, base_size * nrows), sharey=False
-    )
+    distance = cfg.distance
+    threshold = cfg.threshold
+    nrows, ncols, base_size = cfg.plot.nrows, cfg.plot.ncols, cfg.plot.base_size
 
-    distance = "fsc"
-    for i, fname in enumerate(data_fnames[: nrows * ncols]):
-        print(f"Processing file {i+1}/{len(data_fnames)}: {fname}")
-        with open(fname, "rb") as f:
-            data = pickle.load(f)
+    rng = np.random.default_rng(cfg.seed)
+    n = len(frequencies)
+    orderings = {"original": np.arange(n), "permuted": rng.permutation(n)}
 
-        df = data[distance]["cost_matrix"]
-
-        row_min = df.iloc[idx_map].values.min(axis=1)
-        threshold = 5  # 0.00015
-
-        frequencies = gt_ordering["populations_count"].values[
-            idx_map
-        ]  # df.index.values[idx_map]
-        rare_values, frequent_values, statistic, pvalue = (
-            ks_statistic_rare_versus_frequent(frequencies, row_min, threshold)
+    for random_label, random_idx in orderings.items():
+        fig, axes = plt.subplots(
+            nrows,
+            ncols,
+            figsize=(base_size * ncols, base_size * nrows),
+            sharey=False,
+            squeeze=False,
         )
-
-        plot_row = i // ncols
-        plot_col = i % ncols
-        # if plot_row == 4:
-        #     plot_col += 1
-        color = find_color(DEFAULT_PLOT_PARAMETERS, data)
-        # axes[plot_row, plot_col].scatter(x, y, marker='o', color=color, alpha=1)
-        # axes[plot_row, plot_col].hexbin(x, y, gridsize=30, cmap='Blues', mincnt=1)
-        # axes[plot_row, plot_col].scatter(k_lowest_pop[1], k_lowest_val[1], label='2nd lowest', marker='x')
-        # axes[plot_row, plot_col].scatter(k_lowest_pop.mean(0), k_lowest_val.mean(0), label='average lowest', marker='s')
-
-        # kde
-        if plot_row == 0 and plot_col == 0:
-            legend = True
-        else:
-            legend = False
-        pd.Series(frequent_values).plot.kde(
-            ax=axes[plot_row, plot_col], alpha=0.5, label="frequent", legend=legend
-        )
-        pd.Series(rare_values).plot.kde(
-            ax=axes[plot_row, plot_col],
-            alpha=0.5,
-            label="rare",
-            legend=legend,
-            color="red",
-        )
-        # axes[plot_row, plot_col].scatter(df.index.values[idx_map], row_min, marker='o', color=color, alpha=0.5)
-        new_label = data[distance]["user_submission_label"]
-        try:
-            new_label = (
-                ice_cream_method_map[data[distance]["user_submission_label"]]
-                + "\n"
-                + f"p={pvalue:.1e}"
-            )
-        except Exception:
+        for i, fname in enumerate(data_fnames[: nrows * ncols]):
             print(
-                f"Label {data[distance]['user_submission_label']} not found in mapping, using original label."
+                f"[{random_label}] Processing file {i + 1}/{len(data_fnames)}: {fname}"
             )
-            pass
+            with open(fname, "rb") as f:
+                data = pickle.load(f)
 
-        axes[plot_row, plot_col].set_title(new_label)
-        # axes[plot_row, plot_col].legend()
-        if not plot_col == 0:
-            axes[plot_row, plot_col].set_yticklabels([])
-            axes[plot_row, plot_col].set_ylabel("")
-        else:
-            axes[plot_row, plot_col].set_ylabel("# of Images")
+            df = data[distance]["cost_matrix"]
+            row_min = df.iloc[idx_map].values.min(axis=1)
 
-        if plot_row == nrows - 1:
-            # axes[plot_row, plot_col].set_xlabel('GT Population (number of images)')
-            # axes[plot_row, plot_col].set_ylabel(f'Median of Min. {distance} Distances to Submission')
-            axes[plot_row, plot_col].set_xlabel(
-                f"Volume-to-volume {distance.capitalize()} Distance\n(minimum across GT volumes)"
+            rare_values, frequent_values, statistic, pvalue = (
+                ks_statistic_rare_versus_frequent(
+                    frequencies[random_idx], row_min, threshold
+                )
             )
-        else:
-            axes[plot_row, plot_col].set_xlabel("")
-            # axes[plot_row, plot_col].set_xticklabels([])
 
-    for i in range(len(data_fnames), nrows * ncols):
-        plot_row = i // ncols
-        plot_col = i % ncols
-        axes[plot_row, plot_col].set_visible(False)
+            plot_row = i // ncols
+            plot_col = i % ncols
+            ax = axes[plot_row, plot_col]
 
-    plt.tight_layout()
-    plt.savefig(
-        "/mnt/home/smbp/ceph/smbpchallenge/plotting_round1_and_round2/output/accuracy_rare_states_distributions.pdf",
-        dpi=300,
-    )
+            color = find_color(DEFAULT_PLOT_PARAMETERS, data)  # noqa: F841 (currently unused)
+
+            legend = plot_row == 0 and plot_col == 0
+            pd.Series(frequent_values).plot.kde(
+                ax=ax, alpha=0.5, label="frequent", legend=legend
+            )
+            pd.Series(rare_values).plot.kde(
+                ax=ax, alpha=0.5, label="rare", legend=legend, color="red"
+            )
+
+            label = data[distance]["user_submission_label"]
+            if label in ice_cream_method_map:
+                title = ice_cream_method_map[label] + "\n" + f"p={pvalue:.1e}"
+            else:
+                print(f"Label {label} not found in mapping, using original label.")
+                title = label
+            ax.set_title(title)
+
+            if plot_col != 0:
+                ax.set_yticklabels([])
+                ax.set_ylabel("")
+            else:
+                ax.set_ylabel("# of Images")
+
+            if plot_row == nrows - 1:
+                ax.set_xlabel(
+                    f"Volume-to-volume {distance.capitalize()} Distance\n"
+                    "(minimum across GT volumes)"
+                )
+            else:
+                ax.set_xlabel("")
+
+        # Hide unused panels
+        for j in range(len(data_fnames), nrows * ncols):
+            axes[j // ncols, j % ncols].set_visible(False)
+
+        fig.tight_layout()
+        out_path = os.path.join(
+            cfg.paths.output_dir, cfg.output_filename.format(label=random_label)
+        )
+        fig.savefig(out_path, dpi=cfg.plot.dpi)
+        plt.close(fig)
+        print(f"Saved {out_path}")
+
+
+if __name__ == "__main__":
+    main()

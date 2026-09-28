@@ -1,0 +1,53 @@
+defaults:
+  - _self_
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+# Keep Hydra from creating outputs/<date>/ folders and changing the working dir
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+
+paths:
+  metadata: /mnt/home/gwoollard/ceph/repos/cryomethods_comparison_pipeline/osf/metadata.csv
+  pkl_dir: /mnt/home/smbp/ceph/smbpchallenge/map_to_map/set2/output
+  output_dir: /mnt/home/smbp/ceph/smbpchallenge/plotting_round1_and_round2/output
+
+# {label} is filled in with "original" or "permuted"
+output_filename: accuracy_rare_states_distributions_{label}.pdf
+
+# Files inside paths.pkl_dir, plotted in this order
+submissions:
+  - map_to_map_pina_colada_1.pkl
+  - map_to_map_cookie_dough_1.pkl
+  - map_to_map_cookie_dough_2.pkl
+  - map_to_map_cherry_1.pkl
+  - map_to_map_cherry_2.pkl
+  - map_to_map_chocolate_chip_1.pkl
+  - map_to_map_chocolate_chip_2.pkl
+  - map_to_map_chocolate_1.pkl
+  - map_to_map_chocolate_2.pkl
+  - map_to_map_rocky_road_1.pkl
+  - map_to_map_rocky_road_2.pkl
+  - map_to_map_rocky_road_3.pkl
+  - map_to_map_black_raspberry_1.pkl
+  - map_to_map_vanilla_1.pkl
+  - map_to_map_vanilla_2.pkl
+  - map_to_map_mango_1.pkl
+  - map_to_map_peanut_butter_1.pkl
+  - map_to_map_peanut_butter_2.pkl
+  - map_to_map_neapolitan_1.pkl
+  - map_to_map_neapolitan_2.pkl
+  - map_to_map_bubble_gum_2.pkl
+  - map_to_map_mint_chocolate_chip_80.pkl
+
+distance: fsc
+threshold: 5   # populations_count <= threshold is "rare"
+seed: 0        # seed for the permuted control; set to null for a fresh permutation each run
+
+plot:
+  nrows: 5
+  ncols: 5
+  base_size: 3
+  dpi: 300
