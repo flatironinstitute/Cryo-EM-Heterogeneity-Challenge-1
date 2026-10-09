@@ -49,5 +49,5 @@ seed: 0        # seed for the permuted control; set to null for a fresh permutat
 plot:
   nrows: 5
   ncols: 5
-  base_size: 3
+  base_size: 4
   dpi: 300

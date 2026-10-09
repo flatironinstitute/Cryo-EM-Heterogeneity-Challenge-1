@@ -1,14 +1,13 @@
 import os
 import pickle
 
+import seaborn as sns
 import hydra
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from omegaconf import DictConfig
 from scipy.stats import ks_2samp
-
-from cryo_challenge.plot_utils._common_utilities import DEFAULT_PLOT_PARAMETERS
 
 
 def find_color(DEFAULT_PLOT_PARAMETERS, data):
@@ -95,27 +94,68 @@ def main(cfg: DictConfig) -> None:
                 data = pickle.load(f)
 
             df = data[distance]["cost_matrix"]
-            row_min = df.iloc[idx_map].values.min(axis=1)
 
-            rare_values, frequent_values, statistic, pvalue = (
-                ks_statistic_rare_versus_frequent(
-                    frequencies[random_idx], row_min, threshold
-                )
+            # define a submitted volume as rare or frequent based on which ground truth volume it is closest to, and the population of that ground truth volume
+            #
+
+            col_idx = df.iloc[idx_map].values.argmin(axis=0)
+            col_freq = frequencies[random_idx][col_idx]
+            rare_idx = col_freq <= threshold
+            frequent_idx = col_freq > threshold
+            print(
+                "rare states:",
+                np.sum(rare_idx),
+                "frequent states:",
+                np.sum(frequent_idx),
             )
+
+            col_values = df.iloc[idx_map].values.min(axis=0)
+            rare_values = col_values[rare_idx]
+            frequent_values = col_values[frequent_idx]
+            if len(rare_values) == 0 or len(frequent_values) == 0:
+                print(
+                    f"Warning: Either no rare or frequent values for {data['fsc']['user_submission_label']}. Skipping KS test."
+                )
+                pvalue = np.nan
+            else:
+                _, pvalue = ks_2samp(rare_values, frequent_values)
+
+            # rare_values, frequent_values, _, pvalue = (
+            #     ks_statistic_rare_versus_frequent(
+            #         frequencies[random_idx], row_min, threshold
+            #     )
+            # )
 
             plot_row = i // ncols
             plot_col = i % ncols
             ax = axes[plot_row, plot_col]
 
-            color = find_color(DEFAULT_PLOT_PARAMETERS, data)  # noqa: F841 (currently unused)
+            # color = find_color(DEFAULT_PLOT_PARAMETERS, data)  # noqa: F841 (currently unused)
 
             legend = plot_row == 0 and plot_col == 0
-            pd.Series(frequent_values).plot.kde(
-                ax=ax, alpha=0.5, label="frequent", legend=legend
-            )
-            pd.Series(rare_values).plot.kde(
-                ax=ax, alpha=0.5, label="rare", legend=legend, color="red"
-            )
+            if len(frequent_values) > 0:
+                pd.Series(frequent_values).plot.kde(
+                    ax=ax, alpha=0.5, label="frequent", legend=legend
+                )
+                sns.rugplot(
+                    x=frequent_values,
+                    ax=ax,
+                    color="C0",
+                    height=0.05,
+                    alpha=0.6,
+                )
+            if len(rare_values) > 0:
+                pd.Series(rare_values).plot.kde(
+                    ax=ax, alpha=0.5, label="rare", legend=legend, color="red"
+                )
+
+                sns.rugplot(
+                    x=rare_values,
+                    ax=ax,
+                    color="red",
+                    height=0.05,
+                    alpha=0.6,
+                )
 
             label = data[distance]["user_submission_label"]
             if label in ice_cream_method_map:
@@ -133,7 +173,7 @@ def main(cfg: DictConfig) -> None:
 
             if plot_row == nrows - 1:
                 ax.set_xlabel(
-                    f"Volume-to-volume {distance.capitalize()} Distance\n"
+                    f"Volume-to-volume {distance.upper()} Distance\n"
                     "(minimum across GT volumes)"
                 )
             else:
